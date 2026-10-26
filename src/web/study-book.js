@@ -1,8 +1,8 @@
 // A study page as a small book: the pages are listed on the right (overview, summary, homework); the homework is grouped by question,
 // questions that are not for this lecture are set apart, and a "not yet" note lives only on the homework page.
 (function () {
-  var NAMES = { over: 'מה חשוב לדעת', sum: 'סיכום לעיון', hw: 'שיעורי בית: מתחילים כאן' };
-  var ICONS = { over: '🎯', sum: '📖', hw: '✏️' };
+  var NAMES = { over: 'סקירה', sum: 'הסיכום', hw: 'שיעורי בית' };
+  var ICONS = { over: '', sum: '', hw: '' };
   var LONG = { over: 'סקירה: מה חובה לדעת', sum: 'הסיכום', hw: 'שיעורי בית' };
 
 
@@ -16,7 +16,7 @@
   try { var saved = localStorage.getItem('sumit-study-theme'); if (saved === 'dark' || saved === 'light') applyTheme(saved); } catch (e) { }
   function themeButton(parent) {
     var b = document.createElement('button'); b.type = 'button'; b.className = 'booktheme' + (parent ? '' : ' floating');
-    function label() { b.textContent = currentTheme() === 'dark' ? '☀️ מצב בהיר' : '🌙 מצב כהה'; }
+    function label() { b.textContent = currentTheme() === 'dark' ? 'מצב בהיר' : 'מצב כהה'; }
     b.onclick = function () { var n = currentTheme() === 'dark' ? 'light' : 'dark'; applyTheme(n); try { localStorage.setItem('sumit-study-theme', n); } catch (e) { } label(); };
     label(); (parent || document.body).appendChild(b); return b;
   }
@@ -42,6 +42,17 @@
   }
 
 
+  var EMOJI = /[\u{1F300}-\u{1FAFF}\u{1F000}-\u{1F2FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{2B50}\u{2B55}\u{FE0F}\u{200D}]/gu;
+  function stripEmoji() {
+    var w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null), n, list = [];
+    while ((n = w.nextNode())) list.push(n);
+    list.forEach(function (t) {
+      var p = t.parentNode; if (!p || /^(SCRIPT|STYLE|TEXTAREA)$/.test(p.nodeName) || (p.closest && p.closest('.katex,.chev,svg'))) return;
+      var v = t.nodeValue, c = v.replace(EMOJI, function (m) { return /[\u2713\u2714\u2717\u2718]/.test(m) ? m : ''; }).replace(/^\s{2,}/, ' ');
+      if (c !== v) t.nodeValue = c;
+    });
+  }
+
   function build() {
     var wrap = document.querySelector('.wrap');
     if (!wrap || wrap.getAttribute('data-book')) return;
@@ -63,7 +74,7 @@
       if (isNotYet(k)) { notyet.push(k); continue; }
       g[cur].push(k);
     }
-    var order = ['hw', 'over', 'sum'].filter(function (n) { return g[n].length > 0 || (n === 'hw' && notyet.length); });
+    var order = ['over', 'sum', 'hw'].filter(function (n) { return g[n].length > 0 || (n === 'hw' && notyet.length); });
     if (order.length < 2) { return; }
     if (notyet.length && order.indexOf('hw') < 0) { g.hw = []; order.push('hw'); }
     wrap.setAttribute('data-book', '1');
@@ -120,7 +131,7 @@
     var pages = {};
     order.forEach(function (n) {
       var s = document.createElement('section'); s.className = 'bookpage'; s.id = 'bp-' + n; main.appendChild(s); pages[n] = s;
-      var h = document.createElement('h1'); h.className = 'bookpage-title print-only'; h.textContent = ICONS[n] + ' ' + LONG[n]; s.appendChild(h);
+      var h = document.createElement('h1'); h.className = 'bookpage-title print-only'; h.textContent = LONG[n]; s.appendChild(h);
     });
     lead.forEach(function (e) { (pages.over || pages.sum).appendChild(e); });
     order.forEach(function (n) { g[n].forEach(function (e) { pages[n].appendChild(e); }); });
@@ -132,7 +143,7 @@
     var label = document.createElement('div'); label.className = 'booklabel'; label.textContent = 'עמודים'; side.appendChild(label);
     order.forEach(function (n, ix) {
       var b = document.createElement('button'); b.type = 'button'; b.setAttribute('data-p', n);
-      b.innerHTML = '<span class="bn">' + (ix + 1) + '</span><span class="bt">' + ICONS[n] + ' ' + NAMES[n] + '</span>';
+      b.innerHTML = '<span class="bn">' + (ix + 1) + '</span><span class="bt">' + NAMES[n] + '</span>';
       b.onclick = function () { restoreQuestion(); show(n, true); };
       side.appendChild(b);
     });
@@ -143,7 +154,7 @@
     order.forEach(function (n, ix) {
       if (ix >= order.length - 1) return;
       var nav = document.createElement('div'); nav.className = 'pagenav';
-      var next = document.createElement('button'); next.type = 'button'; next.textContent = 'לעמוד הבא: ' + ICONS[order[ix + 1]] + ' ' + NAMES[order[ix + 1]] + ' ←';
+      var next = document.createElement('button'); next.type = 'button'; next.textContent = 'לעמוד הבא: ' + NAMES[order[ix + 1]] + ' ←';
       next.onclick = function () { show(order[ix + 1], true); };
       nav.appendChild(next); pages[n].appendChild(nav);
     });
@@ -215,6 +226,6 @@
     });
   }
 
-  function start() { build(); if (!document.querySelector('.booktheme') && document.body) themeButton(null); }
+  function start() { stripEmoji(); build(); if (!document.querySelector('.booktheme') && document.body) themeButton(null); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();

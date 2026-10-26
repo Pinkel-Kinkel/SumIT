@@ -154,7 +154,7 @@ partial class HitStudent
         if (r == null || r.Error) say("error", "הבדיקה לא הצליחה: " + (r == null ? "אין AI מחובר" : r.Text));
         else
         {
-            say("assistant", "🔎 **בדיקה נוספת (" + BrainName(r.Provider) + "):**\n\n" + r.Text);
+            say("assistant", "**בדיקה נוספת (" + BrainName(r.Provider) + "):**\n\n" + r.Text);
             lastChatBrain[course + "|" + scope] = r.Provider;
         }
         done();

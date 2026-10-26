@@ -809,7 +809,7 @@ partial class HitStudent
         var result = await CourseTask(key, course, s => SectionStatus(course, num, s, true, false), prompt);
         bool ok = !result.Error && File.Exists(StudyPagePath(course, num));
         SectionStatus(course, num, result.Error ? "נכשל: " + Trunc(result.Text, 160)
-            : (ok ? "דף הלימוד מוכן ✨" : "הסתיים"), false, result.Error);
+            : (ok ? "דף הלימוד מוכן" : "הסתיים"), false, result.Error);
         SendSectionLocal(course, num);
         Notify(ok ? "דף הלימוד לשיעור " + num + " מוכן" : null, course);
         return result;
@@ -902,7 +902,7 @@ partial class HitStudent
             + "השתמש במבחנים, בפרופיל המרצה ובחומרים מ-CS24 אם יש, כדי להראות איך המרצה מצפה שיפתרו." + WorkAlone;
         var result = await CourseTask(key, course, s => SectionStatus(course, num, s, true, false), prompt);
         result = await EnsureCompleteQuestions(key, course, num, result, s => SectionStatus(course, num, s, true, false));
-        SectionStatus(course, num, result.Error ? "נכשל: " + Trunc(result.Text, 160) : "ההכנה לשיעורי הבית מוכנה ✨", false, result.Error);
+        SectionStatus(course, num, result.Error ? "נכשל: " + Trunc(result.Text, 160) : "ההכנה לשיעורי הבית מוכנה", false, result.Error);
         SendSectionLocal(course, num);
         Notify(result.Error ? null : "ההכנה לשיעורי הבית של שיעור " + num + " מוכנה", course);
     }

@@ -56,7 +56,7 @@
         case 'lecturePdf': {
           const steps = ['קורא את חומרי הקורס', 'כותב את הסיכום', 'מסמן רמזים בדפי התרגיל', 'מכין את קובץ ה-PDF...'];
           steps.forEach((t, i) => emit({ type: 'sectionStatus', course: m.course, num: m.num, text: t, busy: true }, 300 + i * 700));
-          emit({ type: 'sectionStatus', course: m.course, num: m.num, text: 'קובץ ה-PDF של ההרצאה מוכן ✨', busy: false }, 3300);
+          emit({ type: 'sectionStatus', course: m.course, num: m.num, text: 'קובץ ה-PDF של ההרצאה מוכן', busy: false }, 3300);
           break;
         }
         case 'chat':

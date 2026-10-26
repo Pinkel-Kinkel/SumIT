@@ -85,7 +85,7 @@ built *from his worked solutions*, not from the topic:
   `python -I scripts/assemble.py body.html "<course>/דפי לימוד/שבוע-N.html" "<Course> – שבוע N" <course>-wN-done`
 - Sections, in order: compact constants/units table (`#cheat`) · must/skip · core explanation
   (numbered subsections with the formula cards from step 1b) · gaps (`g1..`) · question patterns table (`pat-A..`: recognise -> start from ->
-  trap) · errata · **🎯 שימוש בתרגילים** (`#use`, always last).
+  trap) · errata · **שימוש בתרגילים** (`#use`, always last).
 - "שימוש בתרגילים": one collapsed card per exercise, `id="use-<key>"`, class `q`. First show the complete source-faithful question in `<section class="question-statement" data-source="file, page, question/subpart">`, before any hint or solution. Include all givens, units, constraints and what must be found/proved; reproduce necessary diagrams/tables. A short title or a PDF link is not enough. Each subpart includes its necessary common givens. Keep assumptions separate from source facts. If data is missing/unreadable, say exactly what is missing; never invent the question from its answer. Newly authored practice is labeled as such, including `data-source="תרגול שנוצר"`. Deferred questions also need the statement and source, then the reason for deferral. After the statement comes a **hint**:
   numbered steps per sub-question - where to start, which formulas (links to `#f-*`) in which order, the
   trap. Do not leak the final answer in the hint. A nested `<details class="reveal">`, initially closed, holds the full worked solution, reasons for important steps, and a units/sign/substitution check. Add a brief self-check when it helps catch a typical mistake. Keep the small

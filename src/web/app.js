@@ -162,7 +162,7 @@ function showLimit(m) {
   if ($('limitCard')) return;
   const card = h(`<div class="overlay" id="limitCard"><div class="wizard" style="width:min(460px,100%)">
     <div class="art-top" style="height:150px">${ART.ai().replace('<svg', '<svg style="width:230px;height:140px"')}</div>
-    <div class="content"><h1 style="font-size:21px">Claude צריך הפסקה קטנה ☕</h1>
+    <div class="content"><h1 style="font-size:21px">Claude צריך הפסקה קטנה</h1>
     <p class="lead">הגעת למגבלת השימוש לעכשיו${m.reset ? ' (מתאפס ב-' + esc(m.reset) + ')' : ''}. כל מה שכבר ירד נשמר, ואחרי האיפוס לוחצים שוב על "צור סיכום PDF" וממשיכים מאותה נקודה.</p>
     <div class="foot"><div class="grow"></div><button class="primary big" data-x>הבנתי</button></div></div></div></div>`);
   card.querySelector('[data-x]').onclick = () => card.remove();
@@ -521,7 +521,7 @@ function renderHome() {
   renderStats(); renderNextUp();
   const name = firstName(S.userName || S.settings.userName);
   $('today').textContent = dayFmt.format(new Date());
-  $('greeting').textContent = greeting() + (name ? `, ${name}` : '') + ' 👋';
+  $('greeting').textContent = greeting() + (name ? `, ${name}` : '');
   const ev = homeEvents().filter(e => e.manual || !e.overdue || Date.now() / 1000 - e.when < 3 * 86400);
   const week = ev.filter(e => e.when && !e.overdue && e.when * 1000 - Date.now() < 7 * 86400000);
   $('heroLine').textContent = S.events == null && !ev.length ? (S.moodle === 'login' ? 'התחבר ל-Moodle כדי לראות מה מחכה לך.' : 'טוען את מה שמחכה לך השבוע...')
@@ -1302,10 +1302,10 @@ function resetChat() {
     : scope.startsWith('lesson:') ? `<b>שיחה על ${scopeTitle(scope)}</b>שאל על החומר של השיעור, על התרגיל או על מה שלא היה ברור בהרצאה.`
     : '<b>שאל אותי כל דבר על הקורס</b>אני קורא את המצגות, התרגילים, התמלולים והמבחנים. אם חסר משהו, אגיד לך בדיוק מאיפה להביא אותו.';
   const e = h(`<div class="chat-empty">${ART.chat().replace('<svg', '<svg class="art"')}${intro}<div class="suggest"></div></div>`);
-  const qs = scope === 'exam' ? [['🎯', 'תן לי שאלה ראשונה בסגנון המבחנים של המרצה'], ['📊', 'מה הנושאים שהכי חוזרים במבחנים?']]
-    : scope.startsWith('lesson:') ? [['📝', `תסכם לי את ${scopeTitle(scope)}`], ['💡', 'תעזור לי להתחיל את התרגיל של השיעור, רמזים בלבד'], ['❓', 'מה הכי חשוב לזכור מהשיעור הזה?']]
-    : [['📝', 'מה למדנו עד עכשיו בקורס?'], ['🎯', 'מה הכי חשוב למבחן?'], ['🧭', 'מה עוד חסר לך כדי לעזור לי בקורס הזה?']];
-  for (const [em, q] of qs) { const b = h(`<button class="ghost"></button>`); b.textContent = em + '  ' + q; b.onclick = () => { $('chatText').value = q; sendChat(); }; e.querySelector('.suggest').append(b); }
+  const qs = scope === 'exam' ? [['', 'תן לי שאלה ראשונה בסגנון המבחנים של המרצה'], ['', 'מה הנושאים שהכי חוזרים במבחנים?']]
+    : scope.startsWith('lesson:') ? [['', `תסכם לי את ${scopeTitle(scope)}`], ['', 'תעזור לי להתחיל את התרגיל של השיעור, רמזים בלבד'], ['', 'מה הכי חשוב לזכור מהשיעור הזה?']]
+    : [['', 'מה למדנו עד עכשיו בקורס?'], ['', 'מה הכי חשוב למבחן?'], ['', 'מה עוד חסר לך כדי לעזור לי בקורס הזה?']];
+  for (const [em, q] of qs) { const b = h(`<button class="ghost"></button>`); b.textContent = q; b.onclick = () => { $('chatText').value = q; sendChat(); }; e.querySelector('.suggest').append(b); }
   $('msgs').append(e);
 }
 function addMsg(role, text, replay) {
