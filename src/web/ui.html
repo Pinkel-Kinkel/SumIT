@@ -37,6 +37,8 @@
     <button class="nav-item" data-site-link="onedrive"><span class="ni" data-ic="cloud"></span><span class="nav-text">OneDrive</span></button>
     <button class="nav-item" data-notes hidden><span class="ni" data-ic="note"></span><span class="nav-text">המחברות והסיכומים שלי</span></button>
     <div class="nav-user" id="navUser" hidden><img id="navAvatar" alt=""><span class="nav-text" id="navUserName"></span></div>
+    <div class="nav-label nav-text">קהילה</div>
+    <button class="nav-item" id="navDiscord" title="פתיחת ערוץ הדיסקורד של התואר בדפדפן"><span class="ni" data-ic="discord"></span><span class="nav-text">דיסקורד התואר</span></button>
     <div class="nav-label nav-text"></div>
     <button class="nav-item" data-view="settings"><span class="ni" data-ic="settings"></span><span class="nav-text">הגדרות</span></button>
     <div class="grow"></div>
@@ -102,8 +104,14 @@
       <div class="page">
         <div class="head">
           <div class="grow"><h1>הקורסים שלי</h1><p>כל הקורסים שלך מה-Moodle. בוחרים קורס ומקבלים את כל השיעורים, המטלות וההקלטות שלו.</p></div>
-          <label class="toggle"><input type="checkbox" id="showAll"><span class="switch"></span>גם קורסים קודמים</label>
-          <button id="refreshCourses"><span data-ic="refresh"></span>רענן</button>
+          <div class="courses-toolbar" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <select id="courseSemesterFilter" aria-label="סינון לפי סמסטר" style="height:36px;border-radius:10px;padding:0 12px;font-size:13px;border:1px solid var(--border);background:var(--surface);color:var(--text)">
+              <option value="current">הסמסטר הנוכחי בלבד</option>
+              <option value="all">כל הסמסטרים</option>
+            </select>
+            <input id="courseSearch" type="search" placeholder="חיפוש קורס..." style="height:36px;border-radius:10px;padding:0 12px;font-size:13px;border:1px solid var(--border);background:var(--surface);color:var(--text);width:160px" autocomplete="off">
+            <button id="refreshCourses"><span data-ic="refresh"></span>רענן</button>
+          </div>
         </div>
         <div id="coursesState"></div>
         <div class="grid stagger" id="courses"></div>
@@ -287,6 +295,11 @@
           <div class="setting">
             <div class="grow"><b>קובץ ה-PDF בצבעים כהים</b><small>כבוי: ה-PDF בהיר, נוח להדפסה ולקריאה. הדף האינטראקטיבי באפליקציה תמיד לפי מצב הצבעים שבחרת.</small></div>
             <label class="toggle"><input type="checkbox" id="optPdfDark"><span class="switch"></span></label>
+          </div>
+          <div class="setting">
+            <div class="grow"><b>ערוץ הדיסקורד של התואר</b><small>קישור לערוץ הדיסקורד של הסטודנטים להחלפת חומרים, שאלות ועזרה בלימודים.</small></div>
+            <input id="discordUrl" type="url" placeholder="https://discord.gg/..." dir="ltr" style="max-width:280px;height:34px;border-radius:9px;padding:0 10px;font-size:13px;border:1px solid var(--border);background:var(--surface)">
+            <button id="openDiscordBtn" class="soft small"><span data-ic="external"></span>פתח</button>
           </div>
           <div class="setting">
             <div class="grow"><b>מסך הפתיחה</b><small>להציג שוב את ההדרכה של הפעם הראשונה.</small></div>

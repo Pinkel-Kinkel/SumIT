@@ -383,7 +383,8 @@ partial class HitStudent : Form
             onboarded = Bool(settings, "onboarded"), userName = Str(settings, "userName"), version = Version,
             autoSync = Option("autoSync"), autoRecordings = Option("autoRecordings"), autoUpdate = Option("autoUpdate"), autoFallback = Option("autoFallback"), pdfDark = Option("pdfDark"),
             profileImage = ProfileImage(),
-            theme = Str(settings, "theme").Length > 0 ? Str(settings, "theme") : "system", systemLight = SystemUsesLightTheme()
+            theme = Str(settings, "theme").Length > 0 ? Str(settings, "theme") : "system", systemLight = SystemUsesLightTheme(),
+            discordUrl = Str(settings, "discordUrl")
         });
     }
 
@@ -440,6 +441,12 @@ partial class HitStudent : Form
                     ApplyTitleBarTheme();
                     SendSettings();
                 }
+                if (opt == "discordUrl")
+                {
+                    settings["discordUrl"] = Str(m, "value").Trim();
+                    SaveSettings();
+                    SendSettings();
+                }
                 break;
             case "installUpdate": InstallUpdate(); break;
             case "checkUpdate": Send(new { type = "updateCheck", text = "בודק..." }); CheckForUpdate(true); break;
@@ -476,6 +483,15 @@ partial class HitStudent : Form
                 break;
             case "cancelGeminiLogin": CancelGeminiLogin(); CancelAgyLogin(); break;
             case "setGeminiKey": SetHelperKey("gemini", Str(m, "key")); break;
+            case "setGeminiModel":
+                string gmod = Str(m, "model").Trim();
+                if (gmod.Length > 0)
+                {
+                    settings["geminiModel"] = gmod;
+                    SaveSettings();
+                    SendSettings();
+                }
+                break;
             case "setHelperKey": SetHelperKey(Str(m, "provider"), Str(m, "key")); break;
             case "removeHelperKey": RemoveHelperKey(Str(m, "provider")); break;
             case "testBrain": TestBrain(Str(m, "kind")); break;
@@ -860,6 +876,9 @@ partial class HitStudent : Form
         int y = (int)Math.Round(Convert.ToDouble(m["y"]) * siteScale);
         int w = (int)Math.Round(Convert.ToDouble(m["w"]) * siteScale);
         int h = (int)Math.Round(Convert.ToDouble(m["h"]) * siteScale);
+        int totalW = ui.ClientSize.Width;
+        int minSideWidth = totalW <= 860 ? 70 : 236;
+        if (x + w > totalW - minSideWidth) w = Math.Max(10, totalW - minSideWidth - x);
         sitePanel.Bounds = new Rectangle(x, y, Math.Max(10, w), Math.Max(10, h));
     }
 

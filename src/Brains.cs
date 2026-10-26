@@ -41,6 +41,22 @@ partial class HitStudent
         string own = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"agy\bin\agy.exe");
         return File.Exists(own) ? own : FindOnPath("agy.exe");
     }
+    string AgyModel
+    {
+        get
+        {
+            string m = Str(settings, "geminiModel").Trim();
+            var valid = new HashSet<string> { "gemini-3.8-flash-low", "gemini-3.8-flash-medium", "gemini-3.8-flash-high", "claude-sonnet-5-5-low", "gemini-4-argon-low", "gemini-4-argon-medium" };
+            return (!string.IsNullOrEmpty(m) && valid.Contains(m)) ? m : "gemini-3.8-flash-low";
+        }
+    }
+
+    List<string> AgyModelCandidates()
+    {
+        var list = new List<string> { AgyModel, "gemini-3.8-flash-low", "gemini-3.8-flash-medium", "claude-sonnet-5-5-low", "gemini-3.8-flash-high", "gemini-4-argon-low" };
+        return list.Distinct().ToList();
+    }
+
     bool GeminiAccountReady() { return FindAgy() != null && (geminiSignedOverride ?? Bool(settings, "agyOk")); }
     bool ChatGptAccountReady() { return FindCodex() != null && codexSignedIn && (Bool(settings, "chatgptOk") || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SUMIT_CODEX"))); }
 
@@ -122,10 +138,18 @@ partial class HitStudent
                 }
                 File.WriteAllText(Path.Combine(dir, "material.txt"), prompt, new UTF8Encoding(false));
                 string exe = FindAgy();
-                r = await RunCli(exe, "-p " + Q("Read the file material.txt in the current folder. It holds instructions, background material and a conversation. Answer the last student message exactly as the instructions say, in the language they ask for. Do not run commands, do not change files, and reply with the answer only.") + " --mode plan", null, dir, 300000);
-                text = r.Item2.Trim();
-                if (r.Item3.IndexOf("Authentication required", StringComparison.OrdinalIgnoreCase) >= 0 || r.Item3.IndexOf("authentication failed", StringComparison.OrdinalIgnoreCase) >= 0)
-                { settings["agyOk"] = false; SaveSettings(); reply.Error = true; reply.Text = "ההתחברות ל-Google פגה. התחבר שוב בהגדרות"; return reply; }
+                string pArgs = "-p " + Q("Read the file material.txt in the current folder. It holds instructions, background material and a conversation. Answer the last student message exactly as the instructions say, in the language they ask for. Do not run commands, do not change files, and reply with the answer only.") + " --mode plan";
+                foreach (var mod in AgyModelCandidates())
+                {
+                    r = await RunCli(exe, pArgs + " --model " + mod, null, dir, 300000);
+                    text = r.Item2.Trim();
+                    if (r.Item3.IndexOf("Authentication required", StringComparison.OrdinalIgnoreCase) >= 0 || r.Item3.IndexOf("authentication failed", StringComparison.OrdinalIgnoreCase) >= 0)
+                    { settings["agyOk"] = false; SaveSettings(); reply.Error = true; reply.Text = "ההתחברות ל-Google פגה. התחבר שוב בהגדרות"; return reply; }
+                    if (r.Item1 == 0 && text.Length > 0) break;
+                    string errLower = (r.Item3 + " " + r.Item2).ToLowerInvariant();
+                    bool isLimit = errLower.Contains("usage limit") || errLower.Contains("rate limit") || errLower.Contains("quota") || errLower.Contains("429");
+                    if (!isLimit) break;
+                }
             }
             else
             {
@@ -361,8 +385,19 @@ partial class HitStudent
             if (!signed) { settings["agyOk"] = false; SaveSettings(); return false; }
             Send(new { type = "authCode", kind = "gemini", state = "wait", phase = "verify" });
             // Existing credentials alone do not prove that the account can make requests.
-            var r = await RunCli(FindAgy(), "-p " + Q("Reply with exactly: READY") + " --mode plan --print-timeout 30s", null, dir, 45000, true);
-            bool ok = !agyLoginCancelled && r.Item1 == 0 && Regex.IsMatch(r.Item2, @"(?im)^\s*(?:\*\*)?READY(?:\*\*)?[.!]?\s*$");
+            bool ok = false;
+            string exe = FindAgy();
+            foreach (var mod in AgyModelCandidates())
+            {
+                if (agyLoginCancelled) break;
+                var r = await RunCli(exe, "-p " + Q("Reply with exactly: READY") + " --mode plan --model " + mod + " --print-timeout 30s", null, dir, 45000, true);
+                if (r.Item1 == 0 && Regex.IsMatch(r.Item2, @"(?im)^\s*(?:\*\*)?READY(?:\*\*)?[.!]?\s*$"))
+                {
+                    ok = true;
+                    settings["geminiModel"] = mod;
+                    break;
+                }
+            }
             settings["agyOk"] = ok; SaveSettings();
             if (!ok && !agyLoginCancelled) Toast("Google לא אישר חיבור פעיל. נסה שוב או השתמש במפתח API; בדיקת החיבור מוגבלת ל-45 שניות.", true);
             return ok;

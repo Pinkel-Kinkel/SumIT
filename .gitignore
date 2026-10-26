@@ -1,11 +1,14 @@
-build/
-dist/
-*.exe
-*.dll
+# Build output and distribution
+macos/dist/
+macos/build/icon.icns
+macos/selftest.json
 
-# Created next to the app at runtime - holds your Zoom sign-in, never commit it
-browser-data/
-save-folder.txt
-settings.json
-selftest.json
-*.part
+# Dependencies
+macos/node_modules/
+**/node_modules/
+
+# Logs and runtime data
+**/logs/
+*.log
+.DS_Store
+Thumbs.db

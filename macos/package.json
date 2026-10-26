@@ -1,0 +1,77 @@
+{
+  "name": "sumit",
+  "productName": "SumIT",
+  "version": "1.0.14",
+  "description": "SumIT for macOS - lecture summaries for HIT students (Electron port of the Windows WinForms/WebView2 app)",
+  "main": "main.js",
+  "private": true,
+  "license": "SEE LICENSE IN ../README.md",
+  "author": "Pinkel-Kinkel",
+  "scripts": {
+    "start": "electron .",
+    "demo": "electron . --demo",
+    "check": "node scripts/check.js",
+    "test": "node scripts/check.js && node scripts/offline-tests.js",
+    "icon": "bash scripts/make-icns.sh",
+    "dist": "bash scripts/build-mac.sh",
+    "dist:arm64": "bash scripts/build-mac.sh arm64",
+    "dist:x64": "bash scripts/build-mac.sh x64"
+  },
+  "devDependencies": {
+    "electron": "^45.0.0",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "il.ac.hit.sumit",
+    "productName": "SumIT",
+    "copyright": "SumIT contributors",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload-*.js",
+      "lib/**/*",
+      "pages/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../src/web",
+        "to": "web"
+      },
+      {
+        "from": "../engine",
+        "to": "engine"
+      }
+    ],
+    "asar": true,
+    "mac": {
+      "category": "public.app-category.education",
+      "icon": "build/icon.icns",
+      "target": [
+        {
+          "target": "dmg"
+        },
+        {
+          "target": "zip"
+        }
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "minimumSystemVersion": "11.0",
+      "artifactName": "SumIT-${version}-${arch}.${ext}",
+      "extendInfo": {
+        "NSAppleEventsUsageDescription": "SumIT opens Terminal so you can finish signing in to your AI accounts.",
+        "LSApplicationCategoryType": "public.app-category.education"
+      }
+    },
+    "dmg": {
+      "title": "SumIT ${version}",
+      "artifactName": "SumIT-${version}-${arch}.dmg"
+    }
+  }
+}

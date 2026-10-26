@@ -115,11 +115,15 @@ function md(text) {
   t = t.replace(/`([^`]+)`/g, (_, code) => { blocks.push(`<code>${code}</code>`); return `\u0000${blocks.length-1}\u0000`; });
   t = t.replace(/\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|\\\(([\s\S]+?)\\\)|(?<!\\)\$([^$\n]+?)\$/g, (match, display, bracket, inline, dollar) => {
     const raw = display || bracket || inline || dollar;
-    const decoded = raw.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&');
+    let decoded = raw.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&').trim();
+    decoded = decoded.replace(/[·•]/g, ' \\cdot ').replace(/\\vec\s+([a-zA-Z])'/g, '\\vec{$1}\'').replace(/→/g, ' \\to ').replace(/←/g, ' \\leftarrow ').replace(/−/g, '-');
     const isDisplay = display !== undefined || bracket !== undefined;
     let rendered;
-    try { rendered = katex.renderToString(decoded, {displayMode:isDisplay, throwOnError:true, trust:false, maxExpand:1000}); }
-    catch { rendered = `<code>${esc(decoded)}</code>`; }
+    try { rendered = katex.renderToString(decoded, {displayMode:isDisplay, throwOnError:true, trust:false, strict:'ignore', maxExpand:1000}); }
+    catch {
+      try { rendered = katex.renderToString(decoded, {displayMode:isDisplay, throwOnError:false, trust:false, strict:'ignore', maxExpand:1000}); }
+      catch { rendered = `<code>${esc(decoded)}</code>`; }
+    }
     math.push(`<span class="${isDisplay ? 'math-display' : 'math-inline'}" dir="ltr">${rendered}</span>`);
     return `\u0001${math.length-1}\u0001`;
   });
@@ -293,7 +297,20 @@ function helperCard(kind) {
   else act = `<button class="primary small" data-login>התחבר עם חשבון ${gem ? 'Google' : 'ChatGPT'}</button>`;
   // While the Google page is open: say what to do (the app carries on by itself when the account is saved).
   const codeBox = gem && S.authCode ? `<div class="auth-code" dir="rtl"><b>כמעט סיימנו</b>
-    <small>${S.authCode.phase === 'verify' ? 'בודק שהחשבון יכול לענות. הבדיקה אורכת עד 45 שניות.' : 'נפתח חלון ההתחברות הרשמי של Google Antigravity. בחר Google ופעל לפי ההוראות בחלון. אם מוצג קוד בדפדפן, הדבק אותו בחלון ההתחברות. לאחר האישור נחזור לאפליקציה.'}</small><button class="ghost small" data-cancel-login>בטל התחברות</button></div>` : '';  const keyBox = codeBox + (mode || busy ? '' : `<details class="adv"><summary>יש לי מפתח API</summary><div class="row" style="width:100%"><input type="password" class="ltr" placeholder="הדבק מפתח API" data-key autocomplete="off"><button class="small" data-save>חבר</button></div><button class="link" data-getkey>איך משיגים מפתח?</button></details>`);
+    <small>${S.authCode.phase === 'verify' ? 'בודק שהחשבון יכול לענות. הבדיקה אורכת עד 45 שניות.' : 'נפתח חלון ההתחברות הרשמי של Google Antigravity. בחר Google ופעל לפי ההוראות בחלון. אם מוצג קוד בדפדפן, הדבק אותו בחלון ההתחברות. לאחר האישור נחזור לאפליקציה.'}</small><button class="ghost small" data-cancel-login>בטל התחברות</button></div>` : '';  const curModel = (S.settings && S.settings.geminiModel) || (mode === 'account' ? 'gemini-3.8-flash-low' : 'gemini-1.5-flash');
+  const modelOptions = mode === 'account'
+    ? `<option value="gemini-3.8-flash-low" ${curModel === 'gemini-3.8-flash-low' ? 'selected' : ''}>Gemini 3.8 Flash (Low - מהיר וללא מכסה)</option>
+       <option value="gemini-3.8-flash-medium" ${curModel === 'gemini-3.8-flash-medium' ? 'selected' : ''}>Gemini 3.8 Flash (Medium)</option>
+       <option value="gemini-3.8-flash-high" ${curModel === 'gemini-3.8-flash-high' ? 'selected' : ''}>Gemini 3.8 Flash (High)</option>
+       <option value="claude-sonnet-5-5-low" ${curModel === 'claude-sonnet-5-5-low' ? 'selected' : ''}>Claude Sonnet 5.5 (Low - גיבוי)</option>
+       <option value="gemini-4-argon-low" ${curModel === 'gemini-4-argon-low' ? 'selected' : ''}>Gemini 4 Argon (Low)</option>
+       <option value="gemini-4-argon-medium" ${curModel === 'gemini-4-argon-medium' ? 'selected' : ''}>Gemini 4 Argon (Medium)</option>`
+    : `<option value="gemini-1.5-flash" ${curModel === 'gemini-1.5-flash' ? 'selected' : ''}>Gemini 1.5 Flash (מהיר וחסכוני)</option>
+       <option value="gemini-1.5-flash-8b" ${curModel === 'gemini-1.5-flash-8b' ? 'selected' : ''}>Gemini 1.5 Flash-8B (מכסה גבוהה)</option>
+       <option value="gemini-2.0-flash" ${curModel === 'gemini-2.0-flash' ? 'selected' : ''}>Gemini 2.0 Flash (הדור החדש)</option>
+       <option value="gemini-1.5-pro" ${curModel === 'gemini-1.5-pro' ? 'selected' : ''}>Gemini 1.5 Pro (חכם ומעמיק)</option>`;
+  const modelBox = gem ? `<div class="row gemini-model-row" style="width:100%;margin-top:6px;gap:6px;align-items:center;"><span style="font-size:12px;opacity:0.8;">מודל:</span><select class="small" data-gemini-model style="flex:1;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:3px 6px;font-size:12px;">${modelOptions}</select></div>` : '';
+  const keyBox = codeBox + (mode === 'key' || busy ? '' : `<details class="adv"><summary>יש לי מפתח API</summary><div class="row" style="width:100%"><input type="password" class="ltr" placeholder="הדבק מפתח API" data-key autocomplete="off"><button class="small" data-save>חבר</button></div><button class="link" data-getkey>איך משיגים מפתח?</button></details>`) + modelBox;
   const tr = (S.brainTests || {})[brain];
   const testLine = !mode || !tr ? '' : tr.busy ? '<div class="test-line">בודק...</div>' : tr.ok ? `<div class="test-line ok">✓ ענה תוך ${(tr.ms / 1000).toFixed(1)} שניות</div>` : `<div class="test-line bad">✗ ${esc(tr.text || 'לא ענה')}</div>`;
   const el = h(`<div class="provider${mode ? ' selected' : ''}" data-kind="${kind}"><span class="chip ${mode ? 'ok' : ''} tag">${mode ? 'מחובר' : 'עוזר · לא חובה'}</span>
@@ -308,6 +325,16 @@ function helperCard(kind) {
   const tst = el.querySelector('[data-test]'); if (tst) tst.onclick = () => { S.brainTests = S.brainTests || {}; S.brainTests[brain] = { busy: true }; renderProviders(); send({ type: 'testBrain', kind: brain }); };
   const out = el.querySelector('[data-logout]'); if (out) out.onclick = () => { if (confirm(`להתנתק מ-${name}?`)) send({ type: 'disconnectBrain', kind: brain }); };
   const rm = el.querySelector('[data-rm]'); if (rm) rm.onclick = () => send({ type: 'removeHelperKey', provider: kind });
+  const modelSel = el.querySelector('[data-gemini-model]');
+  if (modelSel) {
+    modelSel.onchange = () => {
+      const chosen = modelSel.value;
+      S.settings = S.settings || {};
+      S.settings.geminiModel = chosen;
+      send({ type: 'setGeminiModel', model: chosen });
+      toast('מודל Gemini עודכן ל-' + chosen);
+    };
+  }
   const save = el.querySelector('[data-save]');
   if (save) {
     const go = () => { const v = el.querySelector('[data-key]').value.trim(); if (!v) return; save.disabled = true; save.textContent = 'בודק...'; send({ type: 'setHelperKey', provider: kind, key: v }); };
@@ -326,7 +353,10 @@ function providerCard(kind) {
   let state, act = '';
   if (kind === 'claude') {
     if (busy) state = `<span class="spinner"></span>${setupText(a.setup)}`;
-    else if (c.loggedIn) state = `<span class="chip ok"><span data-ic="check"></span>מחובר</span><span class="muted ltr">${esc(c.email || '')}</span>`;
+    else if (c.loggedIn) {
+      state = `<span class="chip ok"><span data-ic="check"></span>מחובר</span><span class="muted ltr">${esc(c.email || '')}</span>`;
+      act = '<button class="ghost small" data-act="testClaude">בדוק שזה עובד</button><button class="ghost small" data-act="disconnectClaude">התנתק</button>';
+    }
     else if (c.installed) { state = '<span class="chip warn">מותקן, לא מחובר</span>'; act = '<button class="primary small" data-act="setupClaude">התחבר לחשבון Claude</button>'; }
     else { state = '<span class="chip">לא מותקן</span>'; act = '<button class="primary small" data-act="setupClaude">התקן והתחבר</button>'; }
   } else {
@@ -339,17 +369,21 @@ function providerCard(kind) {
       <div class="row" style="width:100%"><input type="password" class="ltr" placeholder="${c.hasKey ? 'המפתח שמור · אפשר להחליף' : 'מפתח API (לא חובה)'}" data-key><button class="small" data-act="saveKey">שמור</button></div>
       <button class="link" data-act="getKey">קבל מפתח מ-Google AI Studio</button>`;
   }
+  const tr = (S.brainTests || {})[kind];
+  const testLine = !(c && c.loggedIn) || !tr ? '' : tr.busy ? '<div class="test-line">בודק...</div>' : tr.ok ? `<div class="test-line ok">✓ ענה תוך ${(tr.ms / 1000).toFixed(1)} שניות</div>` : `<div class="test-line bad">✗ ${esc(tr.text || 'לא ענה')}</div>`;
   const el = h(`<div class="provider${sel ? ' selected' : ''}" data-kind="${kind}">
     ${kind === 'claude' ? '<span class="chip accent tag">מומלץ</span>' : '<span class="chip ok tag">חינמי או מנוי</span>'}
     <div class="ph"><span class="pl ${kind}" data-ic="${kind}"></span><div><h3>${kind === 'claude' ? 'Claude' : 'Gemini'}</h3></div></div>
     <p>${kind === 'claude' ? 'הכי טוב בסיכומים ארוכים ובבניית דפי לימוד. דורש חשבון Claude (Pro ומעלה מומלץ).' : 'מתחברים עם חשבון Google: חינמי, או עם המנוי שלך (למשל Google AI Pro לסטודנטים). טוב מאוד לצ\'אט ולשאלות, וגם גיבוי כשנגמרת המכסה של Claude.'}</p>
-    <div class="state">${state}</div><div class="act">${act}</div></div>`);
+    <div class="state">${state}</div><div class="act">${act}</div>${testLine}</div>`);
   el.onclick = (e) => {
     const t = e.target.closest('[data-act]');
     if (t) {
       e.stopPropagation();
       const actn = t.dataset.act;
       if (actn === 'setupClaude') { send({ type: 'setProvider', provider: 'claude' }); send({ type: 'setupClaude' }); toast('מתחבר ל-Claude. אם נפתח דפדפן, אשר שם את ההתחברות.'); }
+      if (actn === 'testClaude') { S.brainTests = S.brainTests || {}; S.brainTests.claude = { busy: true }; renderProviders(); send({ type: 'testBrain', kind: 'claude' }); }
+      if (actn === 'disconnectClaude') { if (confirm('להתנתק מ-Claude?')) send({ type: 'disconnectBrain', kind: 'claude' }); }
       if (actn === 'setupGemini') { send({ type: 'setProvider', provider: 'gemini' }); send({ type: 'setupGemini' }); }
       if (actn === 'getKey') send({ type: 'openGeminiKeyPage' });
       if (actn === 'loginGemini') { send({ type: 'setProvider', provider: 'gemini' }); send({ type: 'loginGemini' }); toast('ההתחברות ל-Gemini לוקחת קצת זמן. אשר בחלון שנפתח והאפליקציה תמשיך לבד.'); }
@@ -361,10 +395,11 @@ function providerCard(kind) {
   };
   return el;
 }
-function renderProviders() {
+function renderProviders(force) {
   for (const id of ['providers', 'wizProviders']) {
     const box = $(id);
-    const focused = box.contains(document.activeElement) && document.activeElement.tagName === 'INPUT';
+    if (!box) continue;
+    const focused = !force && box.contains(document.activeElement) && document.activeElement.tagName === 'INPUT';
     if (focused) continue;
     box.innerHTML = '';
     box.append(providerCard('claude'), providerCard('gemini'), providerCard('openai'));
@@ -629,10 +664,47 @@ function loadCourses() {
 }
 function renderCourses() {
   const g = $('courses'); g.innerHTML = '';
-  const list = (S.courses || []).filter(c => $('showAll').checked || c.current);
+  const filterVal = $('courseSemesterFilter')?.value || 'current';
+  const query = ($('courseSearch')?.value || '').trim().toLowerCase();
+
+  // Populate semester filter options dynamically based on available courses
+  const semSelect = $('courseSemesterFilter');
+  if (semSelect && S.courses && S.courses.length) {
+    const existingVal = semSelect.value;
+    const semesters = new Set();
+    S.courses.forEach(c => {
+      const s = semesterOf(c);
+      if (s) semesters.add(s);
+    });
+    // Rebuild options if needed
+    const currentOptions = Array.from(semSelect.options).map(o => o.value);
+    const hasCustomSems = [...semesters].some(s => !currentOptions.includes(s));
+    if (hasCustomSems || semSelect.options.length <= 2) {
+      semSelect.innerHTML = '<option value="current">הסמסטר הנוכחי בלבד</option><option value="all">כל הסמסטרים</option>';
+      [...semesters].sort().forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s; opt.textContent = s;
+        semSelect.appendChild(opt);
+      });
+      if (currentOptions.includes(existingVal)) semSelect.value = existingVal;
+    }
+  }
+
+  const list = (S.courses || []).filter(c => {
+    if (filterVal === 'current' && !c.current) return false;
+    if (filterVal !== 'current' && filterVal !== 'all' && semesterOf(c) !== filterVal) return false;
+    if (query) {
+      const name = (c.name || '').toLowerCase();
+      const cat = (c.category || '').toLowerCase();
+      const short = (c.short || '').toLowerCase();
+      if (!name.includes(query) && !cat.includes(query) && !short.includes(query)) return false;
+    }
+    return true;
+  });
+
   if (!list.length) {
     $('coursesState').innerHTML = '';
-    $('coursesState').append(h(`<div class="empty">${ART.empty().replace('<svg', '<svg class="art"')}<b>לא נמצאו קורסים פעילים</b>אפשר להציג גם קורסים קודמים.</div>`));
+    $('coursesState').append(h(`<div class="empty">${ART.empty().replace('<svg', '<svg class="art"')}<b>לא נמצאו קורסים מתאימים</b>נסה לשנות את הסינון או החיפוש.</div>`));
     return;
   }
   $('coursesState').innerHTML = '';
@@ -647,7 +719,9 @@ function renderCourses() {
   });
 }
 $('refreshCourses').onclick = loadCourses;
-$('showAll').onchange = renderCourses;
+if ($('courseSemesterFilter')) $('courseSemesterFilter').onchange = renderCourses;
+if ($('courseSearch')) $('courseSearch').oninput = renderCourses;
+if ($('showAll')) $('showAll').onchange = renderCourses;
 
 // ---------- One course ----------
 const modIcon = { resource: 'file', file: 'file', assign: 'exam', zoom: 'play', url: 'link', folder: 'folder', page: 'book', quiz: 'exam', forum: 'chat', book: 'book' };
@@ -1456,7 +1530,14 @@ function openSite(site, url) {
 function placeSite(navigate) {
   if (S.view !== 'sites') return;
   const r = $('siteHost').getBoundingClientRect();
-  const m = { x: r.left, y: r.top, w: r.width, h: r.height, vw: window.innerWidth };
+  const sideEl = document.querySelector('nav.side');
+  const sideRect = sideEl ? sideEl.getBoundingClientRect() : null;
+  // In RTL, nav.side is on the right side. Never let siteHost expand into nav.side.
+  let allowedWidth = r.width;
+  if (sideRect && sideRect.left > r.left) {
+    allowedWidth = Math.min(r.width, Math.max(10, sideRect.left - r.left));
+  }
+  const m = { x: r.left, y: r.top, w: allowedWidth, h: r.height, vw: window.innerWidth };
   if (navigate && S.viewer) send(Object.assign({ type: 'viewFile', path: S.viewer.path }, m));
   else if (navigate) { send(Object.assign({ type: 'showSite', site: S.site, url: S.siteUrl || '' }, m)); S.siteUrl = null; }
   else send(Object.assign({ type: 'placeSite' }, m));
@@ -1578,7 +1659,17 @@ function renderSettings() {
   ['optSync','optRec','optUpdate'].forEach(id => { $(id).checked = false; $(id).closest('.setting').hidden = true; });
   $('versionText').textContent = `SumIT ${st.version || ''} · מתעדכנת לבד כשיוצאת גרסה חדשה`;
   applyTheme(st.theme || 'system');
+  if ($('discordUrl') && document.activeElement !== $('discordUrl')) $('discordUrl').value = st.discordUrl || 'https://discord.gg/';
 }
+if ($('discordUrl')) $('discordUrl').onchange = () => send({ type: 'setOption', name: 'discordUrl', value: $('discordUrl').value });
+if ($('openDiscordBtn')) $('openDiscordBtn').onclick = () => {
+  const url = ($('discordUrl')?.value || S.settings?.discordUrl || 'https://discord.gg/').trim();
+  send({ type: 'openLink', url });
+};
+if ($('navDiscord')) $('navDiscord').onclick = () => {
+  const url = (S.settings?.discordUrl || $('discordUrl')?.value || 'https://discord.gg/').trim();
+  send({ type: 'openLink', url });
+};
 $('changeStudy').onclick = $('wizStudyBtn').onclick = () => send({ type: 'chooseFolder', which: 'study' });
 $('openStudy').onclick = () => send({ type: 'openFolder', which: 'study' });
 $('changeNotability').onclick = $('wizNotBtn').onclick = () => send({ type: 'chooseFolder', which: 'notability' });
@@ -1658,6 +1749,19 @@ function onMessage(m) {
   rememberCourseEvent(m);
   if (window.stonesHook) window.stonesHook(m);
   switch (m.type) {
+    case 'chatStream': {
+      if (!S.course || S.course.name !== m.course || (m.scope || 'course') !== S.chatScope) break;
+      if (thinking) { thinking.remove(); thinking = null; }
+      let lastMsg = [...document.querySelectorAll('#msgs .msg.assistant')].pop();
+      if (!lastMsg || !lastMsg.dataset.streaming) {
+        lastMsg = addMsg('assistant', m.text);
+        lastMsg.dataset.streaming = '1';
+      } else {
+        lastMsg.innerHTML = md(m.text);
+        $('msgs').scrollTop = $('msgs').scrollHeight;
+      }
+      break;
+    }
     case 'settings':
       S.settings = m; S.ready.settings = true; S.tasks = m.tasks || [];
       if (S.view === 'tasks') renderTasks($('tasksPage'), false); renderHome();
@@ -1796,6 +1900,15 @@ function onMessage(m) {
       if ((m.scope || 'course') !== S.chatScope) { (S.chatLogs[m.scope] = S.chatLogs[m.scope] || []).push({ role: m.role, text: m.text }); break; }
       if (thinking) { thinking.remove(); thinking = null; }
       if (m.role === 'limit') { addMsg('error', m.text); break; }
+      if (m.role === 'assistant') {
+        const lastMsg = [...document.querySelectorAll('#msgs .msg.assistant')].pop();
+        if (lastMsg && lastMsg.dataset.streaming) {
+          lastMsg.innerHTML = md(m.text);
+          delete lastMsg.dataset.streaming;
+          (S.chatLogs[S.chatScope] = S.chatLogs[S.chatScope] || []).push({ role: m.role, text: m.text });
+          break;
+        }
+      }
       addMsg(m.role, m.text);
       if (S.chatBusy && m.role === 'assistant') setThinking('ממשיך...');
       break;
@@ -1814,7 +1927,7 @@ function onMessage(m) {
     case 'authCode': S.authCode = m.state === 'wait' ? { kind: m.kind, url: m.url, phase:m.phase } : null; renderProviders(); break;
     case 'loginUrl':
       // The browser normally opens by itself; if it didn't, the address is here.
-      toast(`אם הדפדפן לא נפתח, ההתחברות ל-${m.kind === 'gemini' ? 'Google' : 'ChatGPT'} כאן:`, { action: 'פתח את דף ההתחברות', ms: 20000, onAction: () => send({ type: 'openLink', url: m.url }) });
+      toast(`אם הדפדפן לא נפתח, ההתחברות ל-${m.kind === 'gemini' ? 'Google' : m.kind === 'claude' ? 'Claude' : 'ChatGPT'} כאן:`, { action: 'פתח את דף ההתחברות', ms: 20000, onAction: () => send({ type: 'openLink', url: m.url }) });
       break;
     case 'needSync':
       // The assistant had nothing to read yet: download the course, then ask the same question again.
@@ -1844,7 +1957,15 @@ function onMessage(m) {
     case 'updateProgress': S.update = Object.assign(S.update || {}, { progress: m.text, error: m.error }); renderBanners(); break;
     case 'updateReady': S.updateReady = m.version; renderBanners(); toast(`העדכון לגרסה ${m.version} מוכן. הוא ייכנס בפעם הבאה שהאפליקציה נפתחת, או עכשיו:`, { action: 'הפעל מחדש', onAction: () => send({ type: 'restartForUpdate' }), ms: 15000 }); break;
     case 'notabilitySubjects': if (S.course) send({ type: 'openCourse', id: S.course.id, course: S.course.name }); break;
-    case 'helperKeyResult': toast(m.ok ? (m.provider === 'gemini' ? 'Gemini' : 'ChatGPT') + ' חובר, והוא יעזור בצ\'אט ובקריאת דפים' : 'לא התחבר: ' + m.message, { error: !m.ok, ms: 6000 }); renderProviders(); break;
+    case 'helperKeyResult': {
+      toast(m.ok ? (m.provider === 'gemini' ? 'Gemini' : 'ChatGPT') + ' חובר, והוא יעזור בצ\'אט ובקריאת דפים' : 'לא התחבר: ' + m.message, { error: !m.ok, ms: 6000 });
+      if (!m.ok) {
+        document.querySelectorAll(`.provider[data-kind="${m.provider}"] [data-save]`).forEach(b => { b.disabled = false; b.textContent = 'חבר'; });
+      } else {
+        renderProviders(true);
+      }
+      break;
+    }
     case 'sectionProgress': {
       if (!S.course || S.course.name !== m.course) break;
       const s = section(m.num); if (!s) break;
@@ -1908,7 +2029,7 @@ function maybeHideSplash(force) {
 setTimeout(() => maybeHideSplash(true), 7000);
 
 function start() {
-  host = DEMO ? window.DemoHost : (window.chrome && window.chrome.webview);
+  host = DEMO ? window.DemoHost : (window.sumitBridge || (window.chrome && window.chrome.webview));
   if (!host) return;
   host.addEventListener('message', e => onMessage(e.data));
   icons();
