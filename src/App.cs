@@ -15,7 +15,7 @@ using Microsoft.Web.WebView2.WinForms;
 
 partial class HitStudent : Form
 {
-    public const string Version = "1.0.14";
+    public const string Version = "1.0.15";
     const string Repo = "Pinkel-Kinkel/SumIT";
     // Updates are only accepted from these repositories (the project was renamed from hit-recordings).
     static readonly string[] RepoNames = { "Pinkel-Kinkel/SumIT" };
@@ -391,6 +391,7 @@ partial class HitStudent : Form
 
     void Send(object message)
     {
+        RecordUiFailure(message);
         if (!shuttingDown && !IsDisposed && ui.CoreWebView2 != null) ui.CoreWebView2.PostWebMessageAsJson(json.Serialize(message));
     }
 
@@ -585,6 +586,10 @@ partial class HitStudent : Form
             case "viewFile": ShowFile(m); break;
             case "selectSummary": SelectSummary(m); break;
             case "summaryChat": AskSummary(m); break;
+            case "exportDiagnostics": ExportDiagnostics(); break;
+            case "importSharedSummary": PickSharedSummary(m); break;
+            case "cloudSummaryImport": cloudImportCourse=course; cloudImportLecture=Int(m,"num"); break;
+            case "cancelCloudImport": cloudImportCourse=null; cloudImportLecture=0; break;
             case "shareSummary": BeginInvoke(new Action(() => ShareSummary(m))); break;
             case "pickProfileImage": SetProfileImage(false); break;
             case "clearProfileImage": SetProfileImage(true); break;
@@ -877,10 +882,14 @@ partial class HitStudent : Form
         try
         {
             string downloadCourse = siteDownloadCourse;
+            string sharedCourse=cloudImportCourse; int sharedLecture=cloudImportLecture;
+            bool sharedZip=sharedCourse!=null && sharedLecture>0 && sender==site.CoreWebView2 && IsOneDrivePage(site.CoreWebView2.Source) && e.ResultFilePath.EndsWith(".zip",StringComparison.OrdinalIgnoreCase);
+            if(sharedZip) { cloudImportCourse=null; cloudImportLecture=0; }
             // Files saved from Moodle / CS24 / the portal go straight into the course and lecture chosen above the site.
             string name = SafeName(Path.GetFileName(e.ResultFilePath));
             string where;
             string dir = SiteSaveDir(name, out where);
+            if(sharedZip) { dir=Path.Combine(CourseDir(sharedCourse),SumitDir,"incoming"); where="סיכום להרצאה "+sharedLecture; }
             Directory.CreateDirectory(dir);
             string path = UniquePathIn(dir, name);
             e.ResultFilePath = path;
@@ -903,6 +912,7 @@ partial class HitStudent : Form
                 if (op.State == CoreWebView2DownloadState.Completed)
                 {
                     Send(new { type = "siteDownload", name = shown, dir = dir, path = path, state = "done", where = where });
+                    if(sharedZip) ImportSharedSummary(sharedCourse,sharedLecture,path);
                     if (downloadCourse != null) SendCourseLocal(downloadCourse);
                 }
                 else if (op.State == CoreWebView2DownloadState.Interrupted)

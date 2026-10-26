@@ -71,6 +71,10 @@ partial class HitStudent
                 url = OpenAiBase + "/v1/chat/completions";
                 var msgs = new List<object> { new Dictionary<string, object> { { "role", "system" }, { "content", system } } };
                 msgs.AddRange(messages.Select(m => (object)new Dictionary<string, object> { { "role", m.Item1 }, { "content", m.Item2 } }));
+                if(image!=null && msgs.Count>1) ((Dictionary<string,object>)msgs[msgs.Count-1])["content"]=new object[] {
+                    new { type="text",text=messages[messages.Count-1].Item2 },
+                    new { type="image_url",image_url=new { url="data:image/png;base64,"+Convert.ToBase64String(image) } }
+                };
                 body = new Dictionary<string, object> { { "model", OpenAiModel }, { "messages", msgs }, { "temperature", 0.3 } };
                 req.Headers.Add("Authorization", "Bearer " + key);
             }
@@ -82,6 +86,7 @@ partial class HitStudent
                 if (!resp.IsSuccessStatusCode)
                 {
                     reply.Error = true;
+                    Diagnostic("helper-api",provider,FailureKind(text),(int)resp.StatusCode);
                     reply.Limit = (int)resp.StatusCode == 429;
                     reply.Text = HelperErrorText(text, (int)resp.StatusCode);
                     return reply;
@@ -283,10 +288,12 @@ for p in sys.argv[1:]:
                 File.WriteAllText(script, ExtractScript, new UTF8Encoding(false));
                 var r = await Exec("py", "-3 -W ignore -I " + Q(script) + " " + string.Join(" ", pdfs.Select(Q)), null, 180000,
                     new Dictionary<string, string> { { "PYTHONIOENCODING", "utf-8" }, { "PYTHONUTF8", "1" } });
+                Diagnostic("extract-text","python",r.Item1==0?"success":"failed",r.Item1);
                 sb.Append(r.Item2);
             }
             finally { try { File.Delete(script); } catch { } }
         }
+        if(pdfs.Count>0 && sb.Length==0)Diagnostic("extract-text","python","empty-or-unavailable");
         string all = sb.ToString();
         return all.Length > 60000 ? all.Substring(0, 60000) : all;
     }

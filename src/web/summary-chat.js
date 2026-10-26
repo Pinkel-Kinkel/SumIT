@@ -1,4 +1,4 @@
-// The summary stays visible beside an independent Gemini-only conversation.
+// The summary stays visible beside a conversation with Gemini-first provider fallback.
 const summaryThreads = new Map();
 let summaryChatJob = null;
 function summaryThread() {
@@ -10,12 +10,12 @@ function summaryThread() {
 function openSummaryChat(){if(!S.viewer)return;$('summaryChat').hidden=false;renderSummaryChat();$('summaryChatText').focus();requestAnimationFrame(()=>placeSite(false));}
 function renderSummaryChat(){
   const t=summaryThread();if(!t)return;
-  $('summaryChatMessages').innerHTML=t.messages.map(m=>`<div class="summary-chat-message ${m.role}"><b>${m.role==='user'?'אתה':m.role==='error'?'Gemini לא הצליח לענות':'Gemini'}</b><div>${md(m.text)}</div></div>`).join('');
+  $('summaryChatMessages').innerHTML=t.messages.map(m=>`<div class="summary-chat-message ${m.role}"><b>${m.role==='user'?'אתה':m.role==='error'?'לא התקבלה תשובה':esc(m.provider||'AI')}</b><div>${md(m.text)}</div></div>`).join('');
   $('summaryChatText').value=t.draft;
   $('summaryChatSelection').hidden=!t.selection;
   $('summaryChatImage').src=t.selection?.image||'';
   $('summaryChatSend').disabled=!!summaryChatJob;
-  $('summaryChatStatus').textContent=summaryChatJob?.path===S.viewer.path?'Gemini חושב…':summaryChatJob?'ממתין לתשובה בסיכום אחר · Gemini בלבד':'Gemini בלבד · כל דף הסיכום נשלח כהקשר';
+  $('summaryChatStatus').textContent=summaryChatJob?.path===S.viewer.path?'Gemini חושב…':summaryChatJob?'ממתין לתשובה בסיכום אחר · Gemini בלבד':'Gemini תחילה · מעבר למנוע אחר במקרה תקלה';
   $('summaryChatMessages').scrollTop=$('summaryChatMessages').scrollHeight;
 }
 $('viewerChat').onclick=openSummaryChat;
@@ -37,7 +37,7 @@ function summaryChatEvent(m){
   }
   if(m.type!=='summaryChatResult'||m.requestId!==summaryChatJob?.requestId||m.path!==summaryChatJob.path)return;
   const t=summaryThreads.get(m.path);
-  if(t){t.messages.push({role:m.error?'error':'assistant',text:m.text});if(m.error)t.draft=summaryChatJob.text;}
+  if(t){t.messages.push({role:m.error?'error':'assistant',text:m.text,provider:m.provider});if(m.error)t.draft=summaryChatJob.text;}
   summaryChatJob=null;if(S.viewer)renderSummaryChat();
 }
 

@@ -914,3 +914,5 @@ html[data-theme=dark] .card { border-color: #274a82; }
   #summaryChat { flex:0 0 42%; width:100%; border-inline-start:0; border-top:1px solid var(--line); }
   .summary-chat-width,#summaryChatExpand { display:none; }
 }
+
+.app.nav-collapsed nav.side{width:48px;min-width:48px;padding:12px 4px}.app.nav-collapsed nav.side>:not(#collapseSidebar){display:none!important}#collapseSidebar{align-self:flex-start;flex:none}

@@ -1039,6 +1039,9 @@ function fillLecture(el, s) {
   if (L.lecturePdf) chips.push('<span class="chip ok">סיכום PDF מוכן ✓</span>');
   else if (L.studyPage) chips.push('<span class="chip ok">סיכום מוכן ✓</span>');
   el.querySelector('.chips').innerHTML = chips.join('');
+  el.querySelector('.quick-summary')?.remove();
+  const quickPage=L.studyPage||(L.sharedSummaries||[])[0]?.path;
+  if(quickPage){const quick=h('<button class="primary small quick-summary">פתח סיכום</button>');quick.onclick=e=>{e.stopPropagation();openViewer(quickPage,'הרצאה '+s.num+' · סיכום',L.lecturePdf||'',s.num);};el.querySelector('.lecture-head').insertBefore(quick,el.querySelector('.chevron'));}
 
   const items = el.querySelector('.items');
   items.innerHTML = '';
@@ -1075,6 +1078,8 @@ function fillLecture(el, s) {
   btn('exam', 'שיעורי בית ופתרונות מה-Moodle', hasHomework ? 'done' : 'soft', () => lectureSource(s.num, 'moodle', 'homework'));
   btn('book', 'חומר מ-CS24', 'ghost', () => lectureSource(s.num, 'cs24', 'slides'));
   btn('plus', 'קבצים מהמחשב', 'ghost', () => send({ type: 'addFiles', course: course.name, folder: String(s.num), kind: '' }));
+  btn('plus','סיכום של חבר (ZIP / OneDrive)','soft',()=>showSummaryImport(course.name,s.num));
+  (L.sharedSummaries||[]).forEach(item=>btn('book','סיכום חבר: '+item.title,'soft',()=>openViewer(item.path,item.title,'',s.num)));
   btn('calendar', 'ערוך תאריכים וכותרת', 'ghost', () => {
     const existing = el.querySelector('.lecture-editor');
     if (existing) { existing.remove(); return; }
@@ -1418,7 +1423,7 @@ $('viewerShare').onclick = () => {
   $('viewerShareNote').hidden = false;
   $('viewerShareNote').classList.remove('error');
   $('viewerShareStatus').textContent = 'בחר היכן לשמור את קובץ ה־ZIP';
-  send({ type: 'shareSummary', requestId, course: S.course.name, path: S.viewer.path, pdf: S.viewer.pdf || '', title: S.viewer.title });
+  send({ type: 'shareSummary', onedrive:!!S.shareToCloud, requestId, course: S.course.name, path: S.viewer.path, pdf: S.viewer.pdf || '', title: S.viewer.title });
 };
 $('viewerShareDismiss').onclick = () => { $('viewerShareNote').hidden = true; $('viewerShare').focus(); };
 function summaryShareStatus(m) {
@@ -1830,6 +1835,7 @@ function onMessage(m) {
       if (num) toast(`העתקת קישור להקלטת Zoom`, { action: `הוסף לשיעור ${num}`, ms: 9000, onAction: () => send({ type: 'addRecording', course: S.course.name, num, url: m.url }) });
       break;
     }
+    case 'summaryChatProvider': $('summaryChatStatus').textContent=m.text; break;
     case 'summarySelectionReady': case 'summaryChatResult': summaryChatEvent(m); break;
     case 'summaryShareProgress': case 'summaryShareResult': summaryShareStatus(m); break;
     case 'toast': toast(m.text, { error: m.error }); break;

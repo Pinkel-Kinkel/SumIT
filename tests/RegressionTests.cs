@@ -221,11 +221,12 @@ partial class HitStudent
             check("summary Gemini ignores general provider order and receives complete context plus selected image", !r.Error && requests.Count == before + 1 && requests.Last().Contains("HIDDEN-END") && requests.Last().Contains("DIAGRAM") && requests.Last().Contains("inline_data") && !requests.Last().Contains("DROP-ME"));
             geminiStatus = 429; before = requests.Count;
             r = Run(() => app.SummaryGemini(fullSummary, msgs, null));
-            check("summary Gemini quota never falls back to another provider", r.Error && r.Provider == "gemini" && requests.Count == before + 1 && requests.Last().Contains("generateContent"));
+            check("summary quota falls back to connected ChatGPT with complete context", !r.Error && r.Provider == "openai" && requests.Count == before + 2 && requests.Last().Contains("HIDDEN-END"));
             geminiStatus = 200;
             var savedGeminiKey = app.settings["geminiKey"]; app.settings.Remove("geminiKey"); before = requests.Count;
             r = Run(() => app.SummaryGemini(fullSummary, msgs, null));
-            check("missing Gemini sends no requests to any provider", r.Error && requests.Count == before);
+            check("missing Gemini uses connected ChatGPT", !r.Error && r.Provider=="openai" && requests.Count == before+1);
+            check("quota discussion is not a quota error", !IsUsageLimit("Explain quota policies") && IsUsageLimit("RESOURCE_EXHAUSTED HTTP 429"));
             app.settings["geminiKey"] = savedGeminiKey; app.settings["helperPref"] = "auto";
 
             // A lecture question is answered from the digests and the summary the app already has.

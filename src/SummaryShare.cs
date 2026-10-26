@@ -86,6 +86,8 @@ partial class HitStudent
                     } else using (var source = File.OpenRead(file)) source.CopyTo(dest);
                 }
             }
+            using(var writer=new StreamWriter(zip.CreateEntry("sumit-share.json").Open(),Encoding.UTF8))
+                writer.Write(new System.Web.Script.Serialization.JavaScriptSerializer().Serialize(new { format="sumit-summary", version=1, entry="files/"+relative(page) }));
             string target = "files/" + string.Join("/", relative(page).Split('/').Select(Uri.EscapeDataString));
             using (var writer = new StreamWriter(zip.CreateEntry("פתח את הסיכום.html").Open(), Encoding.UTF8))
                 writer.Write("<!doctype html><html lang=he dir=rtl><meta charset=utf-8><title>פתיחת הסיכום</title><meta http-equiv=refresh content=\"0;url=" + WebUtility.HtmlEncode(target) + "\"><a href=\"" + WebUtility.HtmlEncode(target) + "\">פתח את הסיכום</a></html>");
@@ -108,7 +110,8 @@ partial class HitStudent
                 throw new IOException("הסיכום אינו זמין לשיתוף");
             string destination;
             using (var save = new SaveFileDialog {
-                Title = "שמירת הסיכום לשיתוף", Filter = "קובץ ZIP לשיתוף|*.zip",
+                InitialDirectory=Bool(message,"onedrive")?HitOneDrive():"",
+                Title = Bool(message,"onedrive")?"בחר תיקייה משותפת מסונכרנת ב-OneDrive":"שמירת הסיכום לשיתוף", Filter = "קובץ ZIP לשיתוף|*.zip",
                 FileName = SafeName(course + " - " + Str(message, "title")) + ".zip",
                 AddExtension = true, DefaultExt = "zip", OverwritePrompt = true
             }) {
@@ -120,8 +123,12 @@ partial class HitStudent
             await Task.Run(() => BuildSummaryShare(root, page, pdf, temp));
             if (File.Exists(destination)) File.Replace(temp, destination, null);
             else File.Move(temp, destination);
+            if(Bool(message,"onedrive")) {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Path.GetDirectoryName(destination)) { UseShellExecute=true });
+                result="ה-ZIP נשמר בתיקייה שבחרת. בתיקייה מסונכרנת הוא יעלה דרך OneDrive; הרשאות השיתוף נקבעות ב-OneDrive.";
+            }
             status = "saved";
-            result = "קובץ ה-ZIP נשמר בהצלחה ומוכן לשליחה.";
+            if(!Bool(message,"onedrive")) result = "קובץ ה-ZIP נשמר בהצלחה ומוכן לשליחה.";
         }
         catch (Exception ex) { status = "error"; result = "לא הצלחתי לשמור את ה-ZIP: " + ex.Message; }
         finally {

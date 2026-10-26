@@ -83,11 +83,24 @@ partial class HitStudent
 
     async Task<HelperReply> SummaryGemini(string system, List<Tuple<string, string>> messages, byte[] image)
     {
-        // This feature explicitly uses Gemini, independently of general helper ordering. No provider fallback.
-        string mode = HelperMode("gemini");
-        if (mode == "account") return await HelperCallCli("gemini", system, messages, image);
-        if (mode == "key") return await HelperCall("gemini", Unprotect(Str(settings, KeySetting("gemini"))), system, messages, image);
-        return new HelperReply { Provider = "gemini", Error = true, Text = "Gemini לא מחובר. חבר אותו בהגדרות כדי לשאול כאן; השאלה לא הועברה למודל אחר." };
+        HelperReply reply=null;
+        foreach(string provider in new[]{"gemini","openai"}) {
+            string mode=HelperMode(provider); if(mode.Length==0)continue;
+            if(reply!=null) Send(new { type="summaryChatProvider",provider=provider,text="Gemini לא זמין — ממשיך עם "+BrainName(provider) });
+            reply=mode=="account"?await HelperCallCli(provider,system,messages,image):await HelperCall(provider,Unprotect(Str(settings,KeySetting(provider))),system,messages,image);
+            if(!reply.Error)return reply;
+            Diagnostic("summary-chat",provider,FailureKind(reply.Text));
+        }
+        if(claudeLoggedIn && FindClaude()!=null) {
+            Send(new { type="summaryChatProvider",provider="claude",text="ממשיך עם Claude" });
+            string dir=Path.Combine(Path.GetTempPath(),"SumIT-chat-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(dir);
+            try {
+            if(image!=null)File.WriteAllBytes(Path.Combine(dir,"selection.png"),image);
+            var result=await RunClaude("summary-fallback",dir,CliPrompt(system,messages)+(image!=null?"\nקרא גם את selection.png. אל תשנה קבצים.":""),null,null,null);
+            return new HelperReply { Provider="claude",Text=result.Text,Error=result.Error,Limit=result.Limit };
+            } finally { try { Directory.Delete(dir,true); } catch {} }
+        }
+        return reply??new HelperReply { Provider="gemini",Error=true,Text="אין מנוע AI מחובר. חבר Gemini, ChatGPT או Claude בהגדרות." };
     }
 
     async void AskSummary(Dictionary<string, object> m)
@@ -115,7 +128,7 @@ partial class HitStudent
                 if (history.Count > 8) history.RemoveRange(0, history.Count - 8);
                 summaryChats[path] = history;
             }
-            Send(new { type = "summaryChatResult", requestId = requestId, path = path, text = reply.Text, error = reply.Error });
+            Send(new { type = "summaryChatResult", requestId = requestId, path = path, text = reply.Text, error = reply.Error, provider = reply.Provider });
         } catch (Exception ex) { Send(new { type = "summaryChatResult", requestId = requestId, path = path, text = ex.Message, error = true }); }
         finally { if (started) summaryChatBusy = false; }
     }

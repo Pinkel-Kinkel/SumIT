@@ -429,7 +429,7 @@ return out;";
         return new
         {
             dir = dir, exists = Directory.Exists(dir), files = files, videos = recordingFiles.Count, transcripts = transcripts, recordings = recordingFiles,
-            studyPage = File.Exists(page) ? page : null, exercises = exercises, pointers = pointers, materialFiles = materialFiles,
+            sharedSummaries = SharedSummaries(course,num), studyPage = File.Exists(page) ? page : null, exercises = exercises, pointers = pointers, materialFiles = materialFiles,
             lecturePdf = File.Exists(LecturePdfPath(course, num)) ? LecturePdfPath(course, num) : null
         };
     }

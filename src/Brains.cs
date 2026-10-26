@@ -130,16 +130,18 @@ partial class HitStudent
             else
             {
                 string exe = FindCodex();
+                if(image!=null)File.WriteAllBytes(Path.Combine(dir,"selection.png"),image);
                 string answer = Path.Combine(dir, "answer.txt");
-                r = await RunCli(exe, "exec --ignore-user-config --skip-git-repo-check -s read-only --ephemeral -o " + Q(answer) + " -", prompt, dir, 240000);
+                r = await RunCli(exe, "exec "+(image!=null?"--image "+Q(Path.Combine(dir,"selection.png"))+" ":"")+"--ignore-user-config --skip-git-repo-check -s read-only --ephemeral -o " + Q(answer) + " -", prompt, dir, 240000);
                 text = File.Exists(answer) ? File.ReadAllText(answer, Encoding.UTF8).Trim() : "";
             }
             if (r.Item1 != 0 || text.Length == 0)
             {
                 reply.Error = true;
                 string err = (r.Item3 + " " + r.Item2).ToLowerInvariant();
-                reply.Limit = err.Contains("usage limit") || err.Contains("rate limit") || err.Contains("quota") || err.Contains("429");
-                reply.Text = reply.Limit ? "המכסה של המנוי נגמרה לעכשיו" : err.Contains("not logged in") || err.Contains("log in") || err.Contains("401") ? "ההתחברות פגה. התחבר שוב בהגדרות" : Trunc((r.Item3.Length > 0 ? r.Item3 : r.Item2).Trim(), 200);
+                reply.Limit = IsUsageLimit(err);
+                Diagnostic("helper-cli",provider,FailureKind(err),r.Item1);
+                reply.Text = reply.Limit ? "הספק החזיר הגבלת שימוש או קצב (ייתכן זמני). אפשר לנסות מנוע אחר; פרטי הכשל נרשמו בדוח האבחון" : err.Contains("not logged in") || err.Contains("log in") || err.Contains("401") ? "ההתחברות פגה. התחבר שוב בהגדרות" : Trunc((r.Item3.Length > 0 ? r.Item3 : r.Item2).Trim(), 200);
                 if (reply.Text.Length == 0) reply.Text = "ה-AI לא החזיר תשובה";
                 return reply;
             }

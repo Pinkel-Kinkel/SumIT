@@ -162,3 +162,17 @@ powershell -ExecutionPolicy Bypass -File build.ps1
 בדיקות (בלי חשבונות אמיתיים): `tools\test-offline.ps1` (לוגיקה, כולל שכבת ה-AI מול שרת מזויף), `node tools\test-ui.cjs` (ממשק, אחרי `npm install --prefix build/test-tools playwright-core@1.56.1`), `tools\test-downloads.ps1` (הורדות). בדיקה מלאה מול החשבונות שלך: `SumIT.exe --selftest report.json`.
 
 </div>
+
+## Windows ו-macOS
+
+גרסת Windows זמינה ב-[Releases](https://github.com/Pinkel-Kinkel/SumIT/releases).
+קיימת גם גרסת macOS קהילתית שפותחה על ידי ItayOssi: [קוד המק והוראות הבנייה](https://github.com/ItayOssi/SumIT/tree/feat/macos-port-and-ai-fixes/macos).
+זו גרסת Electron נפרדת; קובץ SumIT.zip של Windows אינו מתקין למק. בנייה והרצה של גרסת המק דורשות macOS, ולא אומתו על מחשב Windows.
+
+### תמיכה ושיתוף סיכומים
+
+- בהגדרות: **ייצוא דוח תקלות (Logs)**. הדוח מכיל גרסה, מצב חיבורים וקודי תקלות טכניים; ללא מפתחות, שיחות, חומר הקורס או נתוני הדפדפן. שולחים אותו לתמיכה באופן ידני.
+- בהרצאה: **סיכום של חבר (ZIP / OneDrive)**. אפשר לבחור או להדביק ZIP, לבחור תיקייה מסונכרנת, או להוריד ZIP דרך OneDrive שבאפליקציה. הסיכום נוסף בנפרד.
+- **שיתוף ב-OneDrive** שומר ZIP לתיקייה שבוחרים. יש לבחור תיקייה מסונכרנת שכבר משותפת עם האנשים הרצויים; הרשאות וסיום הסנכרון מנוהלים ב-OneDrive.
+- בצ׳אט הסיכום: Gemini תחילה; בתקלה עוברים למנוע מחובר אחר ומציגים מי ענה. תגובת 429 יכולה להיות הגבלת קצב זמנית ואינה מוכיחה שהמנוי הסתיים.
+- אפשר לקפל את התפריט הראשי בלחיצה על ☰ ולפתוח סיכום ישירות משורת ההרצאה הסגורה.

@@ -20,6 +20,7 @@
 
 <div class="app">
   <nav class="side">
+    <button id="collapseSidebar" class="ghost" aria-expanded="true" title="הסתר את התפריט הראשי">☰</button>
     <button class="brand" id="brand" title="מסך הבית">
       <span class="logo-wrap"><div class="logo" id="navLogo"></div><span class="edit-pen" id="editProfile" role="button" tabindex="0" title="עריכת השם, התיאור והתמונה" data-ic="edit"></span></span>
       <div><b id="brandName">SumIT</b><small id="brandSub">כל הלימודים במקום אחד</small></div>
@@ -211,6 +212,7 @@
       <div class="site-bar" id="viewerBar" hidden>
         <button class="small primary" id="viewerBack"><span data-ic="back"></span>חזרה להרצאה</button>
         <b class="grow" id="viewerTitle" dir="auto"></b>
+        <button class="small soft" id="viewerShareCloud">שיתוף ב-OneDrive</button>
         <button class="small soft" id="viewerShare" aria-controls="viewerShareNote" title="שמור את הסיכום בקובץ ZIP לשיתוף"><span data-ic="download"></span><span id="viewerShareLabel">שיתוף</span></button>
         <button class="small soft" id="viewerSelect">הקף אזור לשאלה</button>
         <button class="small soft" id="viewerChat"><span data-ic="chat"></span>שאל את הצ'אט</button>
@@ -239,7 +241,7 @@
     <!-- Settings -->
     <section class="view" id="view-settings">
       <div class="page" style="max-width:880px">
-        <div class="head"><div class="grow"><h1>הגדרות</h1><p>החיבורים, התיקיות והמחברת.</p></div></div>
+        <div class="head"><button id="exportDiagnostics">ייצוא דוח תקלות (Logs)</button><div class="grow"><h1>הגדרות</h1><p>החיבורים, התיקיות והמחברת.</p></div></div>
         <section class="card pad-lg">
           <div class="card-head"><h2>המנוע החכם</h2><span class="chip" id="aiChip"></span></div>
           <div class="provider-cards" id="providers"></div>
@@ -365,5 +367,6 @@
 <script src="extras.js"></script>
 <script src="app.js"></script>
 <script src="summary-chat.js"></script>
+<script src="support-ui.js"></script>
 </body>
 </html>

@@ -490,6 +490,7 @@ partial class HitStudent
                     : provider == "openai" ? await RunChatGptTask(cwd, continuation, system)
                     : await RunGemini(key, cwd, continuation, system, onEvent);
                 result.Provider = provider;
+                Diagnostic("generate",provider,result.Error?FailureKind(result.Text):"success");
                 if (shuttingDown || !result.Error || !(result.Limit || IsUsageLimit(result.Text))) return result;
                 result.Limit = true;
             }
@@ -515,7 +516,7 @@ partial class HitStudent
 
     static bool IsUsageLimit(string text)
     {
-        return Regex.IsMatch(text ?? "", @"usage limit|session limit|rate limit|limit reached|hit your limit|hit your session|quota|RESOURCE_EXHAUSTED|429|5-hour limit|weekly limit", RegexOptions.IgnoreCase);
+        return Regex.IsMatch(text ?? "", @"usage limit|session limit|rate.?limit|limit reached|hit your limit|hit your session|quota[ _-]*(exceeded|exhausted)|RESOURCE_EXHAUSTED|\b429\b|5-hour limit|weekly limit", RegexOptions.IgnoreCase);
     }
 
     // "resets 7pm" / "resets at 19:00" -> shown to the student as-is, if the AI said it.
