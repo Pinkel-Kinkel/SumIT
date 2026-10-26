@@ -373,7 +373,9 @@ if ($env:FAKE_NAME -eq 'codex' -and $m.Success) {
             app.SaveLecture(course, new Dictionary<string, object> { { "num", 1 }, { "title", "L1" } });
             Directory.CreateDirectory(Path.GetDirectoryName(app.StudyPagePath(course, 1)));
             File.WriteAllText(app.StudyPagePath(course, 1), "<html><body><h1>סיכום</h1><p>שאלה 2: התשובה היא 5</p></body></html>");
-            Environment.SetEnvironmentVariable("FAKE_REPLY", "{\"verdict\":\"issues\",\"issues\":[{\"where\":\"שאלה 2\",\"problem\":\"החישוב שגוי\",\"old\":\"התשובה היא 5\",\"new\":\"התשובה היא 7\"},{\"where\":\"שאלה 9\",\"problem\":\"לא ניתן לצטט\",\"old\":\"\",\"new\":\"\"}]}");
+            check("an older summary is offered for a rebuild in the new format", app.OutdatedSummaries().Any(x => x.Item1 == course && x.Item2 == 1));
+            app.MarkSummaryFormat(course, 1);
+            check("a summary made in the current format is not offered again", !app.OutdatedSummaries().Any(x => x.Item1 == course && x.Item2 == 1));            Environment.SetEnvironmentVariable("FAKE_REPLY", "{\"verdict\":\"issues\",\"issues\":[{\"where\":\"שאלה 2\",\"problem\":\"החישוב שגוי\",\"old\":\"התשובה היא 5\",\"new\":\"התשובה היא 7\"},{\"where\":\"שאלה 9\",\"problem\":\"לא ניתן לצטט\",\"old\":\"\",\"new\":\"\"}]}");
             string note = Run(() => app.SecondOpinion(course, 1, "claude"));
             string html = File.ReadAllText(app.StudyPagePath(course, 1));
             check("a reviewer's correction is made in the page itself, quietly", note != null && note.Contains("תיקן") && html.Contains("התשובה היא 7") && !html.Contains("התשובה היא 5") && html.Contains("<h1>סיכום</h1>") && !html.Contains("בדיקה שנייה"));

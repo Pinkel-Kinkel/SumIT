@@ -1471,6 +1471,7 @@ $('siteDownloads').onclick = () => send({type:'siteAction',action:'downloads'});
 $('siteExternal').onclick = () => send({ type: 'siteAction', action: 'external' });
 $('sitePrint').onclick = () => send({ type: 'siteAction', action: 'savepdf' });
 $('siteCopy').onclick = () => send({ type: 'siteAction', action: 'copylink' });
+$('refreshSummaries').onclick = () => { if (confirm('לבנות מחדש את כל הסיכומים הישנים בפורמט החדש? זה משתמש ב-AI, אחד אחרי השני, ויכול לקחת זמן.')) send({ type: 'refreshSummaries' }); };
 if ($('checkUpdate')) $('checkUpdate').onclick = () => send({ type: 'checkUpdate' });
 $('portalUpdate').onclick = () => { send({ type: 'importTimetable', fromFolder: true }); toast('קורא את הקבצים מתיקיית מערכת שעות...'); };
 function syncDownloadTarget() { send({ type: 'setDownloadTarget', course: $('dlCourse').value, folder: $('dlFolder').value }); $('dlFolder').disabled = !$('dlCourse').value; }
@@ -1575,6 +1576,8 @@ function renderSettings() {
   $('wizNot').textContent = st.notabilityDir || 'אם Notability מגבה את המחברות לתיקייה במחשב, בחר אותה כאן';
   $('wizNotRow').classList.toggle('ok', !!st.notabilityDir);
   $('optFallback').checked = st.autoFallback !== false; $('optPdfDark').checked = !!st.pdfDark;
+  $('refreshSummariesRow').hidden = !st.outdatedSummaries;
+  $('refreshSummariesText').textContent = st.outdatedSummaries ? (st.outdatedSummaries === 1 ? 'סיכום אחד נבנה בפורמט הקודם.' : st.outdatedSummaries + ' סיכומים נבנו בפורמט הקודם.') + ' בפורמט החדש כל שאלה בשיעורי הבית כוללת את מה שצריך כדי לפתור אותה, ואפשר להתחיל ישר ממנה. הבנייה מחדש משתמשת ב-AI (אחד אחרי השני) והסיכום הישן נשמר אם היא נכשלת.' : '';
   ['optSync','optRec','optUpdate'].forEach(id => { $(id).checked = false; $(id).closest('.setting').hidden = true; });
   $('versionText').textContent = `SumIT ${st.version || ''} · מתעדכנת לבד כשיוצאת גרסה חדשה`;
   applyTheme(st.theme || 'system');

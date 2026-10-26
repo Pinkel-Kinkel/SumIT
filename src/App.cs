@@ -15,7 +15,7 @@ using Microsoft.Web.WebView2.WinForms;
 
 partial class HitStudent : Form
 {
-    public const string Version = "1.0.15";
+    public const string Version = "1.0.16";
     const string Repo = "Pinkel-Kinkel/SumIT";
     // Updates are only accepted from these repositories (the project was renamed from hit-recordings).
     static readonly string[] RepoNames = { "Pinkel-Kinkel/SumIT" };
@@ -375,7 +375,7 @@ partial class HitStudent : Form
     {
         Send(new
         {
-            snapSeen = Bool(settings, "snapSeen"), hitOneDrive = HitOneDrive(), studyInHitOneDrive = HitOneDrive().Length > 0 && StudyRoot.StartsWith(HitOneDrive().TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase),
+            snapSeen = Bool(settings, "snapSeen"), outdatedSummaries = OutdatedSummaries().Count, hitOneDrive = HitOneDrive(), studyInHitOneDrive = HitOneDrive().Length > 0 && StudyRoot.StartsWith(HitOneDrive().TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase),
             tasks = settings.ContainsKey("tasks") ? settings["tasks"] : new System.Collections.ArrayList(),
             type = "settings", studyRoot = StudyRoot, recordingsDir = RecordingsDir, notabilityDir = NotabilityDir,
             aiProvider = Provider, hasGeminiKey = Str(settings, "geminiKey").Length > 0, hasOpenAiKey = Str(settings, "openaiKey").Length > 0,
@@ -515,6 +515,7 @@ partial class HitStudent : Form
             // AI tasks
             case "getNewMaterial": GetNewMaterial(course, m["sections"] as System.Collections.ArrayList, m["nums"] as System.Collections.ArrayList); break;
             case "lecturePdf": StartLectureSummary(m); break;
+            case "refreshSummaries": RefreshOutdatedSummaries(); break;
             case "summarize": Summarize(course, Int(m, "num"), Str(m, "title")); break;
             case "analyzeCourse": AnalyzeCourse(course); break;
             case "examPrep": ExamPrep(course); break;
