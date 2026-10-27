@@ -62,7 +62,14 @@ class Host {
       title: 'SumIT', width: 1240, height: 820, minWidth: 820, minHeight: 620, center: true, backgroundColor: bg, show: !this.selfTest,
       titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 16, y: 14 }, tabbingIdentifier: 'sumit',
     });
+    // With a right-to-left system language (Hebrew on most students' Macs) Chromium mirrors child-view bounds, so
+    // x: 0 lands on the right edge - over the sidebar. layout() flips the rects back.
+    this.mirrorViews = /^(he|iw|ar|fa|ur|yi|ps|sd|ug|ckb|dv)\b/i.test(app.getLocale());
     this.win.on('resize', () => this.layout());
+    this.win.on('maximize', () => this.layout());
+    this.win.on('unmaximize', () => this.layout());
+    this.win.on('enter-full-screen', () => this.layout());
+    this.win.on('leave-full-screen', () => this.layout());
     this.win.on('focus', () => this.CheckClipboard(false));
     this.win.on('close', () => this.onClosing());
     nativeTheme.on('updated', () => this.ApplyTitleBarTheme());
@@ -92,7 +99,8 @@ class Host {
     this.ui = new WebView('ui', { session: this.uiSession, preload: pre('preload-ui.js'), background: bg });
 
     const fill = (w, h) => ({ x: 0, y: 0, width: w, height: h });
-    this.addPanel('site', [[this.site, () => this.siteBounds || { x: 0, y: 0, width: 10, height: 10 }]], false);
+    // Detached from the window while hidden, so the dashboard underneath gets every click.
+    this.addPanel('site', [[this.site, (w, h) => this.siteRect(w, h)]], false, true);
     this.addPanel('moodle', this.loginPanel(this.moodle, 'התחבר עם שם המשתמש והסיסמה של HIT. זה קורה פעם אחת בלבד.', () => { this.moodleCancelled = true; this.bringToFront('ui'); }));
     this.addPanel('zoom', this.loginPanel(this.zoom, 'התחבר ל-Zoom עם המשתמש של HIT. זה קורה פעם אחת, וההורדה תמשיך לבד.', () => { if (this.working) this.zoomCancelled = true; this.bringToFront('ui'); }));
     this.addPanel('cs24', [[this.cs24View, fill]]);
@@ -117,11 +125,21 @@ class Host {
     return [[bar, (w) => ({ x: 0, y: 0, width: w, height: 60 })], [view, (w, h) => ({ x: 0, y: 60, width: w, height: Math.max(0, h - 60) })]];
   }
 
-  addPanel(name, items, visible = true) {
-    this.panels.set(name, { items, visible });
+  // detach: the panel's views are removed from the window while it is hidden, not just made invisible.
+  addPanel(name, items, visible = true, detach = false) {
+    this.panels.set(name, { items, visible, detach });
     if (!this.order.includes(name)) this.order.unshift(name);
-    for (const [v] of items) { this.win.contentView.addChildView(v.view); v.view.setVisible(visible); }
+    for (const [v] of items) v.view.setVisible(visible);
     this.restack();
+  }
+
+  // Where a site goes: the page's #siteHost box, kept as insets from the window edges so a window resize keeps the
+  // columns - the summary chat on the left, the site in the middle, the sidebar on the right (CSS: 236px wide,
+  // 70px at <= 860px, 48px collapsed). The fallback covers the first frame, before the page has reported.
+  // Left-to-right coordinates: layout() takes care of Chromium's RTL mirroring.
+  siteRect(w, h) {
+    const i = this.siteInsets || { left: 0, top: 89, right: w <= 860 ? 70 : 236, bottom: 0 };
+    return { x: i.left, y: i.top, width: Math.max(10, w - i.left - i.right), height: Math.max(10, h - i.top - i.bottom) };
   }
 
   removePanel(name) {
@@ -145,13 +163,20 @@ class Host {
     if (!p) return;
     p.visible = visible;
     for (const [v] of p.items) v.view.setVisible(visible);
-    this.layout();
+    if (p.detach) this.restack(); else this.layout();
   }
   isPanelVisible(name) { const p = this.panels.get(name); return !!p && p.visible; }
   frontPanel() { return this.order[this.order.length - 1]; }
 
+  // addChildView of a view that's already there moves it to the top, so this re-applies the whole z-order.
   restack() {
-    for (const name of this.order) for (const [v] of this.panels.get(name).items) this.win.contentView.addChildView(v.view);
+    for (const name of this.order) {
+      const p = this.panels.get(name);
+      for (const [v] of p.items) {
+        if (p.detach && !p.visible) { try { this.win.contentView.removeChildView(v.view); } catch { } }
+        else this.win.contentView.addChildView(v.view);
+      }
+    }
     this.layout();
   }
 
@@ -160,7 +185,10 @@ class Host {
     const { width, height } = this.win.getContentBounds();
     for (const name of this.order) {
       const p = this.panels.get(name);
-      for (const [v, rect] of p.items) v.view.setBounds(rect(width, height));
+      for (const [v, rect] of p.items) {
+        const r = rect(width, height);   // left-to-right window coordinates
+        if (this.mirrorViews) r.x = width - r.x - r.width;
+        v.view.setBounds(r);      }
     }
   }
 
@@ -273,6 +301,8 @@ class Host {
     for (const opt of ['autoSync', 'autoRecordings', 'autoUpdate', 'autoFallback', 'pdfDark'])
       if (!(opt in this.settings)) this.settings[opt] = opt === 'autoFallback';   // pdfDark: off
     this.settings.autoRecordings = false; this.settings.autoUpdate = false; this.settings.autoSync = false;
+    // 1.0.18 shipped an invite that expires in November 2026; move anyone who saved it to the permanent one.
+    if (/discord\.gg\/5uTFvmyRP\/?$/i.test(Str(this.settings, 'discordUrl'))) { this.settings.discordUrl = C.DiscordInvite; this.SaveSettings(); }
   }
 
   // "HIT/קורסים" inside the student's HIT OneDrive when there is one, so the courses are backed up and follow them; otherwise in Documents.
@@ -341,8 +371,10 @@ class Host {
 
   SendSettings() {
     const hitOd = this.HitOneDrive();
+    const outdated = this.OutdatedSummaries ? this.OutdatedSummaries().length : 0;
     this.Send({
       snapSeen: Bool(this.settings, 'snapSeen'), hitOneDrive: hitOd,
+      outdatedSummaries: outdated,
       studyInHitOneDrive: hitOd.length > 0 && this.StudyRoot.toLowerCase().startsWith(hitOd.replace(/\/+$/, '').toLowerCase() + '/'),
       tasks: Array.isArray(this.settings.tasks) ? this.settings.tasks : [],
       type: 'settings', studyRoot: this.StudyRoot, recordingsDir: this.RecordingsDir, notabilityDir: this.NotabilityDir,
@@ -352,6 +384,7 @@ class Host {
       autoSync: this.Option('autoSync'), autoRecordings: this.Option('autoRecordings'), autoUpdate: this.Option('autoUpdate'), autoFallback: this.Option('autoFallback'), pdfDark: this.Option('pdfDark'),
       profileImage: this.ProfileImage(),
       theme: Str(this.settings, 'theme').length > 0 ? Str(this.settings, 'theme') : 'system', systemLight: this.SystemUsesLightTheme(),
+      discordUrl: Str(this.settings, 'discordUrl') || C.DiscordInvite,
       platform: 'mac',
     });
   }
@@ -359,8 +392,8 @@ class Host {
   // ---------- UI messages ----------
 
   Send(message) {
-    this.RecordUiFailure(message);
     if (this.shuttingDown || !this.ui || this.ui.wc.isDestroyed()) return;
+    if (this.RecordUiFailure) this.RecordUiFailure(message);
     try { this.ui.wc.send('sumit-host-message', JSON.parse(JSON.stringify(message === undefined ? null : message))); } catch { }
   }
 
@@ -404,6 +437,11 @@ class Host {
           this.settings.theme = t === 'light' || t === 'dark' ? t : 'system';
           this.SaveSettings();
           this.ApplyTitleBarTheme();
+          this.SendSettings();
+        }
+        if (opt === 'discordUrl') {
+          this.settings.discordUrl = Str(m, 'value').trim();
+          this.SaveSettings();
           this.SendSettings();
         }
         break;
@@ -573,11 +611,13 @@ class Host {
       case 'skipExams': this.SkipExams(course); break;
       case 'viewFile': this.ShowFile(m); break;
       case 'selectSummary': this.SelectSummary(m); break;
-      case 'exportDiagnostics': await this.ExportDiagnostics(); break;
-      case 'importSharedSummary': await this.PickSharedSummary(m); break;
-      case 'cloudSummaryImport': this.cloudImportCourse=course; this.cloudImportLecture=Int(m,'num'); break;
-      case 'cancelCloudImport': this.cloudImportCourse=null; break;
       case 'summaryChat': this.AskSummary(m); break;
+      case 'flashcards': this.MakeFlashcards(m); break;
+      case 'exportDiagnostics': this.ExportDiagnostics(); break;
+      case 'importSharedSummary': this.PickSharedSummary(m); break;
+      case 'cloudSummaryImport': this.cloudImportCourse = course; this.cloudImportLecture = Int(m, 'num'); break;
+      case 'cancelCloudImport': this.cloudImportCourse = null; this.cloudImportLecture = 0; break;
+      case 'refreshSummaries': this.RefreshOutdatedSummaries(); break;
       case 'shareSummary': this.ShareSummary(m); break;
       case 'pickProfileImage': await this.SetProfileImage(false); break;
       case 'clearProfileImage': await this.SetProfileImage(true); break;
@@ -676,7 +716,22 @@ class Host {
   OpenExternal(url) {
     let u;
     try { u = new URL(url); } catch { return; }
-    if (u.protocol === 'https:' || u.protocol === 'http:') platform.openExternal(u.href);
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return;
+    // A Discord invite opens in the Discord app when it is installed (it registers discord://), else in the browser.
+    const host = u.hostname.toLowerCase().replace(/^www\./, '');
+    const invite = host === 'discord.gg' ? u.pathname.slice(1) : /^(discord|discordapp)\.com$/.test(host) ? (/^\/invite\/([^/]+)/.exec(u.pathname) || [])[1] : null;
+    if (invite && /^[\w-]+$/.test(invite) && app.getApplicationNameForProtocol('discord://')) { this.OpenDiscordInvite(invite); return; }
+    platform.openExternal(u.href);
+  }
+
+  // Discord drops a link that arrives while it is still starting, so when it wasn't running the link is sent again
+  // once it has loaded (a second copy of the same invite just shows the same screen).
+  async OpenDiscordInvite(invite) {
+    const link = 'discord://-/invite/' + invite;
+    const running = (await util.Exec('/usr/bin/pgrep', ['-x', 'Discord'], null, 3000)).code === 0;
+    platform.openExternal(link);
+    if (running) return;
+    for (const wait of [6000, 8000]) { await delay(wait); platform.openExternal(link); }
   }
 
   // ---------- Status ----------
@@ -766,11 +821,17 @@ class Host {
     const num = (k) => { const v = Number(m[k]); return isFinite(v) ? v : 0; };
     const vw = num('vw');
     if (vw > 0) this.siteScale = this.clientWidth() / vw;
-    const x = Math.round(num('x') * this.siteScale);
-    const y = Math.round(num('y') * this.siteScale);
-    const w = Math.round(num('w') * this.siteScale);
-    const h = Math.round(num('h') * this.siteScale);
-    this.siteBounds = { x, y, width: Math.max(10, w), height: Math.max(10, h) };
+    const y = Math.max(0, Math.round(num('y') * this.siteScale));
+    const reportedSide = num('sideW');
+    const totalW = this.clientWidth();
+    const sideWidth = reportedSide > 0 ? Math.round(reportedSide * this.siteScale) : (totalW <= 860 ? 70 : 236);
+    const { height: totalH } = this.win.getContentBounds();
+    // The #siteHost box, in left-to-right coordinates (layout() undoes Chromium's mirroring under an RTL system
+    // language). An open summary chat sits left of it, or below it on a narrow window. Never over the sidebar.
+    const left = Math.min(Math.max(0, Math.round(num('x') * this.siteScale)), Math.max(0, totalW - sideWidth - 10));
+    const w = num('w') > 0 ? Math.round(num('w') * this.siteScale) : totalW - sideWidth - left;
+    const h = num('h') > 0 ? Math.round(num('h') * this.siteScale) : totalH - y;
+    this.siteInsets = { left, top: y, right: Math.max(sideWidth, totalW - left - w), bottom: Math.max(0, totalH - y - h) };
     this.layout();
   }
 
@@ -796,11 +857,21 @@ class Host {
       // Downloads that a module started itself (e.g. through downloadURL with its own target) set this flag.
       if (item.getSavePath && item.getSavePath()) return;
       const downloadCourse = this.siteDownloadCourse;
+      const sharedCourse = this.cloudImportCourse;
+      const sharedLecture = this.cloudImportLecture;
+      const url = this.site && this.site.source ? this.site.source : '';
+      const isZip = item.getFilename().toLowerCase().endsWith('.zip');
+      const sharedZip = sharedCourse && sharedLecture > 0 && this.IsOneDrivePage && this.IsOneDrivePage(url) && isZip;
+      if (sharedZip) {
+        this.cloudImportCourse = null;
+        this.cloudImportLecture = 0;
+      }
       const name = SafeName(item.getFilename());
       let { dir, where } = this.SiteSaveDir(name);
-      const sharedCourse=this.cloudImportCourse, sharedLecture=this.cloudImportLecture;
-      const sharedZip=sharedCourse && sharedLecture>0 && wc===this.site.wc && this.IsOneDrivePage(wc.getURL()) && name.toLowerCase().endsWith('.zip');
-      if(sharedZip){this.cloudImportCourse=null;dir=path.join(this.CourseDir(sharedCourse),C.SumitDir,'incoming');where='סיכום להרצאה '+sharedLecture;}
+      if (sharedZip) {
+        dir = path.join(this.CourseDir(sharedCourse), C.SumitDir, 'incoming');
+        where = 'סיכום להרצאה ' + sharedLecture;
+      }
       mkdirp(dir);
       this.siteDownloadsDir = dir;
       const p = this.UniquePathIn(dir, name);
@@ -820,7 +891,7 @@ class Host {
       item.once('done', (_e, state) => {
         if (state === 'completed') {
           this.Send({ type: 'siteDownload', name: shown, dir, path: p, state: 'done', where });
-          if(sharedZip)this.ImportSharedSummary(sharedCourse,sharedLecture,p);
+          if (sharedZip && this.ImportSharedSummary) this.ImportSharedSummary(sharedCourse, sharedLecture, p);
           if (downloadCourse) this.SendCourseLocal(downloadCourse);
         } else this.Send({ type: 'siteDownload', name: shown, dir, state: 'failed' });
       });
@@ -843,7 +914,7 @@ function useModule(file) {
 }
 for (const f of ['ai', 'brains', 'council', 'helpers', 'moodle', 'moodle-downloads', 'new-material', 'cs24', 'lectures', 'lecture-pdf',
   'summary-queue', 'study-rendering', 'summary-book', 'course-operations', 'recordings', 'notability', 'selftest',
-  'study-policy', 'summary-share', 'summary-chat', 'support'])
+  'study-policy', 'summary-share', 'summary-chat', 'flashcards', 'support'])
   useModule('./modules/' + f);
 
 module.exports = { Host };

@@ -584,8 +584,9 @@ partial class HitStudent
             + "\n\n---\nהערות טכניות (חשוב): אסור להריץ פקודות או תוכניות (לא PowerShell, לא Python, ולא תתי-סוכנים). השתמש רק בכלי הקבצים: קריאת קובץ, רשימת תיקייה וכתיבת קובץ. "
             + "דלג על כל שלב בסקיל שדורש הרצת סקריפט (למשל יצירת קבצי PDF עם מפנים, בדיקת קישורים או הרכבה) וכתוב ישירות את קבצי ה-HTML והטקסט. קבצי PDF ותמונות אפשר לקרוא ישירות. כתוב קבצים רק בתוך תיקיית העבודה (צור תיקיות חסרות לפי הצורך). קובץ גדול (כמו דף הלימוד) כתוב בחלקים: צור קודם את הקובץ עם המבנה והחלק הראשון, ואז הוסף את שאר החלקים בעריכות נפרדות (כל כתיבה עד כ-250 שורות), ולא בכתיבה אחת ארוכה, כדי שלא תיתקע.\n"
             + "הקבצים שנמצאים בתיקיית העבודה (נתיבים יחסיים):\n" + inventory;        File.WriteAllText(taskFile, full, new UTF8Encoding(false));
+        string modelArg = " --model " + (AgyModel ?? "gemini-3.8-flash-low");
         string args = "-p " + Q("Read the file " + SumitDir + "/" + Path.GetFileName(taskFile) + " in the current folder and carry out everything it says, completely and without asking questions. Reply with the answer or a one-line summary only.")
-                    + " --mode accept-edits --output-format stream-json --add-dir " + Q(SkillDir);
+                    + " --mode accept-edits --output-format stream-json --add-dir " + Q(SkillDir) + modelArg;
         var envv = new Dictionary<string, string> { { "NO_COLOR", "1" } };
         // Google's servers sometimes stop answering in the middle of a long write; without a sign of life for a long time, stop and say so.
         DateTime lastLife = DateTime.UtcNow; bool idleStopped = false;
@@ -876,6 +877,11 @@ partial class HitStudent
             + "כתוב את \"" + LecturerProfile + "\": איזה נושאים חוזרים ובאיזו תדירות, תבניות השאלות שלו, איך הוא מצפה שיפתרו (שלבים, סימונים, רמת פירוט), מלכודות שהוא אוהב, ומה דפוסי הבחינות הקודמות; אין להבטיח מה יופיע בבחינה הבאה.\n"
             + "ובנה את דף \"" + Exams + "/" + ExamPrepPage + "\" עם דף נוסחאות, תבניות השאלות החוזרות ושני מבחני תרגול חדשים עם פתרונות מודרכים נפתחים. סמן אותם כמבחנים שנוצרו לתרגול, לא תחזית. התחל מסיכומי ההרצאות הקיימים וחזור למקורות רק להשלמת פערים." + WorkAlone;
         var result = await CourseTask(key, course, s => Send(new { type = "courseStatus", course = course, text = s, busy = true }), prompt);
+        string prepFile = Path.Combine(CourseDir(course), Exams, ExamPrepPage);
+        if (File.Exists(prepFile))
+        {
+            try { PrepareStudyPage(prepFile); } catch { }
+        }
         Send(new { type = "courseStatus", course = course, text = result.Error ? Trunc(result.Text, 160) : "", busy = false, error = result.Error });
         SendCourseLocal(course);
         Notify(result.Error ? null : "ההכנה למבחן מוכנה", course);

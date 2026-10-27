@@ -383,7 +383,8 @@ partial class HitStudent : Form
             onboarded = Bool(settings, "onboarded"), userName = Str(settings, "userName"), version = Version,
             autoSync = Option("autoSync"), autoRecordings = Option("autoRecordings"), autoUpdate = Option("autoUpdate"), autoFallback = Option("autoFallback"), pdfDark = Option("pdfDark"),
             profileImage = ProfileImage(),
-            theme = Str(settings, "theme").Length > 0 ? Str(settings, "theme") : "system", systemLight = SystemUsesLightTheme()
+            theme = Str(settings, "theme").Length > 0 ? Str(settings, "theme") : "system", systemLight = SystemUsesLightTheme(),
+            discordUrl = Str(settings, "discordUrl")
         });
     }
 
@@ -437,6 +438,12 @@ partial class HitStudent : Form
                     settings["theme"] = t == "light" || t == "dark" ? t : "system";
                     SaveSettings();
                     ApplyTitleBarTheme();
+                    SendSettings();
+                }
+                if (opt == "discordUrl")
+                {
+                    settings["discordUrl"] = Str(m, "value").Trim();
+                    SaveSettings();
                     SendSettings();
                 }
                 break;
@@ -864,6 +871,9 @@ partial class HitStudent : Form
         int y = (int)Math.Round(Convert.ToDouble(m["y"]) * siteScale);
         int w = (int)Math.Round(Convert.ToDouble(m["w"]) * siteScale);
         int h = (int)Math.Round(Convert.ToDouble(m["h"]) * siteScale);
+        int totalW = ui.ClientSize.Width;
+        int minSideWidth = totalW <= 860 ? 70 : 236;
+        if (x + w > totalW - minSideWidth) w = Math.Max(10, totalW - minSideWidth - x);
         sitePanel.Bounds = new Rectangle(x, y, Math.Max(10, w), Math.Max(10, h));
     }
 

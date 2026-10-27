@@ -600,16 +600,20 @@ async function runVerification() {
     btn.click();
     return true;
   })()`);
-  await delay(300);
-  const validKeyUi = await host.ui.executeScript(`(() => {
-    const card = document.querySelector('#providers .provider[data-kind="gemini"]');
-    const stateText = card.querySelector('.state')?.textContent || '';
-    const toastEl = document.querySelector('#toasts .toast:not(.error)');
-    return {
-      stateText: stateText.trim(),
-      toastText: toastEl ? toastEl.textContent : '',
-    };
-  })()`);
+  let validKeyUi = { stateText: "", toastText: "" };
+  for (let i = 0; i < 20; i++) {
+    await delay(100);
+    validKeyUi = await host.ui.executeScript(`(() => {
+      const card = document.querySelector('#providers .provider[data-kind="gemini"]');
+      const stateText = card ? (card.querySelector('.state')?.textContent || '') : '';
+      const toastEl = document.querySelector('#toasts .toast:not(.error)');
+      return {
+        stateText: stateText.trim(),
+        toastText: toastEl ? toastEl.textContent : '',
+      };
+    })()`);
+    if (validKeyUi.stateText.includes("מחובר עם מפתח")) break;
+  }
   record(
     'Buttons',
     'Valid Gemini API key saves encrypted key & updates UI card to connected',

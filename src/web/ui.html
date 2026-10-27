@@ -37,6 +37,8 @@
     <button class="nav-item" data-site-link="onedrive"><span class="ni" data-ic="cloud"></span><span class="nav-text">OneDrive</span></button>
     <button class="nav-item" data-notes hidden><span class="ni" data-ic="note"></span><span class="nav-text">המחברות והסיכומים שלי</span></button>
     <div class="nav-user" id="navUser" hidden><img id="navAvatar" alt=""><span class="nav-text" id="navUserName"></span></div>
+    <div class="nav-label nav-text">קהילה</div>
+    <button class="nav-item" id="navDiscord" title="פתיחת שרת הדיסקורד של התואר (באפליקציית Discord אם היא מותקנת)"><span class="ni" data-ic="discord"></span><span class="nav-text">דיסקורד התואר</span></button>
     <div class="nav-label nav-text"></div>
     <button class="nav-item" data-view="settings"><span class="ni" data-ic="settings"></span><span class="nav-text">הגדרות</span></button>
     <div class="grow"></div>
@@ -82,7 +84,7 @@
             <div id="examBoard"></div>
           </div>
           <div class="card full">
-            <div class="card-head"><span class="ic file" data-ic="book"></span><h2>הקורסים של הסמסטר</h2><button class="small ghost" id="allCourses">לכל הקורסים</button></div>
+            <div class="card-head"><span class="ic file" data-ic="book"></span><h2>הקורסים של הסמסטר</h2><select id="homeCourseFilter" aria-label="אילו קורסים להציג" style="width:auto;flex:none;height:32px;border-radius:10px;padding:0 10px;font-size:13px;border:1px solid var(--border);background:var(--surface);color:var(--text)"><option value="semester">הסמסטר הנוכחי</option><option value="active">כל הקורסים הפעילים</option></select><button class="small ghost" id="allCourses">לכל הקורסים</button></div>
             <div class="grid stagger" id="homeCourses"></div>
           </div>
         </div>
@@ -102,8 +104,14 @@
       <div class="page">
         <div class="head">
           <div class="grow"><h1>הקורסים שלי</h1><p>כל הקורסים שלך מה-Moodle. בוחרים קורס ומקבלים את כל השיעורים, המטלות וההקלטות שלו.</p></div>
-          <label class="toggle"><input type="checkbox" id="showAll"><span class="switch"></span>גם קורסים קודמים</label>
-          <button id="refreshCourses"><span data-ic="refresh"></span>רענן</button>
+          <div class="courses-toolbar" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <select id="courseSemesterFilter" aria-label="סינון לפי סמסטר" style="height:36px;border-radius:10px;padding:0 12px;font-size:13px;border:1px solid var(--border);background:var(--surface);color:var(--text)">
+              <option value="current">הסמסטר הנוכחי בלבד</option>
+              <option value="all">כל הסמסטרים</option>
+            </select>
+            <input id="courseSearch" type="search" placeholder="חיפוש קורס..." style="height:36px;border-radius:10px;padding:0 12px;font-size:13px;border:1px solid var(--border);background:var(--surface);color:var(--text);width:160px" autocomplete="off">
+            <button id="refreshCourses"><span data-ic="refresh"></span>רענן</button>
+          </div>
         </div>
         <div id="coursesState"></div>
         <div class="grid stagger" id="courses"></div>
@@ -216,6 +224,7 @@
         <button class="small soft" id="viewerShare" aria-controls="viewerShareNote" title="שמור את הסיכום בקובץ ZIP לשיתוף"><span data-ic="download"></span><span id="viewerShareLabel">שיתוף</span></button>
         <button class="small soft" id="viewerSelect">הקף אזור לשאלה</button>
         <button class="small soft" id="viewerChat"><span data-ic="chat"></span>שאל את הצ'אט</button>
+        <button class="small soft" id="viewerCards"><span data-ic="book"></span>כרטיסי זיכרון</button>
         <button class="small soft" id="viewerPdf"><span data-ic="file"></span>פתח כ-PDF</button>
       </div>
       <div id="viewerShareNote" hidden>
@@ -234,6 +243,13 @@
         <div id="summaryChatSelection" hidden><img id="summaryChatImage" alt="האזור שסימנת בסיכום"><button id="summaryChatClearSelection" class="ghost small">הסר סימון</button></div>
         <div id="summaryChatMessages" aria-live="polite" role="log"></div>
         <div class="row"><textarea id="summaryChatText" maxlength="8000" rows="2" placeholder="מה תרצה להבין באזור שסימנת?" aria-label="השאלה שלך"></textarea><button id="summaryChatSend" class="primary">שלח ל־Gemini</button></div>
+      </aside>
+      <aside id="flashcards" hidden dir="rtl" aria-label="כרטיסי זיכרון מהסיכום">
+        <div class="row"><b class="grow">כרטיסי זיכרון</b><button id="cardsRedo" class="ghost small" title="מכין את הכרטיסים מחדש מהסיכום">צור מחדש</button><button id="cardsClose" class="ghost small">סגור</button></div>
+        <div id="cardsProgress" hidden><small id="cardsStep" role="status" aria-live="polite"></small><div class="bar"><i id="cardsBar"></i></div><small class="muted">שלושה שלבים ב-Gemini: חילוץ, כתיבה ובדיקה. בערך חצי דקה, ובפעם הבאה הכרטיסים נפתחים מיד.</small></div>
+        <div id="cardsError" hidden role="alert"></div>
+        <button id="cardsCard" hidden aria-live="polite"><small id="cardsTag"></small><span id="cardsSide"></span><div id="cardsText"></div><small class="muted" id="cardsHint"></small></button>
+        <div class="row" id="cardsNav" hidden><button id="cardsPrev" class="soft small">הקודם</button><b class="grow" id="cardsCount"></b><button id="cardsNext" class="soft small">הבא</button></div>
       </aside>
       </div>
     </section>
@@ -284,9 +300,18 @@
             <div class="grow"><b>עדכונים אוטומטיים</b><small id="versionText"></small><small id="updateCheckText" class="muted"></small></div><button class="soft small" id="checkUpdate">בדוק עדכונים</button>
             <label class="toggle"><input type="checkbox" id="optUpdate"><span class="switch"></span></label>
           </div>
+          <div class="setting" id="refreshSummariesRow" hidden>
+            <div class="grow"><b>סיכומים בפורמט הישן</b><small id="refreshSummariesText"></small></div>
+            <button class="primary small" id="refreshSummaries">בנה אותם מחדש</button>
+          </div>
           <div class="setting">
             <div class="grow"><b>קובץ ה-PDF בצבעים כהים</b><small>כבוי: ה-PDF בהיר, נוח להדפסה ולקריאה. הדף האינטראקטיבי באפליקציה תמיד לפי מצב הצבעים שבחרת.</small></div>
             <label class="toggle"><input type="checkbox" id="optPdfDark"><span class="switch"></span></label>
+          </div>
+          <div class="setting">
+            <div class="grow"><b>ערוץ הדיסקורד של התואר</b><small>קישור לערוץ הדיסקורד של הסטודנטים להחלפת חומרים, שאלות ועזרה בלימודים.</small></div>
+            <input id="discordUrl" type="url" placeholder="https://discord.gg/..." dir="ltr" style="max-width:280px;height:34px;border-radius:9px;padding:0 10px;font-size:13px;border:1px solid var(--border);background:var(--surface)">
+            <button id="openDiscordBtn" class="soft small"><span data-ic="external"></span>פתח</button>
           </div>
           <div class="setting">
             <div class="grow"><b>מסך הפתיחה</b><small>להציג שוב את ההדרכה של הפעם הראשונה.</small></div>
@@ -367,6 +392,7 @@
 <script src="extras.js"></script>
 <script src="app.js"></script>
 <script src="summary-chat.js"></script>
+<script src="flashcards.js"></script>
 <script src="support-ui.js"></script>
 </body>
 </html>

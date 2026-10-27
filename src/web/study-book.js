@@ -1,7 +1,7 @@
 // A study page as a small book: the pages are listed on the right (overview, summary, homework); the homework is grouped by question,
 // questions that are not for this lecture are set apart, and a "not yet" note lives only on the homework page.
 (function () {
-  var NAMES = { over: 'סקירה', sum: 'הסיכום', hw: 'שיעורי בית' };
+  var NAMES = { over: 'מה חשוב לדעת', sum: 'סיכום לעיון', hw: 'שיעורי בית: מתחילים כאן' };
   var ICONS = { over: '🎯', sum: '📖', hw: '✏️' };
   var LONG = { over: 'סקירה: מה חובה לדעת', sum: 'הסיכום', hw: 'שיעורי בית' };
 
@@ -63,7 +63,7 @@
       if (isNotYet(k)) { notyet.push(k); continue; }
       g[cur].push(k);
     }
-    var order = ['over', 'sum', 'hw'].filter(function (n) { return g[n].length > 0; });
+    var order = ['hw', 'over', 'sum'].filter(function (n) { return g[n].length > 0 || (n === 'hw' && notyet.length); });
     if (order.length < 2) { return; }
     if (notyet.length && order.indexOf('hw') < 0) { g.hw = []; order.push('hw'); }
     wrap.setAttribute('data-book', '1');

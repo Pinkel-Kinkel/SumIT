@@ -441,16 +441,16 @@ pre.log { margin: 8px 0 0; max-height: 180px; overflow: auto; padding: 10px 12px
 .site-bar {
   display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--border);
   background: var(--surface); flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; flex: none;
-  position: sticky; top: 0; z-index: 10;
+  position: sticky; top: 0; z-index: 10; min-width: 0; max-width: 100%; width: 100%; box-sizing: border-box;
 }
 .site-tabs { display: flex; gap: 4px; background: var(--surface-2); padding: 4px; border-radius: 12px; flex: none; }
 .site-tabs button { height: 32px; border: none; background: none; border-radius: 9px; font-weight: 650; color: var(--muted); }
 .site-tabs button.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
-.site-bar .grow { flex: 1; }
-.site-bar select { width: auto; height: 34px; min-width: 150px; font-size: 12.5px; }
-.site-bar .url { font-size: 12px; color: var(--muted); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#view-sites.active { display: flex; flex-direction: column; height: 100vh; animation: none; overflow: hidden; }
-#siteHost { flex: 1; min-height: 0; position: relative; background: var(--surface-2); width: 100%; height: 100%; }
+.site-bar .grow { flex: 1; min-width: 10px; }
+.site-bar select { width: auto; height: 34px; min-width: 110px; max-width: 180px; font-size: 12.5px; flex-shrink: 1; }
+.site-bar .url { font-size: 12px; color: var(--muted); max-width: 280px; min-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 2; }
+#view-sites.active { display: flex; flex-direction: column; height: 100%; animation: none; overflow: hidden; min-width: 0; max-width: 100%; width: 100%; flex: 1; }
+#siteHost { flex: 1; min-height: 0; position: relative; background: var(--surface-2); width: 100%; height: 100%; min-width: 0; max-width: 100%; }
 #siteHost .loading { position: absolute; inset: 0; display: grid; place-items: center; }
 
 /* Settings */
@@ -914,9 +914,28 @@ html[data-theme=dark] .card { border-color: #274a82; }
 .summary-chat-width { display:flex; align-items:center; gap:10px; font-size:12px; color:var(--muted); }
 .summary-chat-width input { flex:1; min-width:50px; padding:0; }
 #summaryChat .katex-display { overflow-x:auto; overflow-y:hidden; }
+/* Flashcards: the same left column as the chat (one of them at a time). */
+#flashcards { flex:0 0 min(380px,58%); width:min(380px,58%); min-width:0; display:flex; flex-direction:column; gap:12px; padding:12px 18px; border-inline-start:1px solid var(--line); background:var(--surface); overflow:auto; }
+#flashcards[hidden] { display:none; }
+#cardsProgress .bar { margin:8px 0 6px; }
+#cardsError { color:var(--bad); background:color-mix(in srgb, var(--bad) 10%, transparent); border-radius:10px; padding:10px 12px; }
+#cardsCard { all:unset; box-sizing:border-box; display:flex; flex-direction:column; gap:10px; min-height:220px; padding:18px; border-radius:16px; cursor:pointer; text-align:start;
+  background:var(--surface-2); border:1px solid var(--line); box-shadow:0 8px 22px rgba(0,0,0,.08); transition:transform .25s var(--ease), background .25s; }
+#cardsCard:hover { transform:translateY(-2px); }
+#cardsCard:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+#cardsCard.back { background:color-mix(in srgb, var(--accent) 9%, var(--surface-2)); animation:cardFlip .3s var(--ease); }
+#cardsCard:not(.back) { animation:cardFlip .3s var(--ease); }
+@keyframes cardFlip { from { transform:rotateY(70deg); opacity:.3; } to { transform:none; opacity:1; } }
+#cardsTag { align-self:flex-start; background:color-mix(in srgb, var(--accent) 14%, transparent); color:var(--accent); border-radius:999px; padding:2px 10px; font-size:12px; }
+#cardsTag:empty { display:none; }
+#cardsSide { font-size:12px; font-weight:700; color:var(--muted); }
+#cardsText { flex:1; font-size:15.5px; line-height:1.7; overflow-wrap:anywhere; }
+#cardsText .katex-display { overflow-x:auto; overflow-y:hidden; }
+#cardsCount { text-align:center; }
 @media(max-width:760px) {
   #summaryWorkspace { flex-direction:column; }
   #summaryChat { flex:0 0 42%; width:100%; border-inline-start:0; border-top:1px solid var(--line); }
+  #flashcards { flex:0 0 46%; width:100%; border-inline-start:0; border-top:1px solid var(--line); }
   .summary-chat-width,#summaryChatExpand { display:none; }
 }
 

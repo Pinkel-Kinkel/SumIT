@@ -1,6 +1,6 @@
 // The Infinity Stones: a golden gauntlet with one stone for each thing that is connected. It is in the first-run guide (the stones fly in
 // as things get connected) and in the settings (fixed at the side, it can be moved). With all six stones in it, a click is a snap that turns
-// half of the app to dust. (After a restart everything is back, and the gauntlet is gone for good.)
+// half of the app to dust. (After a restart everything is back, the gauntlet too.)
 // Loaded before app.js; it only uses app.js's globals (S, h, helperMode ...) when called.
 
 // x / y are the sockets in the gauntlet's drawing (200 x 240); r is the size of the stone.
@@ -12,7 +12,9 @@ const STONES = [
   { id: 'moodle', stone: 'Time Stone', name: 'Moodle', color: '#22c55e', x: 162, y: 138, ok: () => S.moodle === 'ready' },
   { id: 'timetable', stone: 'Soul Stone', name: 'המערכת שלי', color: '#fb923c', x: 56, y: 108, ok: () => !!(S.timetable && (S.timetable.classes || []).length) }
 ];
-const snapped = () => { try { return !!(S.settings && S.settings.snapSeen) || localStorage.getItem('sumit.snap') === '1'; } catch { return false; } };
+// Only until the app restarts: an older version hid the gauntlet for good after one snap (snapSeen), which is ignored now.
+let snapDone = false;
+const snapped = () => snapDone;
 
 window.stonesHook = (m) => {
   if (m.type === 'brainTest') { S.brainTests = S.brainTests || {}; S.brainTests[m.kind] = m; if (typeof renderProviders === 'function') renderProviders(); }
@@ -136,7 +138,7 @@ function snapNow() {
     document.body.classList.add('snapped');   // the character turns sad and fades away
     flash.classList.remove('on');
     field.remove();
-    try { localStorage.setItem('sumit.snap', '1'); } catch { }
+    snapDone = true;
     send({ type: 'snapDone' });
   }, 1700);
 }

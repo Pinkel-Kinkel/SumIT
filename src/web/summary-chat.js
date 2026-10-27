@@ -1,4 +1,4 @@
-// The summary stays visible beside a conversation with Gemini-first provider fallback.
+// The summary stays visible beside an independent Gemini-only conversation.
 const summaryThreads = new Map();
 let summaryChatJob = null;
 function summaryThread() {
@@ -7,15 +7,16 @@ function summaryThread() {
   if(!summaryThreads.has(key))summaryThreads.set(key,{messages:[],selection:null,draft:''});
   return summaryThreads.get(key);
 }
-function openSummaryChat(){if(!S.viewer)return;$('summaryChat').hidden=false;renderSummaryChat();$('summaryChatText').focus();requestAnimationFrame(()=>placeSite(false));}
+function openSummaryChat(){if(!S.viewer)return;$('flashcards').hidden=true;$('summaryChat').hidden=false;renderSummaryChat();$('summaryChatText').focus();requestAnimationFrame(()=>placeSite(false));}
 function renderSummaryChat(){
   const t=summaryThread();if(!t)return;
-  $('summaryChatMessages').innerHTML=t.messages.map(m=>`<div class="summary-chat-message ${m.role}"><b>${m.role==='user'?'אתה':m.role==='error'?'לא התקבלה תשובה':esc(m.provider||'AI')}</b><div>${md(m.text)}</div></div>`).join('');
-  $('summaryChatText').value=t.draft;
+  const writing=summaryChatJob?.path===S.viewer.path&&summaryChatJob.partial?[{role:'assistant',text:summaryChatJob.partial}]:[];
+  $('summaryChatMessages').innerHTML=t.messages.concat(writing).map(m=>`<div class="summary-chat-message ${m.role}"><b>${m.role==='user'?'אתה':m.role==='error'?'לא התקבלה תשובה':esc(m.provider||'AI')}</b><div>${md(m.text)}</div></div>`).join('');
+  if($('summaryChatText').value!==t.draft)$('summaryChatText').value=t.draft;
   $('summaryChatSelection').hidden=!t.selection;
   $('summaryChatImage').src=t.selection?.image||'';
   $('summaryChatSend').disabled=!!summaryChatJob;
-  $('summaryChatStatus').textContent=summaryChatJob?.path===S.viewer.path?'Gemini חושב…':summaryChatJob?'ממתין לתשובה בסיכום אחר · Gemini בלבד':'Gemini תחילה · מעבר למנוע אחר במקרה תקלה';
+  $('summaryChatStatus').textContent=summaryChatJob?.path===S.viewer.path?(summaryChatJob.partial?'Gemini כותב…':'Gemini חושב…'):summaryChatJob?'ממתין לתשובה בסיכום אחר · Gemini תחילה':'Gemini תחילה · כל דף הסיכום נשלח כהקשר';
   $('summaryChatMessages').scrollTop=$('summaryChatMessages').scrollHeight;
 }
 $('viewerChat').onclick=openSummaryChat;
@@ -27,7 +28,7 @@ $('summaryChatSend').onclick=()=>{
   const t=summaryThread(),text=$('summaryChatText').value.trim();if(!t||!text||summaryChatJob)return;
   const requestId='summary-chat-'+Date.now();summaryChatJob={requestId,path:S.viewer.path,text};
   t.messages.push({role:'user',text:(t.selection?'על האזור שסימנתי:\n':'')+text});t.draft='';
-  send({type:'summaryChat',requestId,course:S.course.name,path:S.viewer.path,text,selected:!!t.selection});renderSummaryChat();
+  send({type:'summaryChat',requestId,course:S.course.name,path:S.viewer.path,title:S.viewer.title||'',text,selected:!!t.selection});renderSummaryChat();
 };
 $('summaryChatText').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('summaryChatSend').click();}};
 function summaryChatEvent(m){
@@ -35,7 +36,9 @@ function summaryChatEvent(m){
     if(S.viewer?.path!==m.path||S.view!=='sites')return;
     for(const t of summaryThreads.values())t.selection=null;summaryThread().selection={text:m.text,image:m.image};openSummaryChat();return;
   }
-  if(m.type!=='summaryChatResult'||m.requestId!==summaryChatJob?.requestId||m.path!==summaryChatJob.path)return;
+  if(m.requestId!==summaryChatJob?.requestId||m.path!==summaryChatJob.path)return;
+  if(m.type==='summaryChatChunk'){summaryChatJob.partial=m.text;if(S.viewer?.path===m.path)renderSummaryChat();return;}
+  if(m.type!=='summaryChatResult')return;
   const t=summaryThreads.get(m.path);
   if(t){t.messages.push({role:m.error?'error':'assistant',text:m.text,provider:m.provider});if(m.error)t.draft=summaryChatJob.text;}
   summaryChatJob=null;if(S.viewer)renderSummaryChat();

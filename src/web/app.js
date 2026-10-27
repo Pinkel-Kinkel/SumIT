@@ -115,11 +115,15 @@ function md(text) {
   t = t.replace(/`([^`]+)`/g, (_, code) => { blocks.push(`<code>${code}</code>`); return `\u0000${blocks.length-1}\u0000`; });
   t = t.replace(/\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|\\\(([\s\S]+?)\\\)|(?<!\\)\$([^$\n]+?)\$/g, (match, display, bracket, inline, dollar) => {
     const raw = display || bracket || inline || dollar;
-    const decoded = raw.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&');
+    let decoded = raw.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&').trim();
+    decoded = decoded.replace(/[·•]/g, ' \\cdot ').replace(/\\vec\s+([a-zA-Z])'/g, '\\vec{$1}\'').replace(/→/g, ' \\to ').replace(/←/g, ' \\leftarrow ').replace(/−/g, '-');
     const isDisplay = display !== undefined || bracket !== undefined;
     let rendered;
-    try { rendered = katex.renderToString(decoded, {displayMode:isDisplay, throwOnError:true, trust:false, maxExpand:1000}); }
-    catch { rendered = `<code>${esc(decoded)}</code>`; }
+    try { rendered = katex.renderToString(decoded, {displayMode:isDisplay, throwOnError:true, trust:false, strict:'ignore', maxExpand:1000}); }
+    catch {
+      try { rendered = katex.renderToString(decoded, {displayMode:isDisplay, throwOnError:false, trust:false, strict:'ignore', maxExpand:1000}); }
+      catch { rendered = `<code>${esc(decoded)}</code>`; }
+    }
     math.push(`<span class="${isDisplay ? 'math-display' : 'math-inline'}" dir="ltr">${rendered}</span>`);
     return `\u0001${math.length-1}\u0001`;
   });
@@ -293,8 +297,16 @@ function helperCard(kind) {
   else act = `<button class="primary small" data-login>התחבר עם חשבון ${gem ? 'Google' : 'ChatGPT'}</button>`;
   // While the Google page is open: say what to do (the app carries on by itself when the account is saved).
   const codeBox = gem && S.authCode ? `<div class="auth-code" dir="rtl"><b>כמעט סיימנו</b>
-    <small>${S.authCode.phase === 'verify' ? 'בודק שהחשבון יכול לענות. הבדיקה אורכת עד 45 שניות.' : 'נפתח חלון ההתחברות הרשמי של Google Antigravity. בחר Google ופעל לפי ההוראות בחלון. אם מוצג קוד בדפדפן, הדבק אותו בחלון ההתחברות. לאחר האישור נחזור לאפליקציה.'}</small><button class="ghost small" data-cancel-login>בטל התחברות</button></div>` : '';  const curModel = (S.settings && S.settings.geminiModel) || 'gemini-flash-latest';
-  const modelBox = gem ? `<div class="row gemini-model-row" style="width:100%;margin-top:6px;gap:6px;align-items:center;"><span style="font-size:12px;opacity:0.8;">מודל:</span><select class="small" data-gemini-model style="flex:1;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:3px 6px;font-size:12px;">${[...new Set(['gemini-flash-latest',curModel])].map(model=>`<option value="${esc(model)}" ${curModel===model?'selected':''}>${esc(model)}</option>`).join('')}</select></div>` : '';
+    <small>${S.authCode.phase === 'verify' ? 'בודק שהחשבון יכול לענות. הבדיקה אורכת עד 45 שניות.' : 'נפתח חלון ההתחברות הרשמי של Google Antigravity. בחר Google ופעל לפי ההוראות בחלון. אם מוצג קוד בדפדפן, הדבק אותו בחלון ההתחברות. לאחר האישור נחזור לאפליקציה.'}</small><button class="ghost small" data-cancel-login>בטל התחברות</button></div>` : '';  const curModel = (S.settings && S.settings.geminiModel) || (mode === 'account' ? 'gemini-3.8-flash-low' : 'gemini-flash-latest');
+  const modelOptions = mode === 'account'
+    ? `<option value="gemini-3.8-flash-low" ${curModel === 'gemini-3.8-flash-low' ? 'selected' : ''}>Gemini 3.8 Flash (Low - מהיר וללא מכסה)</option>
+       <option value="gemini-3.8-flash-medium" ${curModel === 'gemini-3.8-flash-medium' ? 'selected' : ''}>Gemini 3.8 Flash (Medium)</option>
+       <option value="gemini-3.8-flash-high" ${curModel === 'gemini-3.8-flash-high' ? 'selected' : ''}>Gemini 3.8 Flash (High)</option>
+       <option value="claude-sonnet-5-5-low" ${curModel === 'claude-sonnet-5-5-low' ? 'selected' : ''}>Claude Sonnet 5.5 (Low - גיבוי)</option>
+       <option value="gemini-4-argon-low" ${curModel === 'gemini-4-argon-low' ? 'selected' : ''}>Gemini 4 Argon (Low)</option>
+       <option value="gemini-4-argon-medium" ${curModel === 'gemini-4-argon-medium' ? 'selected' : ''}>Gemini 4 Argon (Medium)</option>`
+    : [...new Set(['gemini-flash-latest',curModel])].map(model=>`<option value="${esc(model)}" ${curModel===model?'selected':''}>${esc(model)}</option>`).join('');
+  const modelBox = gem ? `<div class="row gemini-model-row" style="width:100%;margin-top:6px;gap:6px;align-items:center;"><span style="font-size:12px;opacity:0.8;">מודל:</span><select class="small" data-gemini-model style="flex:1;background:var(--bg-card);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:3px 6px;font-size:12px;">${modelOptions}</select></div>` : '';
   const keyBox = codeBox + (mode === 'key' || busy ? '' : `<details class="adv"><summary>יש לי מפתח API</summary><div class="row" style="width:100%"><input type="password" class="ltr" placeholder="הדבק מפתח API" data-key autocomplete="off"><button class="small" data-save>חבר</button></div><button class="link" data-getkey>איך משיגים מפתח?</button></details>`) + modelBox;
   const tr = (S.brainTests || {})[brain];
   const testLine = !mode || !tr ? '' : tr.busy ? '<div class="test-line">בודק...</div>' : tr.ok ? `<div class="test-line ok">✓ ענה תוך ${(tr.ms / 1000).toFixed(1)} שניות</div>` : `<div class="test-line bad">✗ ${esc(tr.text || 'לא ענה')}</div>`;
@@ -400,7 +412,7 @@ function homeEvents() {
 }
 function renderStats() {
   const box = $('stats'); if (!box) return;
-  const cur = (S.courses || []).filter(c => c.current);
+  const cur = thisSemester(S.courses);
   const openTasks = (S.tasks || []).filter(t => !t.done).length;
   const week = homeEvents().filter(e => e.when && !e.overdue && e.when * 1000 - Date.now() < 7 * 86400000).length;
   const exams = ((S.timetable && S.timetable.exams) || []).filter(x => x.date && new Date(x.date + 'T12:00:00') >= new Date(new Date().toDateString())).sort((a, b) => a.date.localeCompare(b.date));
@@ -537,6 +549,23 @@ function semesterOf(c) {
   const y = m[1].replace(/["״']/g, '');
   return `${y.slice(0, -1)}״${y.slice(-1)} · סמסטר ${m[2]}`;
 }
+// "תשפ״ז · סמסטר א" as a number to compare (year in gematria * 10 + semester), or null without a semester in the name.
+const GEM = { א: 1, ב: 2, ג: 3, ד: 4, ה: 5, ו: 6, ז: 7, ח: 8, ט: 9, י: 10, כ: 20, ך: 20, ל: 30, מ: 40, ם: 40, נ: 50, ן: 50, ס: 60, ע: 70, פ: 80, ף: 80, צ: 90, ץ: 90, ק: 100, ר: 200, ש: 300, ת: 400 };
+function termOf(c) {
+  const m = ((c.short || '') + ' ' + (c.name || '')).match(/(תש[א-ת]["״']?[א-ת])[_\s-]*([אבג])['׳]?(?![א-ת])/);
+  if (!m) return null;
+  return [...m[1].replace(/["״']/g, '')].reduce((s, ch) => s + (GEM[ch] || 0), 0) * 10 + GEM[m[2]];
+}
+// Moodle calls a course "in progress" until its end date, and many old courses have none - so "current" alone
+// lists years of courses. This semester: the in-progress courses of the latest semester named in a course, plus
+// the ones the student set up here (they have a folder). Without any semester names: the set-up ones, if any.
+function thisSemester(courses) {
+  const cur = (courses || []).filter(c => c.current);
+  const latest = Math.max(0, ...cur.map(termOf).filter(t => t != null));
+  const mine = c => !!(c.local && c.local.exists);
+  if (latest) return cur.filter(c => termOf(c) === latest || (termOf(c) == null && mine(c)));
+  return cur.some(mine) ? cur.filter(mine) : cur;
+}
 function renderHome() {
   renderStats(); renderNextUp();
   const name = firstName(S.userName || S.settings.userName);
@@ -568,7 +597,7 @@ function renderHome() {
   const hc = $('homeCourses'); hc.innerHTML = '';
   if (!S.courses) for (let i = 0; i < 4; i++) hc.append(h('<div class="skeleton" style="height:170px;border-radius:18px"></div>'));
   else {
-    const cur = S.courses.filter(c => c.current);
+    const cur = $('homeCourseFilter').value === 'active' ? S.courses.filter(c => c.current) : thisSemester(S.courses);
     if (!cur.length) hc.append(h('<div class="empty" style="grid-column:1/-1">אין קורסים פעילים כרגע.</div>'));
     cur.forEach((c, i) => hc.append(courseCard(c, i)));
   }
@@ -579,6 +608,11 @@ $('heroCourses').onclick = () => show('courses');
 $('heroPaste').innerHTML = IC.plus + 'הוסף מטלה';
 $('heroPaste').onclick = () => { show('tasks'); setTimeout(() => { const f = document.querySelector('#tasksPage [data-t-title]'); if (f) f.focus(); }, 80); };
 $('allCourses').onclick = () => show('courses');
+try { if (localStorage.getItem('sumit-home-courses') === 'active') $('homeCourseFilter').value = 'active'; } catch { }
+$('homeCourseFilter').onchange = () => {
+  try { localStorage.setItem('sumit-home-courses', $('homeCourseFilter').value); } catch { }
+  renderHome();
+};
 (function quick() {
   const items = [
     ['c3', 'user', 'פורטל מידע אישי', 'ציונים, מערכת שעות ובחינות', () => openSite('portal')],
@@ -649,10 +683,48 @@ function loadCourses() {
 }
 function renderCourses() {
   const g = $('courses'); g.innerHTML = '';
-  const list = (S.courses || []).filter(c => $('showAll').checked || c.current);
+  const filterVal = $('courseSemesterFilter')?.value || 'current';
+  const query = ($('courseSearch')?.value || '').trim().toLowerCase();
+
+  // Populate semester filter options dynamically based on available courses
+  const semSelect = $('courseSemesterFilter');
+  if (semSelect && S.courses && S.courses.length) {
+    const existingVal = semSelect.value;
+    const semesters = new Set();
+    S.courses.forEach(c => {
+      const s = semesterOf(c);
+      if (s) semesters.add(s);
+    });
+    // Rebuild options if needed
+    const currentOptions = Array.from(semSelect.options).map(o => o.value);
+    const hasCustomSems = [...semesters].some(s => !currentOptions.includes(s));
+    if (hasCustomSems || semSelect.options.length <= 2) {
+      semSelect.innerHTML = '<option value="current">הסמסטר הנוכחי בלבד</option><option value="all">כל הסמסטרים</option>';
+      [...semesters].sort().forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s; opt.textContent = s;
+        semSelect.appendChild(opt);
+      });
+      if (currentOptions.includes(existingVal)) semSelect.value = existingVal;
+    }
+  }
+
+  const semesterNow = new Set(thisSemester(S.courses));
+  const list = (S.courses || []).filter(c => {
+    if (filterVal === 'current' && !semesterNow.has(c)) return false;
+    if (filterVal !== 'current' && filterVal !== 'all' && semesterOf(c) !== filterVal) return false;
+    if (query) {
+      const name = (c.name || '').toLowerCase();
+      const cat = (c.category || '').toLowerCase();
+      const short = (c.short || '').toLowerCase();
+      if (!name.includes(query) && !cat.includes(query) && !short.includes(query)) return false;
+    }
+    return true;
+  });
+
   if (!list.length) {
     $('coursesState').innerHTML = '';
-    $('coursesState').append(h(`<div class="empty">${ART.empty().replace('<svg', '<svg class="art"')}<b>לא נמצאו קורסים פעילים</b>אפשר להציג גם קורסים קודמים.</div>`));
+    $('coursesState').append(h(`<div class="empty">${ART.empty().replace('<svg', '<svg class="art"')}<b>לא נמצאו קורסים מתאימים</b>נסה לשנות את הסינון או החיפוש.</div>`));
     return;
   }
   $('coursesState').innerHTML = '';
@@ -667,7 +739,9 @@ function renderCourses() {
   });
 }
 $('refreshCourses').onclick = loadCourses;
-$('showAll').onchange = renderCourses;
+if ($('courseSemesterFilter')) $('courseSemesterFilter').onchange = renderCourses;
+if ($('courseSearch')) $('courseSearch').oninput = renderCourses;
+if ($('showAll')) $('showAll').onchange = renderCourses;
 
 // ---------- One course ----------
 const modIcon = { resource: 'file', file: 'file', assign: 'exam', zoom: 'play', url: 'link', folder: 'folder', page: 'book', quiz: 'exam', forum: 'chat', book: 'book' };
@@ -1060,8 +1134,12 @@ function fillLecture(el, s) {
   else if (L.studyPage) chips.push('<span class="chip ok">סיכום מוכן ✓</span>');
   el.querySelector('.chips').innerHTML = chips.join('');
   el.querySelector('.quick-summary')?.remove();
-  const quickPage=L.studyPage||(L.sharedSummaries||[])[0]?.path;
-  if(quickPage){const quick=h('<button class="primary small quick-summary">פתח סיכום</button>');quick.onclick=e=>{e.stopPropagation();openViewer(quickPage,'הרצאה '+s.num+' · סיכום',L.lecturePdf||'',s.num);};el.querySelector('.lecture-head').insertBefore(quick,el.querySelector('.chevron'));}
+  const quickPage = L.studyPage || (L.sharedSummaries || [])[0]?.path;
+  if (quickPage) {
+    const quick = h('<button class="primary small quick-summary">פתח סיכום</button>');
+    quick.onclick = e => { e.stopPropagation(); openViewer(quickPage, 'הרצאה ' + s.num + ' · סיכום', L.lecturePdf || '', s.num); };
+    el.querySelector('.lecture-head').insertBefore(quick, el.querySelector('.chevron'));
+  }
 
   const items = el.querySelector('.items');
   items.innerHTML = '';
@@ -1098,8 +1176,8 @@ function fillLecture(el, s) {
   btn('exam', 'שיעורי בית ופתרונות מה-Moodle', hasHomework ? 'done' : 'soft', () => lectureSource(s.num, 'moodle', 'homework'));
   btn('book', 'חומר מ-CS24', 'ghost', () => lectureSource(s.num, 'cs24', 'slides'));
   btn('plus', 'קבצים מהמחשב', 'ghost', () => send({ type: 'addFiles', course: course.name, folder: String(s.num), kind: '' }));
-  btn('plus','סיכום של חבר (ZIP / OneDrive)','soft',()=>showSummaryImport(course.name,s.num));
-  (L.sharedSummaries||[]).forEach(item=>btn('book','סיכום חבר: '+item.title,'soft',()=>openViewer(item.path,item.title,'',s.num)));
+  btn('plus', 'סיכום של חבר (ZIP / OneDrive)', 'soft', () => showSummaryImport(course.name, s.num));
+  (L.sharedSummaries || []).forEach(item => btn('book', 'סיכום חבר: ' + item.title, 'soft', () => openViewer(item.path, item.title, '', s.num)));
   btn('calendar', 'ערוך תאריכים וכותרת', 'ghost', () => {
     const existing = el.querySelector('.lecture-editor');
     if (existing) { existing.remove(); return; }
@@ -1425,7 +1503,8 @@ function jobLog(id, line) {
 // A lecture summary inside the app: the page, with a way back to the lecture, to the chat and to the PDF.
 function openViewer(path, title, pdf, lec) {
   S.viewer = { path, title, pdf, lec };
-  $('summaryChat').hidden = true;
+  $('summaryChat').hidden = true; $('flashcards').hidden = true;
+  $('viewerCards').hidden = (S.settings || {}).platform !== 'mac';   // the Windows host has no flashcards yet
   $('viewerShareNote').hidden = true;
   $('viewerTitle').textContent = title;
   $('viewerPdf').hidden = !pdf;
@@ -1443,7 +1522,7 @@ $('viewerShare').onclick = () => {
   $('viewerShareNote').hidden = false;
   $('viewerShareNote').classList.remove('error');
   $('viewerShareStatus').textContent = 'בחר היכן לשמור את קובץ ה־ZIP';
-  send({ type: 'shareSummary', onedrive:!!S.shareToCloud, requestId, course: S.course.name, path: S.viewer.path, pdf: S.viewer.pdf || '', title: S.viewer.title });
+  send({ type: 'shareSummary', onedrive: !!S.shareToCloud, requestId, course: S.course.name, path: S.viewer.path, pdf: S.viewer.pdf || '', title: S.viewer.title });
 };
 $('viewerShareDismiss').onclick = () => { $('viewerShareNote').hidden = true; $('viewerShare').focus(); };
 function summaryShareStatus(m) {
@@ -1462,7 +1541,7 @@ function summaryShareStatus(m) {
 $('siteBackCourse').onclick = () => { S.viewer = null; show('course'); };
 
 function openSite(site, url) {
-  $('summaryChat').hidden = true;
+  $('summaryChat').hidden = true; $('flashcards').hidden = true;
   $('viewerShareNote').hidden = true;
   if (window.stonesHook) window.stonesHook({ type: 'openSite', site });
   S.viewer = null;
@@ -1476,7 +1555,11 @@ function openSite(site, url) {
 function placeSite(navigate) {
   if (S.view !== 'sites') return;
   const r = $('siteHost').getBoundingClientRect();
-  const m = { x: r.left, y: r.top, w: r.width, h: r.height, vw: window.innerWidth };
+  const sideEl = document.querySelector('nav.side');
+  const sideRect = sideEl ? sideEl.getBoundingClientRect() : null;
+  const sideW = sideRect ? sideRect.width : (window.innerWidth <= 860 ? 70 : 236);
+  // The site fills #siteHost: between the summary chat (left, when open) and nav.side (right, in RTL).
+  const m = { x: r.left, y: r.top, w: r.width, h: r.height, vw: window.innerWidth, sideW };
   if (navigate && S.viewer) send(Object.assign({ type: 'viewFile', path: S.viewer.path }, m));
   else if (navigate) { send(Object.assign({ type: 'showSite', site: S.site, url: S.siteUrl || '' }, m)); S.siteUrl = null; }
   else send(Object.assign({ type: 'placeSite' }, m));
@@ -1491,6 +1574,7 @@ $('siteDownloads').onclick = () => send({type:'siteAction',action:'downloads'});
 $('siteExternal').onclick = () => send({ type: 'siteAction', action: 'external' });
 $('sitePrint').onclick = () => send({ type: 'siteAction', action: 'savepdf' });
 $('siteCopy').onclick = () => send({ type: 'siteAction', action: 'copylink' });
+$('refreshSummaries').onclick = () => { if (confirm('לבנות מחדש את כל הסיכומים הישנים בפורמט החדש? זה משתמש ב-AI, אחד אחרי השני, ויכול לקחת זמן.')) send({ type: 'refreshSummaries' }); };
 if ($('checkUpdate')) $('checkUpdate').onclick = () => send({ type: 'checkUpdate' });
 $('portalUpdate').onclick = () => { send({ type: 'importTimetable', fromFolder: true }); toast('קורא את הקבצים מתיקיית מערכת שעות...'); };
 function syncDownloadTarget() { send({ type: 'setDownloadTarget', course: $('dlCourse').value, folder: $('dlFolder').value }); $('dlFolder').disabled = !$('dlCourse').value; }
@@ -1595,10 +1679,22 @@ function renderSettings() {
   $('wizNot').textContent = st.notabilityDir || 'אם Notability מגבה את המחברות לתיקייה במחשב, בחר אותה כאן';
   $('wizNotRow').classList.toggle('ok', !!st.notabilityDir);
   $('optFallback').checked = st.autoFallback !== false; $('optPdfDark').checked = !!st.pdfDark;
+  $('refreshSummariesRow').hidden = !st.outdatedSummaries;
+  $('refreshSummariesText').textContent = st.outdatedSummaries ? (st.outdatedSummaries === 1 ? 'סיכום אחד נבנה בפורמט הקודם.' : st.outdatedSummaries + ' סיכומים נבנו בפורמט הקודם.') + ' בפורמט החדש כל שאלה בשיעורי הבית כוללת את מה שצריך כדי לפתור אותה, ואפשר להתחיל ישר ממנה. הבנייה מחדש משתמשת ב-AI (אחד אחרי השני) והסיכום הישן נשמר אם היא נכשלת.' : '';
   ['optSync','optRec','optUpdate'].forEach(id => { $(id).checked = false; $(id).closest('.setting').hidden = true; });
   $('versionText').textContent = `SumIT ${st.version || ''} · מתעדכנת לבד כשיוצאת גרסה חדשה`;
   applyTheme(st.theme || 'system');
+  if ($('discordUrl') && document.activeElement !== $('discordUrl')) $('discordUrl').value = st.discordUrl || 'https://discord.gg/f8Duw6RBMr';
 }
+if ($('discordUrl')) $('discordUrl').onchange = () => send({ type: 'setOption', name: 'discordUrl', value: $('discordUrl').value });
+if ($('openDiscordBtn')) $('openDiscordBtn').onclick = () => {
+  const url = ($('discordUrl')?.value || S.settings?.discordUrl || 'https://discord.gg/f8Duw6RBMr').trim();
+  send({ type: 'openLink', url });
+};
+if ($('navDiscord')) $('navDiscord').onclick = () => {
+  const url = (S.settings?.discordUrl || $('discordUrl')?.value || 'https://discord.gg/f8Duw6RBMr').trim();
+  send({ type: 'openLink', url });
+};
 $('changeStudy').onclick = $('wizStudyBtn').onclick = () => send({ type: 'chooseFolder', which: 'study' });
 $('openStudy').onclick = () => send({ type: 'openFolder', which: 'study' });
 $('changeNotability').onclick = $('wizNotBtn').onclick = () => send({ type: 'chooseFolder', which: 'notability' });
@@ -1877,8 +1973,9 @@ function onMessage(m) {
       if (num) toast(`העתקת קישור להקלטת Zoom`, { action: `הוסף לשיעור ${num}`, ms: 9000, onAction: () => send({ type: 'addRecording', course: S.course.name, num, url: m.url }) });
       break;
     }
-    case 'summaryChatProvider': $('summaryChatStatus').textContent=m.text; break;
-    case 'summarySelectionReady': case 'summaryChatResult': summaryChatEvent(m); break;
+    case 'summaryChatProvider': $('summaryChatStatus').textContent = m.text; break;
+    case 'summarySelectionReady': case 'summaryChatChunk': case 'summaryChatResult': summaryChatEvent(m); break;
+    case 'flashcardsProgress': case 'flashcardsResult': flashcardsEvent(m); break;
     case 'summaryShareProgress': case 'summaryShareResult': summaryShareStatus(m); break;
     case 'toast': toast(m.text, { error: m.error }); break;
     case 'updateCheck': { const t = document.getElementById('updateCheckText'); if (t) t.textContent = ' · ' + m.text; break; }

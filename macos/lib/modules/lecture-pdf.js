@@ -226,6 +226,7 @@ module.exports = {
       this.SendSectionLocal(course, num);
       if (pageReady && (!result || !result.Error)) {
         writeText(cache, fingerprint);
+        if (this.MarkSummaryFormat) this.MarkSummaryFormat(course, num);
         this.Notify('הסיכום של הרצאה ' + num + ' מוכן', course);
         if (open) {
           this.Send({ type: 'summaryReady', course, num, page: this.StudyPagePath(course, num), pdf });

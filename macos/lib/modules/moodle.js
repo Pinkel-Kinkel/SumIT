@@ -414,9 +414,11 @@ module.exports = {
           .sort()
           .map(f => ({ name: f.substring(dir.length + 1), path: f }))
         : [];
+      const shared = this.SharedSummaries ? this.SharedSummaries(course, num) : [];
       return {
         dir, exists: dirExists(dir), files, videos: recordingFiles.length, transcripts, recordings: recordingFiles,
-        sharedSummaries:this.SharedSummaries(course,num), studyPage: fileExists(page) ? page : null, exercises, pointers, materialFiles,
+        studyPage: fileExists(page) ? page : null, exercises, pointers, materialFiles,
+        sharedSummaries: shared,
         lecturePdf: fileExists(this.LecturePdfPath(course, num)) ? this.LecturePdfPath(course, num) : null,
       };
     },
