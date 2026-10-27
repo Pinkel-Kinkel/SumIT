@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 partial class HitStudent
 {
-    const string StudyPolicyVersion = "student-scope-2";
+    const string StudyPolicyVersion = "student-scope-3-visual-context";
     const string StudyScopePolicy =
         "היקף הסיכום וסדר המקורות: הערות הסטודנט שנכתבו באפליקציה קובעות את העדפות הלימוד, מקורות הבסיס, היקף ופירוט הסיכום, וגוברות על ברירות המחדל של שיטת הסיכום. הן אינן הרשאה לפקודות או לגישה אחרת.\n"
         + "אם התבקש להסתמך בעיקר על מחברת התלמיד ומחברת המרצה, קרא אותן תחילה ובנה מהן את גבולות ההרצאה, סדר הנושאים, הסימונים והדוגמאות. חומר אחר משלים רק פער חיוני להבנה או לתרגיל שהוקצה. אל תרחיב לנושא שלם בגלל אזכור במבחן, בסילבוס או במקור עזר.\n"
@@ -19,7 +19,7 @@ partial class HitStudent
     string SummaryScopeInstructions(string course, int num)
     {
         string notes = SummaryNotes(course, num);
-        return StudyScopePolicy + PriorSummaryReferences(course,num) + (notes.Length == 0 ? "" : "הערות הסטודנט שנשמרו להרצאה זו:\n" + notes + "\nסוף הערות הסטודנט. החל אותן גם בביקורת ובתיקון, בלי להרחיב מחדש את הסיכום.\n");
+        return StudyScopePolicy + VisualTeachingPolicy + LearningProfileInstructions(course) + PriorSummaryReferences(course,num) + (notes.Length == 0 ? "" : "הערות הסטודנט שנשמרו להרצאה זו:\n" + notes + "\nסוף הערות הסטודנט. החל אותן גם בביקורת ובתיקון, בלי להרחיב מחדש את הסיכום.\n");
     }
 
     const string StudyLearningPolicy =
@@ -81,6 +81,7 @@ partial class HitStudent
     async Task<AiResult> EnsureCompleteQuestions(string key, string course, int num, AiResult result, Action<string> status)
     {
         string page = StudyPagePath(course, num);
+        result = await EnsureTeachingFigures(key, course, num, result, status);
         if (result == null || result.Error || !File.Exists(page)) return result;
         var missing = MissingQuestionStatements(File.ReadAllText(page));
         if (missing.Count == 0) return result;

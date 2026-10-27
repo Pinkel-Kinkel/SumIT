@@ -17,6 +17,7 @@ async function addChatImage(blob,text='',thread=summaryThread()){
  const url=URL.createObjectURL(blob);try{const img=new Image();img.src=url;await img.decode();const scale=Math.min(1,1600/Math.max(img.width,img.height));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(img.width*scale));canvas.height=Math.max(1,Math.round(img.height*scale));canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);const image=canvas.toDataURL('image/png');if(image.length>2800000)throw new Error('התמונה כבדה מדי. נסה לחתוך לאזור הרלוונטי.');if(thread.attachments.length>=6)return;thread.attachments.push({id:crypto.randomUUID(),image,text});if(summaryThread()===thread)renderSummaryChat();}catch(e){toast(e.message||'לא ניתן לקרוא את התמונה');}finally{URL.revokeObjectURL(url);}
 }
 $('viewerChat').onclick=openSummaryChat;
+$('summaryLearningReset').onclick=()=>{if(S.viewer&&S.course)send({type:'resetLearningNeeds',course:S.course.name,path:S.viewer.path});};
 $('viewerSelect').onclick=()=>{if(S.viewer&&S.course)send({type:'selectSummary',course:S.course.name,path:S.viewer.path});};
 $('summaryChatClose').onclick=()=>{$('summaryChat').hidden=true;requestAnimationFrame(()=>placeSite(false));};
 $('summaryChatClearSelection').onclick=()=>{const t=summaryThread();if(t){t.attachments=[];renderSummaryChat();}};
