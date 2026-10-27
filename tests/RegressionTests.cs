@@ -34,6 +34,10 @@ partial class HitStudent
             check("the interactive page and the PDF have different names", SummaryHtmlName != SummaryPdfName);
             check("a lecture's subfolders are valid save destinations", app.SafeDownloadFolder(@"הרצאות\הרצאה 1\תרגילים") == Path.Combine(LectureFolderName(1), Exercises)
                 && app.SafeDownloadFolder(@"הרצאות\הרצאה 1\..") == SafeName(@"הרצאות\הרצאה 1\.."));
+            string priorPage=app.StudyPagePath("prior-fixture",1);Directory.CreateDirectory(Path.GetDirectoryName(priorPage));File.WriteAllText(priorPage,"<section id=\"prior-formula\">prior</section>");
+            string references=app.PriorSummaryReferences("prior-fixture",2);
+            check("prior lecture links include existing anchors",references.Contains("prior-formula")&&Uri.UnescapeDataString(references).Contains("הרצאה 1"));
+            check("first lecture has no prior-summary dependencies",app.PriorSummaryReferences("prior-fixture",1)=="");
             check("default courses folder is HIT\\קורסים", HitStudent.DefaultStudyRootForTest().EndsWith(@"HIT\קורסים"));
             check("nested download destination", app.SafeDownloadFolder(@"הרצאות\הרצאה 1") == LectureFolderName(1));
             check("download traversal is flattened", !app.SafeDownloadFolder(@"..\..\outside").Contains("\\"));
@@ -219,6 +223,12 @@ partial class HitStudent
             int before = requests.Count;
             r = Run(() => app.SummaryGemini(fullSummary, msgs, new byte[] { 1, 2, 3 }));
             check("summary Gemini ignores general provider order and receives complete context plus selected image", !r.Error && requests.Count == before + 1 && requests.Last().Contains("HIDDEN-END") && requests.Last().Contains("DIAGRAM") && requests.Last().Contains("inline_data") && !requests.Last().Contains("DROP-ME"));
+            r = Run(() => app.SummaryGemini(fullSummary, msgs, new byte[] {1}, new List<byte[]> {new byte[] {2},new byte[] {3}}));
+            check("all pasted images reach Gemini", !r.Error && System.Text.RegularExpressions.Regex.Matches(requests.Last(),"inline_data").Count==3);
+            r = Run(() => app.HelperCall("openai",new string('o',30),fullSummary,msgs,new byte[]{1},new List<byte[]>{new byte[]{2}}));
+            check("all pasted images reach ChatGPT",!r.Error && System.Text.RegularExpressions.Regex.Matches(requests.Last(),"image_url").Count==4);
+            check("empty course extraction is not treated as success", !CourseInfoHasContent(new Dictionary<string,object>{{"lecturer","someone"}}));
+            check("known course facts count",CourseInfoHasContent(new Dictionary<string,object>{{"lecturer","someone"},{"homeworkRequired",false}}));
             geminiStatus = 429; before = requests.Count;
             r = Run(() => app.SummaryGemini(fullSummary, msgs, null));
             check("summary quota falls back to connected ChatGPT with complete context", !r.Error && r.Provider == "openai" && requests.Count == before + 2 && requests.Last().Contains("HIDDEN-END"));

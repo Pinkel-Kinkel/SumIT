@@ -39,7 +39,7 @@ partial class HitStudent
 
     string HelperProvider() { return HelperOrder().FirstOrDefault(); }
 
-    async Task<HelperReply> HelperCall(string provider, string key, string system, List<Tuple<string, string>> messages, byte[] image = null)
+    async Task<HelperReply> HelperCall(string provider, string key, string system, List<Tuple<string, string>> messages, byte[] image = null, List<byte[]> extraImages = null)
     {
         var reply = new HelperReply { Provider = provider };
         try
@@ -77,6 +77,18 @@ partial class HitStudent
                 };
                 body = new Dictionary<string, object> { { "model", OpenAiModel }, { "messages", msgs }, { "temperature", 0.3 } };
                 req.Headers.Add("Authorization", "Bearer " + key);
+            }
+            if(extraImages!=null && extraImages.Count>0) {
+                var payload=(Dictionary<string,object>)body;
+                if(provider=="gemini") {
+                    var list=(List<object>)payload["contents"];var last=(Dictionary<string,object>)list[list.Count-1];
+                    var parts=((object[])last["parts"]).ToList();
+                    foreach(var png in extraImages)parts.Add(new { inline_data=new { mime_type="image/png",data=Convert.ToBase64String(png) } });last["parts"]=parts.ToArray();
+                } else {
+                    var list=(List<object>)payload["messages"];var last=(Dictionary<string,object>)list[list.Count-1];
+                    var parts=image==null?new List<object>{new {type="text",text=messages[messages.Count-1].Item2}}:((object[])last["content"]).ToList();
+                    foreach(var png in extraImages)parts.Add(new {type="image_url",image_url=new {url="data:image/png;base64,"+Convert.ToBase64String(png)}});last["content"]=parts.ToArray();
+                }
             }
             req.RequestUri = new Uri(url);
             req.Content = new StringContent(json.Serialize(body), Encoding.UTF8, "application/json");
@@ -269,8 +281,13 @@ for p in sys.argv[1:]:
         print('failed', p, e)
 ";
 
+    readonly Dictionary<string,string> extractedTextCache=new Dictionary<string,string>();
     async Task<string> ExtractTexts(IEnumerable<string> files)
     {
+        files=files.Where(File.Exists).ToList();
+        string cacheKey=string.Join("|",files.OrderBy(f=>f).Select(f=>{var info=new FileInfo(f);return f+":"+info.Length+":"+info.LastWriteTimeUtc.Ticks;}));
+        string cached;if(extractedTextCache.TryGetValue(cacheKey,out cached))return cached;
+        bool cacheable=true;
         var sb = new StringBuilder();
         var pdfs = new List<string>();
         foreach (string f in files)
@@ -280,6 +297,7 @@ for p in sys.argv[1:]:
             else if (ext == ".txt" || ext == ".md") sb.Append("=== ").Append(Path.GetFileName(f)).Append("\n").Append(ReadCapped(f, 30000)).Append("\n");
             else if (ext == ".html" || ext == ".htm") sb.Append("=== ").Append(Path.GetFileName(f)).Append("\n").Append(HtmlToText(ReadCapped(f, 300000))).Append("\n");
         }
+        cacheable=pdfs.Count==0;
         if (pdfs.Count > 0 && await EnsurePython(s => { }))
         {
             string script = Path.Combine(Path.GetTempPath(), "sumit-extract-" + Guid.NewGuid().ToString("N") + ".py");
@@ -289,13 +307,16 @@ for p in sys.argv[1:]:
                 var r = await Exec("py", "-3 -W ignore -I " + Q(script) + " " + string.Join(" ", pdfs.Select(Q)), null, 180000,
                     new Dictionary<string, string> { { "PYTHONIOENCODING", "utf-8" }, { "PYTHONUTF8", "1" } });
                 Diagnostic("extract-text","python",r.Item1==0?"success":"failed",r.Item1);
+                cacheable=r.Item1==0;
                 sb.Append(r.Item2);
             }
             finally { try { File.Delete(script); } catch { } }
         }
         if(pdfs.Count>0 && sb.Length==0)Diagnostic("extract-text","python","empty-or-unavailable");
         string all = sb.ToString();
-        return all.Length > 60000 ? all.Substring(0, 60000) : all;
+        string result=all.Length>60000?all.Substring(0,60000):all;
+        if(cacheable&&result.Length>0){if(extractedTextCache.Count>=8)extractedTextCache.Clear();extractedTextCache[cacheKey]=result;}
+        return result;
     }
 
     // Pulls the first JSON object out of an AI answer (which may wrap it in text or a code fence).
@@ -311,7 +332,7 @@ for p in sys.argv[1:]:
     {
         if (HelperOrder().Count == 0) return false;
         var files = new List<string>();
-        foreach (string d in new[] { Path.Combine(CourseDir(course), CourseInfoFolder) })
+        foreach (string d in new[] { Path.Combine(CourseDir(course), CourseInfoFolder), Path.Combine(CourseDir(course), General) })
             if (Directory.Exists(d)) files.AddRange(Directory.GetFiles(d, "*", SearchOption.AllDirectories));
         string text = await ExtractTexts(files);
         if (text.Trim().Length < 200) return false;
@@ -321,7 +342,7 @@ for p in sys.argv[1:]:
         var r = await HelperAsk(system, new List<Tuple<string, string>> { Tuple.Create("user", "הקורס: " + course + "\n\n" + text) });
         if (r == null || r.Error) return false;
         var info = JsonFromAnswer(r.Text, json);
-        if (info == null) return false;
+        if (info == null || !CourseInfoHasContent(info)) return false;
         try { if (File.Exists(Path.Combine(CourseDir(course), CourseJson))) File.SetAttributes(Path.Combine(CourseDir(course), CourseJson), FileAttributes.Normal); } catch { }   // a hidden file cannot be written over
         File.WriteAllText(Path.Combine(CourseDir(course), CourseJson), json.Serialize(info), new UTF8Encoding(false));
         try { File.SetAttributes(Path.Combine(CourseDir(course), CourseJson), FileAttributes.Hidden); } catch { }

@@ -15,3 +15,5 @@ function showSummaryImport(course,num){
  dialog.querySelector('[data-cloud]').onclick=()=>{send({type:'cloudSummaryImport',course,num});dialog.close();openSite('onedrive');toast('בחר ZIP ב-OneDrive ולחץ הורדה. הסיכום יתווסף להרצאה '+num,{ms:20000,action:'בטל ייבוא',onAction:()=>send({type:'cancelCloudImport'})});};
  dialog.querySelector('[data-close]').onclick=()=>dialog.close();dialog.onkeydown=e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='v'){e.preventDefault();choose({clipboard:true});}};dialog.showModal();
 }
+
+$('sendDeveloperLogs').onclick=()=>send({type:'sendDeveloperLogs'});

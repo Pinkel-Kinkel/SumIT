@@ -293,7 +293,6 @@ partial class HitStudent
             // 1. A helper reads the text of the saved pages.
             if (HelperOrder().Count > 0)
             {
-                await EnsurePython(s => { });
                 string text = await ExtractTexts(TimetableFiles().Where(f => !f.EndsWith(".png", StringComparison.OrdinalIgnoreCase) && !f.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) && !f.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)));
                 if (text.Trim().Length > 200 && await HelperReadSchedule(Trunc(text, 90000)))
                 {
@@ -444,7 +443,13 @@ partial class HitStudent
         }
     }
 
+    Task<bool> pythonPreparation;
     async Task<bool> EnsurePython(Action<string> status)
+    {
+        if(pythonPreparation==null || pythonPreparation.IsFaulted || (pythonPreparation.IsCompleted && !pythonPreparation.Result))pythonPreparation=PreparePython(status);
+        return await pythonPreparation;
+    }
+    async Task<bool> PreparePython(Action<string> status)
     {
         if ((await Exec("py", "-3 -c \"import fitz\"")).Item1 == 0) return true;
         if ((await Exec("py", "-3 --version")).Item1 != 0)

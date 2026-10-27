@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'">
 <title>SumIT</title>
 <link rel="icon" type="image/png" href="images/icon.png">
 <link rel="stylesheet" href="style.css">
@@ -228,12 +228,12 @@
       </div>
       <div id="summaryWorkspace">
       <div id="siteHost"><div class="loading"><span class="spinner lg"></span></div></div>
-      <aside id="summaryChat" hidden dir="rtl" aria-label="שיחה עם Gemini על הסיכום">
-        <div class="row"><b class="grow">שאל את Gemini</b><small id="summaryChatStatus" role="status"></small><button id="summaryChatExpand" class="ghost small" aria-pressed="false">הגדל</button><button id="summaryChatClose" class="ghost small">סגור צ׳אט</button></div>
-        <label class="summary-chat-width">רוחב הצ׳אט <input id="summaryChatWidth" type="range" min="300" max="680" step="20" value="380" aria-label="רוחב הצ׳אט"></label>
-        <div id="summaryChatSelection" hidden><img id="summaryChatImage" alt="האזור שסימנת בסיכום"><button id="summaryChatClearSelection" class="ghost small">הסר סימון</button></div>
+      <aside id="summaryChat" hidden dir="rtl" aria-label="שיחה על הסיכום">
+        <div class="row"><b class="grow">שיחה על הסיכום</b><small id="summaryChatStatus" role="status"></small><button id="summaryChatExpand" class="ghost small" aria-pressed="false">הגדל</button><button id="summaryChatClose" class="ghost small">סגור צ׳אט</button></div>
+        <div id="summaryChatResize" role="separator" tabindex="0" aria-orientation="vertical" aria-label="גרור לשינוי רוחב הצ׳אט" aria-valuemin="320" aria-valuemax="800"></div>
+        <div id="summaryChatSelection" hidden><div id="summaryChatAttachments"></div><button id="summaryChatClearSelection" class="ghost small">נקה תמונות</button></div>
         <div id="summaryChatMessages" aria-live="polite" role="log"></div>
-        <div class="row"><textarea id="summaryChatText" maxlength="8000" rows="2" placeholder="מה תרצה להבין באזור שסימנת?" aria-label="השאלה שלך"></textarea><button id="summaryChatSend" class="primary">שלח ל־Gemini</button></div>
+        <div class="chat-compose"><button id="summaryChatAttach" class="ghost small">צרף תמונות</button><input id="summaryChatFiles" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden><textarea id="summaryChatText" maxlength="8000" rows="2" placeholder="כתוב שאלה, או הדבק תמונות כאן…" aria-label="השאלה שלך"></textarea><button id="summaryChatSend" class="primary">שלח</button></div>
       </aside>
       </div>
     </section>
@@ -241,7 +241,7 @@
     <!-- Settings -->
     <section class="view" id="view-settings">
       <div class="page" style="max-width:880px">
-        <div class="head"><button id="exportDiagnostics">ייצוא דוח תקלות (Logs)</button><div class="grow"><h1>הגדרות</h1><p>החיבורים, התיקיות והמחברת.</p></div></div>
+        <div class="head"><button id="sendDeveloperLogs" class="primary">שלח דוח למפתח</button><button id="exportDiagnostics">ייצוא דוח תקלות (Logs)</button><div class="grow"><h1>הגדרות</h1><p>החיבורים, התיקיות והמחברת.</p></div></div>
         <section class="card pad-lg">
           <div class="card-head"><h2>המנוע החכם</h2><span class="chip" id="aiChip"></span></div>
           <div class="provider-cards" id="providers"></div>
@@ -284,11 +284,11 @@
             <div class="grow"><b>עדכונים אוטומטיים</b><small id="versionText"></small><small id="updateCheckText" class="muted"></small></div><button class="soft small" id="checkUpdate">בדוק עדכונים</button>
             <label class="toggle"><input type="checkbox" id="optUpdate"><span class="switch"></span></label>
           </div>
-          <div class="setting" id="refreshSummariesRow" hidden>
+          <div class="setting" id="refreshSummariesRow" hidden style="display:none">
             <div class="grow"><b>סיכומים בפורמט הישן</b><small id="refreshSummariesText"></small></div>
             <button class="primary small" id="refreshSummaries">בנה אותם מחדש</button>
           </div>
-          <div class="setting">
+          <div class="setting" hidden style="display:none">
             <div class="grow"><b>קובץ ה-PDF בצבעים כהים</b><small>כבוי: ה-PDF בהיר, נוח להדפסה ולקריאה. הדף האינטראקטיבי באפליקציה תמיד לפי מצב הצבעים שבחרת.</small></div>
             <label class="toggle"><input type="checkbox" id="optPdfDark"><span class="switch"></span></label>
           </div>

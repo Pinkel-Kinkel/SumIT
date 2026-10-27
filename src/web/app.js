@@ -1180,7 +1180,7 @@ function updateSetupProgress(course) {
 function renderInfo() {
   const p = $('pane-info'); p.innerHTML = '';
   const L = S.local || {};
-  const info = L.info;
+  const info = L.info || (L.infoText ? {} : null);
   const busy = S.infoBusy;
   if (!info) {
     p.append(h(`<div class="empty">${ART.empty().replace('<svg', '<svg class="art"')}<b>עוד אין מידע על הקורס</b>
@@ -1192,6 +1192,11 @@ function renderInfo() {
     $('addSyl').onclick = () => send({ type: 'addFiles', course: S.course.name, folder: 'מידע על הקורס' });
     return;
   }
+  if(L.infoText)p.append(h(`<details class="card" ${!L.info?"open":""} style="margin-bottom:14px"><summary>מסמך המידע המלא שנשמר בקורס</summary><div>${md(L.infoText)}</div></details>`));
+  const assistants=Array.isArray(info.assistants)?info.assistants:[];
+  if(assistants.length)p.append(h(`<div class="card"><h2>מתרגלים</h2><p>${esc(assistants.map(a=>typeof a==='string'?a:a.name||'').filter(Boolean).join(' · '))}</p></div>`));
+  const known=Object.entries(info).some(([k,v])=>k!=='lecturer'&&(typeof v==='boolean'||typeof v==='string'&&v.trim()||Array.isArray(v)&&v.length));
+  if(!known)p.append(h('<div class="card"><b>המידע שחולץ חלקי</b><p>לא נמצאו פרטים מספיקים במקורות שנקראו. אפשר להוסיף סילבוס מלא וללחוץ נתח מחדש.</p></div>'));
   const hw = info.homeworkRequired === true ? ['bad', 'חובה'] : info.homeworkRequired === false ? ['ok', 'לא חובה'] : ['', 'לא צוין'];
   const colors = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#0ea5e9', '#8b5cf6', '#ef4444'];
   const grading = (info.grading || []).filter(g => g && g.component);
@@ -1208,8 +1213,8 @@ function renderInfo() {
       <div class="legend">${grading.map((g, i) => `<div><i style="background:${colors[i % colors.length]}"></i><span dir="auto">${esc(g.component)}</span><b>${esc(g.weight)}%</b></div>`).join('')}</div></div>`);
     wrap.append(c);
   }
-  const dates = S.sections.filter(s => s.due).map(s => ({date:s.due,what:'הגשת שיעורי בית · הרצאה ' + s.num})).concat((S.timetable && S.timetable.exams || []).filter(e => e.course && S.course.name.includes(e.course)).map(e => ({date:e.date,what:'מבחן · מועד ' + (e.moed || '')})));
-  if (dates.length) wrap.append(h(`<div class="card" style="margin-top:14px;--i:5"><h2>תאריכים מהמערכת ומההרצאות שהגדרת</h2><div class="dates-list" style="margin-top:8px">${dates.map(d => `<div><b class="ltr">${esc(d.date || '')}</b><span dir="auto">${esc(d.what)}</span></div>`).join('')}</div></div>`));
+  const dates = (Array.isArray(info.importantDates)?info.importantDates:[]).filter(d=>d&&d.date&&d.what).concat(S.sections.filter(s => s.due).map(s => ({date:s.due,what:'הגשת שיעורי בית · הרצאה ' + s.num})).concat((S.timetable && S.timetable.exams || []).filter(e => e.course && S.course.name.includes(e.course)).map(e => ({date:e.date,what:'מבחן · מועד ' + (e.moed || '')}))));
+  if (dates.length) wrap.append(h(`<div class="card" style="margin-top:14px;--i:5"><h2>תאריכים מהסילבוס, מהמערכת ומההרצאות</h2><div class="dates-list" style="margin-top:8px">${dates.map(d => `<div><b class="ltr">${esc(d.date || '')}</b><span dir="auto">${esc(d.what)}</span></div>`).join('')}</div></div>`));
   const tips = (info.tips || []).filter(Boolean);
   if (tips.length) wrap.append(h(`<div class="card" style="margin-top:14px;--i:6"><h2>טיפים לקורס</h2><ul class="tips">${tips.map(t => `<li dir="auto">${esc(t)}</li>`).join('')}</ul></div>`));
   const row = h('<div class="row wrap" style="margin-top:14px"></div>');
@@ -1864,7 +1869,7 @@ function onMessage(m) {
       break;
     }
     case 'academicCalendar': S.academic = m.data; if (S.view === 'course') renderLectures(); break;
-    case 'siteNav': { const onPortal = /webrashim\.hit\.ac\.il/i.test(m.url || ''); if (document.getElementById('portalHint').hidden === onPortal) { $('portalHint').hidden = !onPortal; requestAnimationFrame(() => placeSite(true)); } } $('siteUrl').textContent = m.url || ''; $('siteBack').disabled = !m.canBack; $('siteForward').disabled = !m.canForward; break;
+    case 'siteNav': followSummaryNavigation(m.url); { const onPortal = /webrashim\.hit\.ac\.il/i.test(m.url || ''); if (document.getElementById('portalHint').hidden === onPortal) { $('portalHint').hidden = !onPortal; requestAnimationFrame(() => placeSite(true)); } } $('siteUrl').textContent = m.url || ''; $('siteBack').disabled = !m.canBack; $('siteForward').disabled = !m.canForward; break;
     case 'timetable': S.timetable = m.data; renderTimetable(); break;
     case 'prepStatus':
       S.prep = m.busy ? m : null; renderBanners();

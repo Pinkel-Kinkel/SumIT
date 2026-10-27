@@ -916,3 +916,11 @@ html[data-theme=dark] .card { border-color: #274a82; }
 }
 
 .app.nav-collapsed nav.side{width:48px;min-width:48px;padding:12px 4px}.app.nav-collapsed nav.side>:not(#collapseSidebar){display:none!important}#collapseSidebar{align-self:flex-start;flex:none}
+
+/* Quiet side conversation; resize on the divider rather than a settings slider. */
+#summaryChat{position:relative;padding:18px;gap:14px;background:var(--surface);flex-basis:min(var(--summary-chat-width,400px),65%);width:min(var(--summary-chat-width,400px),65%)}
+#summaryChatResize{position:absolute;right:-5px;top:0;bottom:0;width:10px;cursor:col-resize;z-index:5;touch-action:none}#summaryChatResize:hover,#summaryChatResize:focus-visible{background:#709cff55;outline:none}
+#summaryChatMessages{padding:4px 2px;scroll-behavior:smooth}.summary-chat-empty{padding:32px 16px;text-align:center;color:var(--muted);line-height:1.8}.summary-chat-empty b{color:var(--text);font-size:18px}
+.summary-chat-message{padding:14px 16px;line-height:1.8;margin:0 0 16px;background:transparent;border:0}.summary-chat-message>b{display:block;color:var(--muted);font-size:12px;margin-bottom:6px}.summary-chat-message.user{background:var(--surface-2);border:1px solid var(--line);margin-inline-start:24px}.summary-chat-message p{margin:5px 0}
+.chat-compose{display:flex;flex-wrap:wrap;gap:8px;padding:10px;border:1px solid var(--line);border-radius:14px;background:var(--surface-2)}#summaryChatText{order:-1;flex:1 0 100%;min-height:76px;border:0;background:transparent;resize:none;padding:8px}#summaryChatSend{margin-inline-start:auto}#summaryChatSelection{align-items:flex-start;flex-direction:column;gap:4px}#summaryChatAttachments{display:flex;gap:8px;flex-wrap:wrap}.chat-attachment{position:relative}.chat-attachment img{width:78px;height:66px;object-fit:contain;background:#fff;border-radius:8px}.chat-attachment button{position:absolute;top:-6px;left:-6px;background:var(--surface);padding:0 6px}.chat-attachment span{position:absolute;bottom:2px;right:3px;background:#122847;color:#fff;border-radius:3px;padding:0 4px;font-size:10px}
+@media(max-width:760px){#summaryChat{width:100%;flex-basis:48%;padding:10px}#summaryChatResize{display:none}}

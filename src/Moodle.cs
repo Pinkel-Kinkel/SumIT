@@ -449,6 +449,7 @@ return out;";
         return new
         {
             dir = dir, exists = Directory.Exists(dir), exams = CountFiles(Path.Combine(dir, Exams)), infoFiles = CountFiles(Path.Combine(dir, CourseInfoFolder)),
+            infoText = File.Exists(Path.Combine(dir, CourseInfoFolder + ".md")) ? ReadCapped(Path.Combine(dir, CourseInfoFolder + ".md"),60000) : null,
             notes = CountFiles(Path.Combine(dir, Notebook)), cs24 = CountFiles(Path.Combine(dir, Cs24Folder)), studyPages = pageCount, info = courseInfo,
             lecturePdfs = pdfCount,
             examPrep = File.Exists(prep) ? prep : null, lecturerProfile = File.Exists(profile) ? profile : null,

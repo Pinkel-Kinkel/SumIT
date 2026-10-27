@@ -101,7 +101,7 @@ partial class HitStudent
     }
 
     // One question, through the subscription.
-    async Task<HelperReply> HelperCallCli(string provider, string system, List<Tuple<string, string>> messages, byte[] image = null)
+    async Task<HelperReply> HelperCallCli(string provider, string system, List<Tuple<string, string>> messages, byte[] image = null, List<byte[]> extraImages = null, int timeoutMs = 300000)
     {
         var reply = new HelperReply { Provider = provider };
         string dir = Path.Combine(Path.GetTempPath(), "SumIT-brain-" + Guid.NewGuid().ToString("N"));
@@ -109,6 +109,9 @@ partial class HitStudent
         try
         {
             string prompt = CliPrompt(system, messages);
+            var extraPaths=new List<string>();
+            if(extraImages!=null)for(int i=0;i<extraImages.Count;i++){string p=Path.Combine(dir,"attachment-"+(i+2)+".png");File.WriteAllBytes(p,extraImages[i]);extraPaths.Add(p);}
+            if(extraPaths.Count>0)prompt=prompt.Replace("אל תשתמש בכלים ואל תקרא או תכתוב קבצים.","מותר לקרוא את material.txt ואת קובצי PNG בתיקייה בלבד; אל תשנה קבצים.")+"\nAdditional student images, in numbered order: "+string.Join(", ",extraPaths.Select(Path.GetFileName))+". Read all attached images.";
             Tuple<int, string, string> r;
             string text = "";
             if (provider == "gemini")
@@ -122,7 +125,7 @@ partial class HitStudent
                 }
                 File.WriteAllText(Path.Combine(dir, "material.txt"), prompt, new UTF8Encoding(false));
                 string exe = FindAgy();
-                r = await RunCli(exe, "-p " + Q("Read the file material.txt in the current folder. It holds instructions, background material and a conversation. Answer the last student message exactly as the instructions say, in the language they ask for. Do not run commands, do not change files, and reply with the answer only.") + " --mode plan", null, dir, 300000);
+                r = await RunCli(exe, "-p " + Q("Read the file material.txt in the current folder. It holds instructions, background material and a conversation. Answer the last student message exactly as the instructions say, in the language they ask for. Do not run commands, do not change files, and reply with the answer only.") + " --mode plan", null, dir, timeoutMs);
                 text = r.Item2.Trim();
                 if (r.Item3.IndexOf("Authentication required", StringComparison.OrdinalIgnoreCase) >= 0 || r.Item3.IndexOf("authentication failed", StringComparison.OrdinalIgnoreCase) >= 0)
                 { settings["agyOk"] = false; SaveSettings(); reply.Error = true; reply.Text = "ההתחברות ל-Google פגה. התחבר שוב בהגדרות"; return reply; }
@@ -132,7 +135,7 @@ partial class HitStudent
                 string exe = FindCodex();
                 if(image!=null)File.WriteAllBytes(Path.Combine(dir,"selection.png"),image);
                 string answer = Path.Combine(dir, "answer.txt");
-                r = await RunCli(exe, "exec "+(image!=null?"--image "+Q(Path.Combine(dir,"selection.png"))+" ":"")+"--ignore-user-config --skip-git-repo-check -s read-only --ephemeral -o " + Q(answer) + " -", prompt, dir, 240000);
+                r = await RunCli(exe, "exec "+string.Join(" ",extraPaths.Select(p=>"--image "+Q(p)))+" "+(image!=null?"--image "+Q(Path.Combine(dir,"selection.png"))+" ":"")+"--ignore-user-config --skip-git-repo-check -s read-only --ephemeral -o " + Q(answer) + " -", prompt, dir, Math.Min(timeoutMs,240000));
                 text = File.Exists(answer) ? File.ReadAllText(answer, Encoding.UTF8).Trim() : "";
             }
             if (r.Item1 != 0 || text.Length == 0)
