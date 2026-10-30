@@ -169,6 +169,10 @@ powershell -ExecutionPolicy Bypass -File build.ps1
 קיימת גם גרסת macOS קהילתית שפותחה על ידי ItayOssi: [קוד המק והוראות הבנייה](https://github.com/ItayOssi/SumIT/tree/feat/macos-port-and-ai-fixes/macos).
 זו גרסת Electron נפרדת; קובץ SumIT.zip של Windows אינו מתקין למק. בנייה והרצה של גרסת המק דורשות macOS, ולא אומתו על מחשב Windows.
 
+### קריאת הסיכומים בטלפון ובטאבלט
+
+אפשר לקרוא את הסיכומים האינטראקטיביים גם באנדרואיד, ב-iPad וב-iPhone, בלי להתקין כלום מחנות האפליקציות: [SumIT Reader](https://pinkel-kinkel.github.io/SumIT-Reader/) ([הקוד](https://github.com/Pinkel-Kinkel/SumIT-Reader)). שומרים סיכום ל-OneDrive בעזרת **שיתוף** בהרצאה, ובוחרים אותו בקורא. הקורא רק מציג סיכומים; יצירת סיכומים נשארת ב-SumIT במחשב.
+
 ### תמיכה ושיתוף סיכומים
 
 - בהגדרות: **ייצוא דוח תקלות (Logs)**. הדוח מכיל גרסה, מצב חיבורים וקודי תקלות טכניים; ללא מפתחות, שיחות, חומר הקורס או נתוני הדפדפן. שולחים אותו לתמיכה באופן ידני.
