@@ -19,7 +19,7 @@ partial class HitStudent
     string SummaryScopeInstructions(string course, int num)
     {
         string notes = SummaryNotes(course, num);
-        return StudyScopePolicy + VisualTeachingPolicy + LearningProfileInstructions(course) + PriorSummaryReferences(course,num) + (notes.Length == 0 ? "" : "הערות הסטודנט שנשמרו להרצאה זו:\n" + notes + "\nסוף הערות הסטודנט. החל אותן גם בביקורת ובתיקון, בלי להרחיב מחדש את הסיכום.\n");
+        return StudyScopePolicy + VisualTeachingPolicy + LearningProfileInstructions(course,num) + PriorSummaryReferences(course,num) + (notes.Length == 0 ? "" : "הערות הסטודנט שנשמרו להרצאה זו:\n" + notes + "\nסוף הערות הסטודנט. החל אותן גם בביקורת ובתיקון, בלי להרחיב מחדש את הסיכום.\n");
     }
 
     const string StudyLearningPolicy =
