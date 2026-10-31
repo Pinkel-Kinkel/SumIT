@@ -110,7 +110,8 @@ partial class HitStudent
                 foreach (string en in new[] { "2023/exam a.pdf", "2023/solution a.pdf", "../evil.exe", "run.bat" }) { var ze = za.CreateEntry(en); using (var w = new StreamWriter(ze.Open())) w.Write("x"); }
             }
             int unpacked = app.UnpackZip(zpath, zdir);
-            check("zip opened safely and original archive is preserved", unpacked == 2 && File.Exists(Path.Combine(zdir, "2023_exam a.pdf")) && File.Exists(Path.Combine(zdir, "2023_solution a.pdf")) && File.Exists(zpath) && !File.Exists(Path.Combine(zdir, "evil.exe")) && !File.Exists(Path.Combine(zdir, "run.bat")));            RunHelperTests(app, root, check);
+            check("zip opened safely and original archive is preserved", unpacked == 2 && File.Exists(Path.Combine(zdir, "2023_exam a.pdf")) && File.Exists(Path.Combine(zdir, "2023_solution a.pdf")) && File.Exists(zpath) && !File.Exists(Path.Combine(zdir, "evil.exe")) && !File.Exists(Path.Combine(zdir, "run.bat")));            check("the summary prompt teaches from zero: context first, every example finished, no side facts", app.SummaryScopeInstructions("learning-fixture", 2).Contains("תקן ההסבר") && app.SummaryScopeInstructions("learning-fixture", 2).Contains("אל תפתח סעיף בנוסחה") && app.SummaryScopeInstructions("learning-fixture", 2).Contains("עובדות מעניינות"));
+            RunHelperTests(app, root, check);
             RunBrainTests(app, root, check);
             RunLifecycleTests(app, root, check);
             Console.WriteLine("Offline regression checks complete. Fixtures: " + root);

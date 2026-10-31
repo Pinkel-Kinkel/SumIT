@@ -206,13 +206,13 @@
     notyet.forEach(function (e) { var n = deferredNumbers(e); for (var k in n) later[k] = true; });
     var items = Array.prototype.slice.call(page.querySelectorAll('details.q')), groups = {}, any = false;
     items.forEach(function (d) {
-      var t = (d.querySelector('summary') || d).textContent || '', m = /שאלה\s*(\d+(?:\.\d+)*)/.exec(t);
-      if (!m) return;
+      var t = (d.querySelector('summary') || d).textContent || '', m = /שאלה\s*(\d+(?:\.\d+)*)/.exec(t), named = d.getAttribute('data-group');
+      if (!m && !named) return;
       any = true;
-      var n = m[1], gr = groups[n];
+      var n = named || m[1], gr = groups[n];
       if (!gr) {
         gr = document.createElement('section'); gr.className = 'qgroup'; gr.dataset.question = n;
-        var h = document.createElement('h3'); h.className = 'qghead'; h.textContent = 'שאלה ' + n;
+        var h = document.createElement('h3'); h.className = 'qghead'; h.textContent = named || ('שאלה ' + n);
 
         gr.appendChild(h); d.parentNode.insertBefore(gr, d); groups[n] = gr;
       }

@@ -132,7 +132,7 @@ partial class HitStudent
                   + "צור גם את קבצי ה-PDF עם המפנים ב-\"" + folder + "/" + Exercises + "/" + PointersFolder + "\".\n"
                 : "ג. אין עדיין שיעורי בית להרצאה הזו - במקום החלק \"שימוש בתרגילים\" תן 2-3 שאלות תרגול בסגנון של המרצה (מהמבחנים הקודמים, אם יש).\n")
             + "בלי אימוג'ים ובלי סמלים דקורטיביים בכל הדף (לא בכותרות, לא בתיבות ולא בטקסט): רק טקסט, כותרות ונוסחאות. השתמש בעיצוב ובצבע כדי להבליט, לא בציורים.\n"
-            + "כתוב תמציתי: בלי הערות מנהליות, חזרות, הסברים על איך נבנה הסיכום או ציטוטים מיותרים. כל שורה צריכה לעזור ללמוד. את שם המרצה ופרטי הקורס אפשר להזכיר פעם אחת בלבד.\n"
+            + "כתוב באריכות שנחוצה להבנה: מפורט ומוסבר יותר מדי עדיף על דחוס. בלי הערות מנהליות, חזרות על אותו הסבר, הסברים על איך נבנה הסיכום או ציטוטים מיותרים. את שם המרצה ופרטי הקורס אפשר להזכיר פעם אחת בלבד.\n"
             + "עברית, אנגלית, מספרים ונוסחאות מופיעים יחד בדף: כל נוסחה ב-KaTeX, וטקסט באנגלית בתוך משפט בעברית נשאר קריא ובסדר הנכון.\n"
             + "אם קיים לצד דף הסיכום קובץ עם סיומת .interrupted, זו טיוטה שנעצרה: אפשר להיעזר בחלקים התקינים שלה אך יש להשלים ולבדוק לפני שמירה.\n"
             + "לפני שמירה בדוק עקביות: מספרי השאלות שנדחו בתיבת ההנחיות חייבים להתאים בדיוק לסעיפים שסומנו notyet. אל תסמן שאלה שנדרשה לביצוע כנדחית רק מפני שהוזכרה באותה תיבה. הוסף data-deferred-questions עם רשימת מספרים מופרדת בפסיקים לתיבת דחייה של שאלות שלמות; עבור סעיף בלבד סמן רק את ה-details המתאים.\n"
@@ -213,7 +213,7 @@ partial class HitStudent
             PrepareStudyPage(page);
             string html = File.ReadAllText(page, Encoding.UTF8);
             const string extra = "<style>@media print{details>summary .chev,button,input[type=checkbox],.no-print{display:none!important}"
-                + "details,.card,.fx{break-inside:avoid-page} h2{break-after:avoid} body{background:#fff}}</style>"
+                + ".fx,.exrow,.exgoal,.exresult,.warnbox,.callout,figure{break-inside:avoid-page} h2,h3,h4{break-after:avoid} body{background:#fff}}</style>"
                 + "<script>addEventListener('DOMContentLoaded',function(){document.querySelectorAll('details').forEach(function(d){d.open=true})})</script>";
             int head = html.IndexOf("</head>", StringComparison.OrdinalIgnoreCase);
             html = head >= 0 ? html.Insert(head, extra) : extra + html;

@@ -19,6 +19,18 @@ Keep the page proportional to what was actually taught, not to a fixed template 
 
 Before saving or revising, check each paragraph: does it explain this lecture, bridge a necessary prerequisite, or support an assigned current exercise? Remove it otherwise. Preserve these choices during review and question-text repairs. A source preference is not a factual contradiction: flag actual mistakes or missing information briefly, without inventing facts or expanding the whole topic.
 
+## Teaching standard (overrides every instruction to be brief)
+
+The student may never have attended the lecture and remembers little of earlier courses; the page is their only source. Teach from zero, like a patient private tutor:
+
+- Assume no prior knowledge. Define every concept the first time it appears, in plain words with a tiny example, even when it was taught before. A short reminder in place, not only a link.
+- Order by understanding, not by the slides: what are we trying to do and why, the idea in everyday words, the rule or formula with every symbol explained, a complete worked example, what the result means and why it works, then a common mistake and a short self-check. Never open a section with a formula.
+- Every worked example goes to the end. State the goal; on each line say what is done and why; finish with a sentence on what the result says about the original question. Never write an equation followed directly by its result; name even simple steps (expanding, cancelling, substituting).
+- Plain, everyday language and short sentences. Never pack several claims into one line separated by commas and colons. One idea per paragraph or line, with space between. Explain words such as "does not exist", "bounded", "tends to" before using them, and what they mean in practice.
+- No fun facts, side remarks or background in the middle of an explanation. Anything not essential goes in a final "extension" section, or is left out.
+- After each topic add a self-check question with a collapsed solution.
+- Long and clear beats short and dense, even if it is too much. Cut only repetition and unrelated material.
+
 ## 0. Always start from the course log
 
 The course folder holds a log file (e.g. `physics_claude.md`; template: `templates/course_log_template.md`).
