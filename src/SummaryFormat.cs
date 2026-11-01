@@ -8,7 +8,11 @@ using System.Linq;
 // Older summaries are still readable (and open on the homework page), and one button rebuilds them in the new format, one at a time.
 partial class HitStudent
 {
-    const int SummaryFormat = 2;
+    const int SummaryFormat = 3;   // 2: homework with what each question needs. 3: taught from zero (context first, every example finished)
+    internal bool FormatOutdated(string course, int num)
+    {
+        try { if (!File.Exists(StudyPagePath(course, num))) return false; string f = FormatFile(course, num); return (File.Exists(f) ? File.ReadAllText(f).Trim() : "") != SummaryFormat.ToString(); } catch { return false; }
+    }
     string FormatFile(string course, int num) { return Path.Combine(CourseDir(course), SumitDir, "format", num + ".txt"); }
 
     void MarkSummaryFormat(string course, int num)

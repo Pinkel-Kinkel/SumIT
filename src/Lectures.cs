@@ -119,7 +119,7 @@ partial class HitStudent
         return (rows ?? new ArrayList()).Cast<Dictionary<string, object>>()
             .OrderBy(x => Int(x, "num")).Select(x => (object)new {
                 num = Int(x, "num"), title = Str(x, "title"), date = Str(x, "date"),
-                summaryNotes = SummaryNotes(course, Int(x, "num")), due = Str(x, "due"), items = new object[0], local = LocalInfo(course, Int(x, "num")),
+                summaryNotes = SummaryNotes(course, Int(x, "num")), formatOutdated = FormatOutdated(course, Int(x, "num")), due = Str(x, "due"), items = new object[0], local = LocalInfo(course, Int(x, "num")),
                 // A summary that is being made keeps its progress when the student walks away and comes back.
                 running = summaryRunning.Contains(course + "|" + Int(x, "num")) || summaryQueued.Contains(course + "|" + Int(x, "num")),
                 progress = summaryProgress.ContainsKey(course + "|" + Int(x, "num")) ? summaryProgress[course + "|" + Int(x, "num")] : null

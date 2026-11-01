@@ -1091,6 +1091,7 @@ function fillLecture(el, s) {
     // The summary opens inside the app (with the chat next to it for questions); the PDF is a file in the lecture's folder.
     btn('book', 'פתח את הסיכום', 'primary', () => openViewer(L.studyPage || L.lecturePdf, `הרצאה ${s.num} · סיכום`, L.lecturePdf, s.num));
     if (L.lecturePdf) btn('file', 'פתח כ-PDF', 'soft', () => send({ type: 'openPath', path: L.lecturePdf }));
+    if (s.formatOutdated) btn('sparkles', 'שדרג לסיכום בפורמט החדש (הסבר מאפס)', 'primary', () => requestLectureSummary(course, s, true), s.busy);
     btn('sparkles', 'עדכן סיכום אם החומר השתנה', 'soft', () => requestLectureSummary(course, s), s.busy);
     // Another AI (ChatGPT / Gemini on the student's account) checks every solution in the summary and adds its notes at the end.
     if (helpersConnected()) btn('check', 'בדיקה שנייה עם AI נוסף', 'soft', () => send({ type: 'secondOpinion', course: course.name, num: s.num }), s.busy);
@@ -1582,7 +1583,7 @@ function renderSettings() {
   $('wizNotRow').classList.toggle('ok', !!st.notabilityDir);
   $('optFallback').checked = st.autoFallback !== false; $('optPdfDark').checked = !!st.pdfDark;
   $('refreshSummariesRow').hidden = !st.outdatedSummaries;
-  $('refreshSummariesText').textContent = st.outdatedSummaries ? (st.outdatedSummaries === 1 ? 'סיכום אחד נבנה בפורמט הקודם.' : st.outdatedSummaries + ' סיכומים נבנו בפורמט הקודם.') + ' בפורמט החדש כל שאלה בשיעורי הבית כוללת את מה שצריך כדי לפתור אותה, ואפשר להתחיל ישר ממנה. הבנייה מחדש משתמשת ב-AI (אחד אחרי השני) והסיכום הישן נשמר אם היא נכשלת.' : '';
+  $('refreshSummariesText').textContent = st.outdatedSummaries ? (st.outdatedSummaries === 1 ? 'סיכום אחד נבנה בפורמט הקודם.' : st.outdatedSummaries + ' סיכומים נבנו בפורמט הקודם.') + ' בפורמט החדש ההסבר מתחיל מאפס: הקשר לפני נוסחה, כל דוגמה מוסברת עד הסוף, וכל שאלה בשיעורי הבית כוללת את מה שצריך כדי לפתור אותה. הבנייה מחדש משתמשת ב-AI (אחד אחרי השני) והסיכום הישן נשמר אם היא נכשלת.' : '';
   ['optSync','optRec','optUpdate'].forEach(id => { $(id).checked = false; $(id).closest('.setting').hidden = true; });
   $('versionText').textContent = `SumIT ${st.version || ''} · מתעדכנת לבד כשיוצאת גרסה חדשה`;
   applyTheme(st.theme || 'system');
