@@ -15,7 +15,7 @@ using Microsoft.Web.WebView2.WinForms;
 
 partial class HitStudent : Form
 {
-    public const string Version = "1.0.22";
+    public const string Version = "1.0.23";
     const string Repo = "Pinkel-Kinkel/SumIT";
     // Updates are only accepted from these repositories (the project was renamed from hit-recordings).
     static readonly string[] RepoNames = { "Pinkel-Kinkel/SumIT" };
@@ -714,6 +714,33 @@ partial class HitStudent : Form
     bool updating, restartingForUpdate;
     DateTime lastUpdateCheck = DateTime.MinValue;
 
+    // GitHub's API allows only 60 requests an hour per address, and the check fails quietly when that is used up (several apps or PCs behind one
+    // address). The public "latest release" page has no such limit: its redirect names the newest tag, and the files have fixed addresses.
+    async Task<Dictionary<string, object>> LatestRelease(HttpClient http)
+    {
+        try
+        {
+            string body = await http.GetStringAsync("https://api.github.com/repos/" + Repo + "/releases/latest");
+            return json.Deserialize<Dictionary<string, object>>(body);
+        }
+        catch { }
+        using (var plain = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false }))
+        {
+            plain.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "SumIT/" + Version);
+            using (var resp = await plain.GetAsync("https://github.com/" + Repo + "/releases/latest"))
+            {
+                string location = resp.Headers.Location != null ? resp.Headers.Location.ToString() : "";
+                var m = System.Text.RegularExpressions.Regex.Match(location, @"/releases/tag/([^/?#]+)$");
+                if (!m.Success) throw new Exception("לא ניתן לקרוא את הגרסה האחרונה מ-GitHub");
+                string tagName = Uri.UnescapeDataString(m.Groups[1].Value), baseUrl = "https://github.com/" + Repo + "/releases/download/" + m.Groups[1].Value + "/";
+                var assets = new System.Collections.ArrayList();
+                foreach (string name in new[] { "SumIT.zip", "SumIT.zip.sha256" })
+                    assets.Add(new Dictionary<string, object> { { "name", name }, { "browser_download_url", baseUrl + name } });
+                return new Dictionary<string, object> { { "tag_name", tagName }, { "html_url", "https://github.com/" + Repo + "/releases/tag/" + m.Groups[1].Value }, { "assets", assets }, { "body", "" } };
+            }
+        }
+    }
+
     async void CheckForUpdate(bool manual = false)
     {
         lastUpdateCheck = DateTime.Now;
@@ -723,8 +750,7 @@ partial class HitStudent : Form
             using (var http = new HttpClient())
             {
                 http.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "SumIT/" + Version);
-                string body = await http.GetStringAsync("https://api.github.com/repos/" + Repo + "/releases/latest");
-                var rel = json.Deserialize<Dictionary<string, object>>(body);
+                var rel = await LatestRelease(http);
                 string tag = Str(rel, "tag_name").TrimStart('v');
                 System.Version latest, mine;
                 if (!System.Version.TryParse(tag, out latest) || !System.Version.TryParse(Version, out mine) || latest <= mine) { pendingUpdate = null; Send(new { type = "updateCheck", text = "יש לך את הגרסה האחרונה (" + Version + "). נבדק " + DateTime.Now.ToString("HH:mm") }); return; }
