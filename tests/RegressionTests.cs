@@ -34,6 +34,9 @@ partial class HitStudent
             check("profile ignores arbitrary instructions",!app.LearningProfileInstructions("learning-fixture").Contains("ignore"));
             app.RememberLearningNeeds("learning-fixture","למה משתמשים בזמן הכולל בשאלה הזאת?",@"C:\x\הרצאה 3\סיכום.html");
             check("the student's questions teach the next summary of the same lecture",app.LearningProfileInstructions("learning-fixture",3).Contains("למה משתמשים בזמן הכולל") && app.LearningProfileInstructions("learning-fixture",3).Contains("על ההרצאה הזו"));
+            var savedPics=app.RememberLearningImages("learning-fixture",@"C:\x\הרצאה 3\סיכום.html",new List<byte[]>{new byte[]{137,80,78,71,13,10,26,10,1,2,3}});
+            app.RememberLearningNeeds("learning-fixture","מה עושים עם התמונה הזאת בשאלה?",@"C:\x\הרצאה 3\סיכום.html",savedPics);
+            check("pictures sent in the chat are kept locally and offered to the next summary of that lecture",savedPics.Count==1&&File.Exists(Path.Combine(app.LearningImagesDir("learning-fixture"),savedPics[0]))&&app.LearningProfileInstructions("learning-fixture",3).Contains("learning-images")&&app.LearningProfileInstructions("learning-fixture",3).Contains(savedPics[0]));
             check("and the next lectures learn what was unclear before",app.LearningProfileInstructions("learning-fixture",4).Contains("בסיכומים קודמים") && app.LearningProfileInstructions("learning-fixture",4).Contains("למה משתמשים בזמן הכולל"));
             check("automatic downloads off", !app.Option("autoSync") && !app.Option("autoRecordings"));
             string course = "test-course";
