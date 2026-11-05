@@ -173,6 +173,65 @@ partial class HitStudent
         finally { moodleLock.Release(); }
     }
 
+    // Background reads never pop up the sign-in page: when Moodle is down or the session ran out, the caller keeps what is saved on this PC.
+    async Task<T> WithMoodleQuiet<T>(Func<Task<T>> work)
+    {
+        await moodleLock.WaitAsync();
+        try
+        {
+            await EnsureMoodle(false);
+            return await work();
+        }
+        finally { moodleLock.Release(); }
+    }
+
+    // The last course list and home page that Moodle gave, so the courses open even while Moodle is unreachable.
+    string MoodleCacheFile { get { return Path.Combine(AppDir, "moodle-cache.json"); } }
+
+    Dictionary<string, object> ReadMoodleCache()
+    {
+        try { if (File.Exists(MoodleCacheFile)) return json.Deserialize<Dictionary<string, object>>(File.ReadAllText(MoodleCacheFile, Encoding.UTF8)) ?? new Dictionary<string, object>(); }
+        catch { }
+        return new Dictionary<string, object>();
+    }
+
+    void WriteMoodleCache(string key, object value)
+    {
+        try
+        {
+            var all = ReadMoodleCache();
+            all[key] = value;
+            File.WriteAllText(MoodleCacheFile, json.Serialize(all), Encoding.UTF8);
+        }
+        catch { }
+    }
+
+    // Courses saved earlier; failing that, the course folders on disk that remember their Moodle id.
+    List<Dictionary<string, object>> OfflineCourses()
+    {
+        var res = new List<Dictionary<string, object>>();
+        try
+        {
+            var all = ReadMoodleCache();
+            if (all.ContainsKey("courses")) res = json.Deserialize<List<Dictionary<string, object>>>(json.Serialize(all["courses"])) ?? res;
+        }
+        catch { }
+        if (res.Count > 0) return res;
+        try
+        {
+            if (StudyRoot.Length > 0 && Directory.Exists(StudyRoot))
+                foreach (string d in Directory.GetDirectories(StudyRoot))
+                {
+                    string name = Path.GetFileName(d);
+                    var meta = LoadMeta(name);
+                    if (!meta.ContainsKey("courseId")) continue;
+                    res.Add(new Dictionary<string, object> { { "id", Int(meta, "courseId") }, { "name", name }, { "short", name }, { "category", "" }, { "current", true }, { "progress", null }, { "url", "" } });
+                }
+        }
+        catch { }
+        return res;
+    }
+
     static string Ajax(string method, string argsJson)
     {
         return "const r=await fetch('/lib/ajax/service.php?sesskey='+M.cfg.sesskey+'&info=" + method + "',{method:'POST',headers:{'Content-Type':'application/json'},"
@@ -301,13 +360,34 @@ for (let i = 0; i < nodes.length; i++) {
 return out;";
 
     List<Dictionary<string, object>> lastCourses;
+    bool coursesFresh; // the list came from Moodle in this run (not from the copy saved on this PC)
 
-    async void LoadCourses()
+    // cachedOnly: just show what is saved on this PC (used while Moodle is unreachable); never touches Moodle.
+    async void LoadCourses(bool cachedOnly = false)
     {
         try
         {
-            string v = await WithMoodle(() => EvalAsync(moodle, CoursesJs, 60000));
+            // The saved list appears at once; the fresh one replaces it when Moodle answers.
+            var saved = OfflineCourses();
+            if (saved.Count > 0)
+            {
+                if (lastCourses == null) lastCourses = saved;
+                foreach (var c in saved) c["local"] = CourseLocal(Str(c, "name"));
+                Send(new { type = "courses", data = saved, cached = true });
+            }
+            if (cachedOnly) return;
+            string v = null;
+            Exception fail = null;
+            try { v = saved.Count > 0 ? await WithMoodleQuiet(() => EvalAsync(moodle, CoursesJs, 60000)) : await WithMoodle(() => EvalAsync(moodle, CoursesJs, 60000)); }
+            catch (Exception ex) { fail = ex; }
+            if (fail != null)
+            {
+                if (saved.Count > 0) return; // Moodle is down or the session ran out: keep working from what is saved
+                throw fail;
+            }
             lastCourses = json.Deserialize<List<Dictionary<string, object>>>(v);
+            coursesFresh = true;
+            WriteMoodleCache("courses", json.DeserializeObject(v));
             foreach (var c in lastCourses) c["local"] = CourseLocal(Str(c, "name"));
             Send(new { type = "courses", data = lastCourses });
         }
@@ -318,12 +398,27 @@ return out;";
     {
         try
         {
-            string v = await WithMoodle(() => EvalAsync(moodle, HomeJs, 60000));
-            var home = json.Deserialize<Dictionary<string, object>>(v);
+            var all = ReadMoodleCache();
+            bool haveSaved = all.ContainsKey("home");
+            string v = null;
+            Exception fail = null;
+            try { v = haveSaved ? await WithMoodleQuiet(() => EvalAsync(moodle, HomeJs, 60000)) : await WithMoodle(() => EvalAsync(moodle, HomeJs, 60000)); }
+            catch (Exception ex) { fail = ex; }
+            Dictionary<string, object> home;
+            if (fail != null)
+            {
+                if (!haveSaved) throw fail;
+                home = json.Deserialize<Dictionary<string, object>>(json.Serialize(all["home"])); // Moodle unreachable: the last known week
+            }
+            else
+            {
+                home = json.Deserialize<Dictionary<string, object>>(v);
+                WriteMoodleCache("home", json.DeserializeObject(v));
+            }
             string name = Str(home, "name");
             if (name.Length > 0 && name != Str(settings, "userName")) { settings["userName"] = name; SaveSettings(); }
             Send(new { type = "home", events = home["events"], name = name });
-            if (lastCourses == null) LoadCourses();
+            if (!coursesFresh) LoadCourses(fail != null);
         }
         catch (Exception ex) { ui.BringToFront(); SendMoodle("error", ex.Message); }
     }
@@ -345,7 +440,17 @@ return out;";
                 });
             }
 
-            string v = await WithMoodle(() => EvalAsync(moodle, SectionsJs.Replace("COURSE_ID", id.ToString()), 120000));
+            // A course that is already on this PC opens without Moodle: no sign-in page, no error when Moodle is down.
+            bool haveLocal = cached != null || Directory.Exists(CourseDir(name));
+            string v = null;
+            Exception fail = null;
+            try { v = haveLocal ? await WithMoodleQuiet(() => EvalAsync(moodle, SectionsJs.Replace("COURSE_ID", id.ToString()), 120000)) : await WithMoodle(() => EvalAsync(moodle, SectionsJs.Replace("COURSE_ID", id.ToString()), 120000)); }
+            catch (Exception ex) { fail = ex; }
+            if (fail != null)
+            {
+                if (haveLocal) return;
+                throw fail;
+            }
             var sections = json.Deserialize<List<Dictionary<string, object>>>(v);
             var meta = LoadMeta(name);
             meta["courseId"] = id;
@@ -354,7 +459,7 @@ return out;";
             {
                 try
                 {
-                    string lv = await WithMoodle(() => EvalAsync(moodle, LecturerJs.Replace("COURSE_ID", id.ToString()), 40000));
+                    string lv = await WithMoodleQuiet(() => EvalAsync(moodle, LecturerJs.Replace("COURSE_ID", id.ToString()), 40000));
                     meta["lecturerGuess"] = json.Deserialize<List<string>>(lv);
                 }
                 catch { meta["lecturerGuess"] = new List<string>(); }

@@ -262,7 +262,8 @@ function renderBanners() {
     const later = h('<button class="small ghost">לא עכשיו</button>'); later.onclick = () => { S.dismissedUpdate = S.update.version; renderBanners(); }; notice.append(later); b.append(notice);
   }
   if (S.ai && !S.ai.ready && !S.ai.setup) b.append(bannerEl('חבר את המנוע החכם כדי לסכם שיעורים ולשאול שאלות', 'חבר עכשיו', () => openWizard(1), 'warn'));
-  if (S.moodle === 'login') b.append(bannerEl('צריך להתחבר ל-Moodle כדי לראות את הקורסים', 'התחבר', connectMoodle, 'warn'));
+  if (S.moodle === 'login' && !(S.courses && S.courses.length)) b.append(bannerEl('צריך להתחבר ל-Moodle כדי לראות את הקורסים', 'התחבר', connectMoodle, 'warn'));
+  else if (S.moodle === 'login') b.append(bannerEl('אין חיבור ל-Moodle כרגע. הקורסים והחומר שכבר הורדת פתוחים כרגיל', 'נסה שוב', () => send({ type: 'loadCourses' })));
 }
 function bannerEl(text, action, fn, cls = '') {
   const el = h(`<div class="banner ${cls}"><span data-ic="${cls ? 'alert' : 'sparkles'}"></span><span class="grow">${text}</span><button class="small">${esc(action)}</button></div>`);
@@ -1680,6 +1681,8 @@ function onMessage(m) {
       S.moodle = m.state; renderStatus();
       if (m.state === 'error' && m.message) toast(m.message, { error: true });
       if (m.state === 'ready' && !S.courses) send({ type: 'loadCourses' });
+      // Moodle is unreachable or signed out: the courses saved on this PC still open (offline).
+      else if (m.state !== 'ready' && m.state !== 'connecting' && !S.courses && !S.askedSavedCourses) { S.askedSavedCourses = true; send({ type: 'loadCourses', cachedOnly: true }); }
       if (!$('wizard').hidden) renderWizardCourses();
       if (m.state === 'login' && S.view === 'courses' && !S.courses) { $('courses').innerHTML = ''; $('coursesState').innerHTML = ''; $('coursesState').append(h(`<div class="empty">${ART.campus().replace('<svg', '<svg class="art" style="width:220px;height:130px"')}<b>צריך להתחבר ל-Moodle</b>מתחברים פעם אחת עם המשתמש של HIT.<div class="row"><button class="primary" id="cm">התחבר</button></div></div>`)); $('cm').onclick = connectMoodle; }
       if (S.view === 'home') renderHome();

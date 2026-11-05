@@ -15,7 +15,7 @@ using Microsoft.Web.WebView2.WinForms;
 
 partial class HitStudent : Form
 {
-    public const string Version = "1.0.24";
+    public const string Version = "1.0.25";
     const string Repo = "Pinkel-Kinkel/SumIT";
     // Updates are only accepted from these repositories (the project was renamed from hit-recordings).
     static readonly string[] RepoNames = { "Pinkel-Kinkel/SumIT" };
@@ -498,7 +498,7 @@ partial class HitStudent : Form
 
             // Moodle
             case "connectMoodle": ConnectMoodle(); break;
-            case "loadCourses": LoadCourses(); break;
+            case "loadCourses": LoadCourses(m.ContainsKey("cachedOnly") && m["cachedOnly"] is bool && (bool)m["cachedOnly"]); break;
             case "loadHome": LoadHome(); break;
             case "openCourse": OpenCourse(Int(m, "id"), course); break;
             case "setLecturer":

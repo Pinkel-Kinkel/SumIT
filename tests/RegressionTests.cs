@@ -400,6 +400,9 @@ if ($env:FAKE_NAME -eq 'codex' -and $m.Success) {
             Run(() => app.RunAi("routing", root, "test", null, null, null));
             check("non-quota errors do not spend another provider", routed.Count == 1);
             app.aiWorkOverride = null; app.claudeLoggedIn = wasLogged;
+            // Moodle down: the courses already on this PC still show, from the folders that remember their Moodle id.
+            app.SaveMeta("offline-course", new Dictionary<string, object> { { "courseId", 4321 } });
+            check("courses open offline from the folders on disk", app.OfflineCourses().Any(c => Convert.ToInt32(c["id"]) == 4321 && (string)c["name"] == "offline-course"));
             // A second opinion on a lecture summary: the notes are added to the page, and a repeat replaces them.
             string course = "review-course";
             app.SaveLecture(course, new Dictionary<string, object> { { "num", 1 }, { "title", "L1" } });

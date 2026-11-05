@@ -91,7 +91,7 @@ partial class HitStudent
             if (!Bool(LoadMeta(name), "setupDone")) continue;
             try
             {
-                string v = await WithMoodle(() => EvalAsync(moodle, SectionsJs.Replace("COURSE_ID", id.ToString()), 120000));
+                string v = await WithMoodleQuiet(() => EvalAsync(moodle, SectionsJs.Replace("COURSE_ID", id.ToString()), 120000));
                 var meta = LoadMeta(name);
                 meta["sectionsCache"] = json.DeserializeObject(v);
                 SaveMeta(name, meta);
