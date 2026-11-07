@@ -972,3 +972,5 @@ html[data-theme=dark] .card { border-color: #274a82; }
 #summaryChat #summaryChatSend{background:#709cff;color:#0b1220;width:34px;height:34px;border-radius:50%;border:0;padding:0;min-width:0}#summaryChat #summaryChatSend:disabled{opacity:.35}
 #summaryChat .sc-icon{min-width:0;padding:0;border:0;background:transparent}
 #summaryChat .sc-icon:hover{background:var(--surface-2)}
+
+.inst-technion [data-site-link="cs24"], .inst-technion [data-site="cs24"] { display: none !important; }

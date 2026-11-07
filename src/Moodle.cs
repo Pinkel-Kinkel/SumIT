@@ -24,7 +24,8 @@ partial class HitStudent
     {
         get
         {
-            string b = NormalizeMoodleUrl(Str(settings, "moodleUrl"));
+            string saved = Str(settings, "moodleUrl");
+            string b = saved.Length == 0 && Str(settings, "institute") == "technion" ? TechnionMoodle : NormalizeMoodleUrl(saved);
             moodleHostNow = new Uri(b).Host;
             return b;
         }
@@ -202,6 +203,11 @@ partial class HitStudent
     {
         string next = NormalizeMoodleUrl(url);
         if (string.Equals(next, MoodleBase, StringComparison.OrdinalIgnoreCase)) { SendSettings(); return; }
+        ApplyMoodleUrl(next);
+    }
+
+    void ApplyMoodleUrl(string next)
+    {
         settings["moodleUrl"] = next;
         SaveSettings();
         var cache = ReadMoodleCache(); cache.Remove("courses"); cache.Remove("home");
@@ -212,6 +218,37 @@ partial class HitStudent
         SendMoodle("login", "");
         SendSettings();
         Send(new { type = "courses", data = new List<Dictionary<string, object>>() });
+    }
+
+    // HIT or the Technion: the Moodle, the folder name and the extras follow. Folders that are still the empty defaults move to the new name;
+    // anything the student already filled or chose himself stays where it is.
+    void SetInstitute(string institute)
+    {
+        institute = institute == "technion" ? "technion" : "hit";
+        if ((institute == "technion") == Technion) { SendSettings(); return; }
+        string fromBrand = InstFolder;
+        settings["institute"] = institute;
+        string toBrand = InstFolder;
+        string study = StudyRoot;
+        if (IsFreshDefaultFolder(study, fromBrand))
+        {
+            string root = DefaultStudyRoot(Directory.Exists(@"D:\"), Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), Technion);
+            settings["studyRoot"] = root;
+            if (IsFreshDefaultFolder(RecordingsDir, fromBrand)) settings["recordingsDir"] = Path.Combine(Path.GetDirectoryName(root), "הקלטות");
+        }
+        ApplyMoodleUrl(Technion ? TechnionMoodle : DefaultMoodle);
+    }
+
+    internal static bool IsFreshDefaultFolder(string path, string brand)
+    {
+        try
+        {
+            string p = (path ?? "").TrimEnd('\\');
+            string parent = Path.GetDirectoryName(p);
+            if (parent == null || !string.Equals(Path.GetFileName(parent), brand, StringComparison.OrdinalIgnoreCase)) return false;
+            return !Directory.Exists(p) || !Directory.EnumerateFileSystemEntries(p).Any();
+        }
+        catch { return false; }
     }
 
     // Background reads never pop up the sign-in page: when Moodle is down or the session ran out, the caller keeps what is saved on this PC.

@@ -242,7 +242,7 @@ partial class HitStudent
         var histories = Dict(meta, "lectureChatHistories") ?? new Dictionary<string, object>();
         var history = histories.ContainsKey(scope) && histories[scope] is ArrayList ? ((ArrayList)histories[scope]).Cast<object>().Select(o => o.ToString()).ToList() : new List<string>();
         string lecturer = Str(meta, "lecturer");
-        string system = "אתה עוזר לימוד אישי של סטודנט ב-HIT בקורס \"" + course + "\"" + (lecturer.Length > 0 ? " של " + lecturer : "") + ". "
+        string system = "אתה עוזר לימוד אישי של סטודנט ב" + (Technion ? "טכניון" : "-HIT") + " בקורס \"" + course + "\"" + (lecturer.Length > 0 ? " של " + lecturer : "") + ". "
             + (scope == "exam"
                 ? "זה אימון למבחן על כל החומר. תן שאלה אחת בכל פעם בסגנון של המרצה, חכה לתשובה של הסטודנט, בדוק אותה כמו שהמרצה היה בודק, והסבר את הטעויות."
                 : "השיחה היא על ההרצאה (והחומר מצטבר: מותר להיעזר גם בהרצאות הקודמות). ענה לפי החומר שלמטה.")
@@ -356,7 +356,7 @@ for p in sys.argv[1:]:
     async Task<bool> HelperReadSchedule(string pageText)
     {
         if (HelperOrder().Count == 0) return false;
-        string system = "אתה קורא טקסט של דף מאתר HIT: מערכת שעות של שבוע (ייתכנו בה חגים וימי חופשה), לוח בחינות או לוח שנה אקדמי. החזר JSON תקין בלבד, בלי טקסט נוסף, במבנה: "
+        string system = "אתה קורא טקסט של דף מאתר " + (Technion ? "CheeseFork" : "HIT") + ": מערכת שעות של שבוע (ייתכנו בה חגים וימי חופשה), לוח בחינות או לוח שנה אקדמי. החזר JSON תקין בלבד, בלי טקסט נוסף, במבנה: "
             + "{\"classes\":[{\"day\":\"ראשון|שני|שלישי|רביעי|חמישי|שישי\",\"start\":\"HH:MM\",\"end\":\"HH:MM\",\"course\":\"\",\"kind\":\"הרצאה|תרגול|מעבדה\",\"lecturer\":\"\",\"room\":\"\"}],"
             + "\"exams\":[{\"course\":\"\",\"moed\":\"א|ב|ג\",\"date\":\"YYYY-MM-DD\",\"time\":\"HH:MM\",\"room\":\"\"}],"
             + "\"semesterStart\":\"YYYY-MM-DD\",\"semesterEnd\":\"YYYY-MM-DD\",\"holidays\":[{\"name\":\"\",\"from\":\"YYYY-MM-DD\",\"to\":\"YYYY-MM-DD\"}]}. "

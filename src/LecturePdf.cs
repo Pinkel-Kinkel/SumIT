@@ -181,7 +181,8 @@ partial class HitStudent
             : pdf != null && warning.Length == 0 ? "הסיכום של ההרצאה מוכן"
             : pdf != null ? "הסיכום מוכן (" + warning + ")"
             : pageReady ? "הסיכום מוכן, אבל קובץ ה-PDF לא נוצר (" + warning + "). אפשר לפתוח את הסיכום, ולנסות שוב אחר כך."
-            : "הסתיים בלי סיכום - נסה שוב";
+            : "הסתיים בלי שנוצר קובץ סיכום" + (!string.IsNullOrWhiteSpace(result.Text) ? ". ההודעה האחרונה של ה-AI: " + Trunc(result.Text.Replace("\n", " "), 200) : "") + ". נסה שוב";
+        Diagnostic("summaryFinish", result.Provider ?? "", result.Error ? FailureKind(result.Text) : !pageReady ? "no-page" : pdf == null ? "no-pdf" : "ok");
         SectionStatus(course, num, status, false, result.Error || !pageReady);
         SendSectionLocal(course, num);
         if (pageReady && !result.Error)

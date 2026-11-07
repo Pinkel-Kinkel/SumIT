@@ -250,9 +250,28 @@ function renderStatus() {
 $('moodlePill').onclick = () => { if (S.moodle === 'ready') toast('Moodle מחובר ✓'); else connectMoodle(); };
 $('aiPill').onclick = () => { if (S.ai && S.ai.ready) toast(aiName() + ' מחובר ✓'); else openWizard(1); };
 $('moodleConnect').onclick = connectMoodle;
+function instTechnion() { return !!(S.settings && S.settings.institute === 'technion'); }
+function instName() { return instTechnion() ? 'הטכניון' : 'HIT'; }
+// HIT or the Technion: the Technion has CheeseFork instead of the personal portal, and no CS24.
+function applyInstitute() {
+  const t = instTechnion();
+  document.body.classList.toggle('inst-technion', t);
+  const label = t ? 'CheeseFork (מערכת שעות)' : 'פורטל מידע אישי';
+  document.querySelectorAll('[data-site-link="portal"] .nav-text, #siteTabs [data-site="portal"]').forEach(e => { e.textContent = label; });
+  if ($('institute') && document.activeElement !== $('institute')) $('institute').value = t ? 'technion' : 'hit';
+  if ($('wizInstitute') && document.activeElement !== $('wizInstitute')) $('wizInstitute').value = t ? 'technion' : 'hit';
+  const hint = $('portalHint');
+  if (hint) hint.querySelector('.grow').innerHTML = t
+    ? '<b>איך טוענים את המערכת והמבחנים</b><ol><li>ב-CheeseFork בונים את המערכת ושומרים אותה כקובץ (PDF או תמונה).</li><li>שמים את הקובץ בתיקייה "מערכת שעות" בתוך Technion.</li><li>חוזרים לדף הבית ולוחצים <b>"עדכן מערכת"</b>, או לוחצים כאן:</li></ol><small class="muted">קובץ ששומרים מכאן נכנס לתיקייה "מערכת שעות" לבד.</small>'
+    : '<b>איך טוענים את המערכת והמבחנים</b><ol><li>במערכת שעות בוחרים <b>"מבנה יומן"</b> ולוחצים למעלה <b>"שמור את הדף כ-PDF"</b>.</li><li>ב<b>"לוח בחינות"</b> לוחצים שוב <b>"שמור את הדף כ-PDF"</b>.</li><li>חוזרים לדף הבית ולוחצים <b>"עדכן מערכת"</b>, או לוחצים כאן:</li></ol><small class="muted">הקבצים נשמרים לבד בתיקייה "מערכת שעות" בתוך HIT.</small>';
+  renderQuick();
+}
 function saveMoodleUrl(v) { send({ type: 'setMoodleUrl', url: (v || '').trim() }); S.courses = null; S.askedSavedCourses = false; }
 $('moodleUrlSave').onclick = () => { saveMoodleUrl($('moodleUrl').value); toast('הכתובת נשמרה. לחץ "התחבר"'); };
 $('wizMoodleUrl').onchange = () => saveMoodleUrl($('wizMoodleUrl').value);
+function chooseInstitute(v) { send({ type: 'setInstitute', institute: v }); S.courses = null; S.askedSavedCourses = false; }
+$('institute').onchange = () => chooseInstitute($('institute').value);
+$('wizInstitute').onchange = () => chooseInstitute($('wizInstitute').value);
 function connectMoodle() { S.moodle = 'connecting'; renderStatus(); send({ type: 'connectMoodle' }); }
 
 function renderBanners() {
@@ -441,8 +460,8 @@ function renderTimetable() {
   if (!tt || !((tt.classes || []).length || (tt.exams || []).length)) {
     renderNextUp(); renderStats();
     const e = h(`<div class="empty" style="border:none;padding:10px">${ART.calendar().replace('<svg', '<svg class="art"')}<b>הוסף את המערכת ואת לוח המבחנים</b>
-      בפורטל מידע אישי: במערכת שעות בוחרים "מבנה יומן" ולוחצים "שמור את הדף כ-PDF", ואותו הדבר ב"לוח בחינות". הקבצים נשמרים לבד, ואחר כך לוחצים כאן "עדכן מערכת".
-      <div class="row"><button class="primary" data-p>פתח את הפורטל</button><button class="soft" data-i><span data-ic="refresh"></span>עדכן מערכת</button></div></div>`);
+      ${instTechnion() ? 'ב-CheeseFork בונים את המערכת ושומרים אותה כקובץ (PDF או תמונה) בתיקייה "מערכת שעות". אחר כך לוחצים כאן "עדכן מערכת".' : 'בפורטל מידע אישי: במערכת שעות בוחרים "מבנה יומן" ולוחצים "שמור את הדף כ-PDF", ואותו הדבר ב"לוח בחינות". הקבצים נשמרים לבד, ואחר כך לוחצים כאן "עדכן מערכת".'}
+      <div class="row"><button class="primary" data-p>${instTechnion() ? 'פתח את CheeseFork' : 'פתח את הפורטל'}</button><button class="soft" data-i><span data-ic="refresh"></span>עדכן מערכת</button></div></div>`);
     e.querySelector('[data-p]').onclick = () => { setSaveTarget('', ''); openSite('portal'); };
     e.querySelector('[data-i]').onclick = () => send({ type: 'importTimetable', fromFolder: true });
     box.append(e);
@@ -563,16 +582,19 @@ $('heroCourses').onclick = () => show('courses');
 $('heroPaste').innerHTML = IC.plus + 'הוסף מטלה';
 $('heroPaste').onclick = () => { show('tasks'); setTimeout(() => { const f = document.querySelector('#tasksPage [data-t-title]'); if (f) f.focus(); }, 80); };
 $('allCourses').onclick = () => show('courses');
-(function quick() {
+function renderQuick() {
+  $('quick').innerHTML = '';
   const items = [
-    ['c3', 'user', 'פורטל מידע אישי', 'ציונים, מערכת שעות ובחינות', () => openSite('portal')],
+    ['c3', 'user', instTechnion() ? 'CheeseFork' : 'פורטל מידע אישי', instTechnion() ? 'מערכת שעות' : 'ציונים, מערכת שעות ובחינות', () => openSite('portal')],
     ['c4', 'folder', 'תיקיית הקורסים', 'כל החומר שהורדת', () => send({ type: 'openFolder', which: 'study' })]
   ];
   for (const [c, ic, t, s, fn] of items) {
     const b = h(`<button><span class="qi ${c}" data-ic="${ic}"></span><span>${t}<small style="display:block">${s}</small></span></button>`);
     b.onclick = fn; $('quick').append(b);
   }
-})();
+  try { icons($('quick')); } catch (e) { }
+}
+renderQuick();
 
 // ---------- Courses ----------
 // The lecturer uploaded something since the last download: say what, and ask before downloading it.
@@ -831,13 +853,14 @@ const SETUP_Q = [
   },
   {
     key: 'exams',
-    ask: () => 'להוריד בשבילך את כל החומר של הקורס מ-CS24?',
-    hint: () => 'אני אמצא את הקורס ב-CS24 ואוריד את כל מה שיש שם: מבחנים ופתרונות משנים קודמות, בחנים, סיכומים, מחברות של סטודנטים ותרגולים. זה חומר עזר, ו-Moodle נשאר המקור העיקרי.',
+    ask: () => instTechnion() ? 'יש לך מבחנים קודמים של הקורס?' : 'להוריד בשבילך את כל החומר של הקורס מ-CS24?',
+    hint: () => instTechnion() ? 'אם יש לך מבחנים משנים קודמות, עדיף עם הפתרונות, הוסף אותם מהמחשב. כך אראה אילו שאלות המרצה שואל ואיך הוא עונה עליהן.' : 'אני אמצא את הקורס ב-CS24 ואוריד את כל מה שיש שם: מבחנים ופתרונות משנים קודמות, בחנים, סיכומים, מחברות של סטודנטים ותרגולים. זה חומר עזר, ו-Moodle נשאר המקור העיקרי.',
     body: (done) => {
       const box = h('<div class="row wrap"></div>');
       const yes = h('<button class="primary">כן, תוריד הכל</button>'); yes.onclick = () => { setupAnswers().cs24Auto = true; done('כן, הכל מ-CS24'); };
+      if (instTechnion()) yes.hidden = true;
       const pc = h('<button class="ghost">יש לי מבחנים במחשב</button>'); pc.onclick = () => send({ type: 'addFiles', course: S.course.name, folder: 'מבחנים' });
-      const no = h('<button class="ghost">לא צריך</button>'); no.onclick = () => { setupAnswers().cs24Auto = false; done('בלי CS24'); };
+      const no = h('<button class="ghost">לא צריך</button>'); no.onclick = () => { setupAnswers().cs24Auto = false; done(instTechnion() ? 'בלי מבחנים עכשיו' : 'בלי CS24'); };
       box.append(yes, pc, no);
       return box;
     }
@@ -1080,7 +1103,7 @@ function fillLecture(el, s) {
 
   btn('book', 'מצגות וחומר מה-Moodle', hasMaterial ? 'done' : 'soft', () => lectureSource(s.num, 'moodle', 'slides'));
   btn('exam', 'שיעורי בית ופתרונות מה-Moodle', hasHomework ? 'done' : 'soft', () => lectureSource(s.num, 'moodle', 'homework'));
-  btn('book', 'חומר מ-CS24', 'ghost', () => lectureSource(s.num, 'cs24', 'slides'));
+  if (!instTechnion()) btn('book', 'חומר מ-CS24', 'ghost', () => lectureSource(s.num, 'cs24', 'slides'));
   btn('plus', 'קבצים מהמחשב', 'ghost', () => send({ type: 'addFiles', course: course.name, folder: String(s.num), kind: '' }));
   btn('plus','סיכום של חבר (ZIP / OneDrive)','soft',()=>showSummaryImport(course.name,s.num));
   (L.sharedSummaries||[]).forEach(item=>btn('book','סיכום חבר: '+item.title,'soft',()=>openViewer(item.path,item.title,'',s.num)));
@@ -1242,7 +1265,7 @@ function renderExams() {
   const acts = card.querySelector('#examActs');
   const add = (ic, t, cls, fn, dis) => { const b = h(`<button class="${cls}"><span data-ic="${ic}"></span>${t}</button>`); b.onclick = fn; b.disabled = !!dis; acts.append(b); };
   add('download', 'הורד את כל המבחנים מה-Moodle', 'primary', () => downloadMoodle('exams'), runtimeFor(S.course.name).operations.get('exams'));
-  add('exam', 'מבחנים מ-CS24', 'soft', () => { setSaveTarget(S.course.name, 'מבחנים'); openSite('cs24'); toast('כל קובץ שתוריד מ-CS24 יישמר בתיקיית המבחנים של הקורס'); });
+  if (!instTechnion()) add('exam', 'מבחנים מ-CS24', 'soft', () => { setSaveTarget(S.course.name, 'מבחנים'); openSite('cs24'); toast('כל קובץ שתוריד מ-CS24 יישמר בתיקיית המבחנים של הקורס'); });
   add('plus', 'הוסף מבחנים מהמחשב', 'ghost', () => send({ type: 'addFiles', course: S.course.name, folder: 'מבחנים' }));
   if (L.exams) add('folder', 'תיקיית המבחנים', 'ghost', () => send({ type: 'openPath', path: L.dir + '\\מבחנים' }));
   add('sparkles', busy ? 'עובד על זה...' : (L.examPrep ? 'בנה מחדש את דף ההכנה' : 'בנה דף הכנה למבחן'), 'primary', () => { S.examBusy = true; send({ type: 'examPrep', course: S.course.name }); renderExams(); }, busy || !L.exams);
@@ -1575,12 +1598,12 @@ function renderSettings() {
   const od = $('wizOneDrive');
   if (od) {
     od.innerHTML = '';
-    if (st.hitOneDrive && st.studyInHitOneDrive) od.append(h('<div class="check-row ok"><div class="ci" data-ic="check"></div><div class="grow"><b>OneDrive של HIT <span class="chip ok">מומלץ</span></b><small>מצאתי אותו, והחומר יישמר שם. יש לך שם עד 1TB, הכל מגובה בענן וזמין מכל מחשב.</small></div></div>'));
+    if (st.hitOneDrive && st.studyInHitOneDrive) od.append(h(`<div class="check-row ok"><div class="ci" data-ic="check"></div><div class="grow"><b>OneDrive של ${instName()} <span class="chip ok">מומלץ</span></b><small>מצאתי אותו, והחומר יישמר שם. יש לך שם עד 1TB, הכל מגובה בענן וזמין מכל מחשב.</small></div></div>`));
     else if (st.hitOneDrive) {
-      const row = h('<div class="check-row"><div class="ci" data-ic="folder"></div><div class="grow"><b>OneDrive של HIT <span class="chip accent">מומלץ</span></b><small>עד 1TB של מקום בחינם, הכל מגובה בענן וזמין מכל מחשב. עדיף לשמור שם את כל החומר.</small></div><button class="primary" data-od>השתמש בו</button></div>');
+      const row = h(`<div class="check-row"><div class="ci" data-ic="folder"></div><div class="grow"><b>OneDrive של ${instName()} <span class="chip accent">מומלץ</span></b><small>עד 1TB של מקום בחינם, הכל מגובה בענן וזמין מכל מחשב. עדיף לשמור שם את כל החומר.</small></div><button class="primary" data-od>השתמש בו</button></div>`);
       row.querySelector('[data-od]').onclick = () => send({ type: 'useHitOneDrive' });
       od.append(row);
-    } else od.append(h('<div class="check-row"><div class="ci" data-ic="alert"></div><div class="grow"><b>לא מצאתי OneDrive של HIT במחשב</b><small>מומלץ להתחבר ל-OneDrive עם החשבון של HIT (יש בו עד 1TB, והחומר יהיה גם בענן) ולהפעיל את האפליקציה מחדש, כדי שאציע אותו. אם לא, בחר למטה כונן או תיקייה אחרת.</small></div></div>'));
+    } else od.append(h(`<div class="check-row"><div class="ci" data-ic="alert"></div><div class="grow"><b>לא מצאתי OneDrive של ${instName()} במחשב</b><small>מומלץ להתחבר ל-OneDrive עם החשבון של ${instName()} (יש בו עד 1TB, והחומר יהיה גם בענן) ולהפעיל את האפליקציה מחדש, כדי שאציע אותו. אם לא, בחר למטה כונן או תיקייה אחרת.</small></div></div>`));
     icons(od);
   }
   $('wizNot').textContent = st.notabilityDir || 'אם Notability מגבה את המחברות לתיקייה במחשב, בחר אותה כאן';
@@ -1673,6 +1696,7 @@ function onMessage(m) {
   switch (m.type) {
     case 'settings':
       S.settings = m; S.ready.settings = true; S.tasks = m.tasks || [];
+      if (m.institute) { S.settings.institute = m.institute; applyInstitute(); }
       if (m.moodleUrl) { const host = m.moodleUrl.replace(/^https?:\/\//, ''); if (document.activeElement !== $('moodleUrl')) $('moodleUrl').value = host; if (document.activeElement !== $('wizMoodleUrl')) $('wizMoodleUrl').value = host; S.moodleHost = host; }
       if (S.view === 'tasks') renderTasks($('tasksPage'), false); renderHome();
       if (m.userName) S.userName = m.userName;
@@ -1877,7 +1901,7 @@ function onMessage(m) {
       break;
     }
     case 'academicCalendar': S.academic = m.data; if (S.view === 'course') renderLectures(); break;
-    case 'siteNav': followSummaryNavigation(m.url); { const onPortal = /webrashim\.hit\.ac\.il/i.test(m.url || ''); if (document.getElementById('portalHint').hidden === onPortal) { $('portalHint').hidden = !onPortal; requestAnimationFrame(() => placeSite(true)); } } $('siteUrl').textContent = m.url || ''; $('siteBack').disabled = !m.canBack; $('siteForward').disabled = !m.canForward; break;
+    case 'siteNav': followSummaryNavigation(m.url); { const onPortal = (instTechnion() ? /cheesefork\.cf/i : /webrashim\.hit\.ac\.il/i).test(m.url || ''); if (document.getElementById('portalHint').hidden === onPortal) { $('portalHint').hidden = !onPortal; requestAnimationFrame(() => placeSite(true)); } } $('siteUrl').textContent = m.url || ''; $('siteBack').disabled = !m.canBack; $('siteForward').disabled = !m.canForward; break;
     case 'timetable': S.timetable = m.data; renderTimetable(); break;
     case 'prepStatus':
       S.prep = m.busy ? m : null; renderBanners();
@@ -1993,7 +2017,7 @@ function examsIntroCard() {
   const row = c.querySelector('[data-b]');
   const add = (ic, t, cls, fn) => { const b = h(`<button class="${cls}"><span data-ic="${ic}"></span>${t}</button>`); b.onclick = fn; row.append(b); };
   add('download', 'הורד את כל המבחנים מה-Moodle', 'primary', () => downloadMoodle('exams'));
-  add('exam', 'מבחנים מ-CS24', 'soft', () => { setSaveTarget(S.course.name, 'מבחנים'); openSite('cs24'); });
+  if (!instTechnion()) add('exam', 'מבחנים מ-CS24', 'soft', () => { setSaveTarget(S.course.name, 'מבחנים'); openSite('cs24'); });
   add('plus', 'מהמחשב', 'ghost', () => send({ type: 'addFiles', course: S.course.name, folder: 'מבחנים' }));
   add('x', 'אין לי עכשיו - דלג', 'ghost', () => send({ type: 'skipExams', course: S.course.name }));
   return c;
@@ -2058,6 +2082,7 @@ function lectureCalendarEditor() {
   form.elements.first.value = firstDate;
   let holidays = ((calendar.holidays && calendar.holidays.length) ? calendar.holidays : (ac ? expand(ac.holidays) : [])).slice().sort();
   form.querySelector('[data-ac]').textContent = ac ? `מצאתי: הסמסטר מתחיל ב-${ac.semesterStart.split('-').reverse().join('/')}, ו-${(ac.holidays || []).length} חופשות/חגים. לחץ "שמור" כדי להשתמש בהם.` : '';
+  if (instTechnion()) form.querySelector('[data-readcal]').parentElement.hidden = true;
   form.querySelector('[data-readcal]').onclick = () => { toast('נפתח לוח השנה של HIT. אחרי שהדף נטען, לחץ למעלה "קרא תאריכי סמסטר וחגים מהדף"', { ms: 7000 }); openSite('calendar'); };
   const fmt = (iso) => iso.split('-').reverse().slice(0, 2).join('/');
   const draw = () => {

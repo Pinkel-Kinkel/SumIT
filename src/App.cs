@@ -15,7 +15,7 @@ using Microsoft.Web.WebView2.WinForms;
 
 partial class HitStudent : Form
 {
-    public const string Version = "1.0.26";
+    public const string Version = "1.0.27";
     const string Repo = "Pinkel-Kinkel/SumIT";
     // Updates are only accepted from these repositories (the project was renamed from hit-recordings).
     static readonly string[] RepoNames = { "Pinkel-Kinkel/SumIT" };
@@ -25,6 +25,14 @@ partial class HitStudent : Form
     static readonly string DataDir = Path.Combine(AppDir, "browser-data");
     static readonly string SettingsFile = Path.Combine(AppDir, "settings.json");
     static readonly string Home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+    // The student's institute: "hit" (default) or "technion". It sets the Moodle, the timetable site, the folder name, and which extras (CS24, the HIT portal) exist.
+    const string TechnionMoodle = "https://moodle26.technion.ac.il";
+    const string CheeseFork = "https://cheesefork.cf/";
+    bool Technion { get { return Str(settings, "institute") == "technion"; } }
+    string InstName { get { return Technion ? "הטכניון" : "HIT"; } }
+    string InstFolder { get { return Technion ? "Technion" : "HIT"; } }
+    string InstOneDrive() { return HitOneDrive(Technion); }
 
     static readonly Dictionary<string, string> Sites = new Dictionary<string, string>
     {
@@ -250,7 +258,7 @@ partial class HitStudent : Form
         bool hasD = Directory.Exists(@"D:\");
         string docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         if (Str(settings, "studyRoot").Length == 0)
-            settings["studyRoot"] = DefaultStudyRoot(hasD, docs);
+            settings["studyRoot"] = DefaultStudyRoot(hasD, docs, Technion);
         if (Str(settings, "recordingsDir").Length == 0)
         {
             // Carry over the folder chosen in the old HIT Recordings app.
@@ -266,14 +274,14 @@ partial class HitStudent : Form
 
     // "HIT\קורסים" inside the student's HIT OneDrive when there is one ("OneDrive - Holon Institute of Technology"), so the
     // courses are backed up and follow them; otherwise in Documents.
-    static string DefaultStudyRoot(bool hasD, string docs)
+    static string DefaultStudyRoot(bool hasD, string docs, bool technion = false)
     {
-        string od = HitOneDrive();
-        return od.Length > 0 ? Path.Combine(od, "HIT", "קורסים") : Path.Combine(docs, "HIT", "קורסים");
+        string od = HitOneDrive(technion), brand = technion ? "Technion" : "HIT";
+        return od.Length > 0 ? Path.Combine(od, brand, "קורסים") : Path.Combine(docs, brand, "קורסים");
     }
 
     // The OneDrive of HIT on this PC ("OneDrive - Holon Institute of Technology"), or "" when it is not set up.
-    static string HitOneDrive()
+    static string HitOneDrive(bool technion = false)
     {
         try
         {
@@ -282,13 +290,14 @@ partial class HitStudent : Form
             if (!string.IsNullOrEmpty(commercial)) candidates.Add(commercial);
             candidates.AddRange(Directory.GetDirectories(Home, "OneDrive*"));
             foreach (string od in candidates)
-                if (Directory.Exists(od) && System.Text.RegularExpressions.Regex.IsMatch(Path.GetFileName(od.TrimEnd('\\')), "holon|\\bHIT\\b|institute of technology|הולון", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                if (Directory.Exists(od) && System.Text.RegularExpressions.Regex.IsMatch(Path.GetFileName(od.TrimEnd('\\')), (technion ? "technion|טכניון" : "holon|\\bHIT\\b|institute of technology|הולון"), System.Text.RegularExpressions.RegexOptions.IgnoreCase))
                     return od;
         }
         catch { }
         return "";
     }
 
+    internal static string DefaultStudyRootTechnionForTest() { return DefaultStudyRoot(true, Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), true); }
     internal static string DefaultStudyRootForTest() { return DefaultStudyRoot(true, Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)); }
 
     // The courses live in "<HIT>\קורסים"; the timetable and general downloads sit next to them, in "<HIT>".
@@ -376,7 +385,7 @@ partial class HitStudent : Form
     {
         Send(new
         {
-            snapSeen = Bool(settings, "snapSeen"), outdatedSummaries = OutdatedSummaries().Count, hitOneDrive = HitOneDrive(), studyInHitOneDrive = HitOneDrive().Length > 0 && StudyRoot.StartsWith(HitOneDrive().TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase),
+            snapSeen = Bool(settings, "snapSeen"), outdatedSummaries = OutdatedSummaries().Count, institute = Technion ? "technion" : "hit", instName = InstName, hitOneDrive = InstOneDrive(), studyInHitOneDrive = InstOneDrive().Length > 0 && StudyRoot.StartsWith(InstOneDrive().TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase),
             tasks = settings.ContainsKey("tasks") ? settings["tasks"] : new System.Collections.ArrayList(),
             type = "settings", studyRoot = StudyRoot, recordingsDir = RecordingsDir, notabilityDir = NotabilityDir,
             aiProvider = Provider, hasGeminiKey = Str(settings, "geminiKey").Length > 0, hasOpenAiKey = Str(settings, "openaiKey").Length > 0,
@@ -498,6 +507,7 @@ partial class HitStudent : Form
             case "openOpenAiKeyPage": OpenExternal("https://platform.openai.com/api-keys"); break;
 
             // Moodle
+            case "setInstitute": SetInstitute(Str(m, "institute")); break;
             case "setMoodleUrl": SetMoodleUrl(Str(m, "url")); break;
             case "connectMoodle": ConnectMoodle(); break;
             case "loadCourses": LoadCourses(m.ContainsKey("cachedOnly") && m["cachedOnly"] is bool && (bool)m["cachedOnly"]); break;
@@ -564,10 +574,10 @@ partial class HitStudent : Form
             case "chooseFolder": ChooseFolder(Str(m, "which")); break;
             case "snapDone": settings["snapSeen"] = true; SaveSettings(); break;
             case "useHitOneDrive":
-                string hitOd = HitOneDrive();
-                if (hitOd.Length == 0) { Toast("לא מצאתי OneDrive של HIT במחשב", true); break; }
-                settings["studyRoot"] = Path.Combine(hitOd, "HIT", "קורסים");
-                settings["recordingsDir"] = Path.Combine(hitOd, "HIT", "הקלטות");
+                string hitOd = InstOneDrive();
+                if (hitOd.Length == 0) { Toast("לא מצאתי OneDrive של " + InstName + " במחשב", true); break; }
+                settings["studyRoot"] = Path.Combine(hitOd, InstFolder, "קורסים");
+                settings["recordingsDir"] = Path.Combine(hitOd, InstFolder, "הקלטות");
                 SaveSettings(); SendSettings();
                 break;
             case "openFolder":
@@ -873,6 +883,8 @@ partial class HitStudent : Form
         string url;
         if (!Sites.TryGetValue(key, out url)) return;
         if (key == "moodle") url = MoodleBase + "/my/";
+        if (Technion && key == "portal") url = CheeseFork;
+        if (Technion && (key == "cs24" || key == "calendar")) return; // the Technion has neither CS24 nor the HIT calendar page
         PlaceSite(m);
         if (key != "portal") CloseSitePopup();
         string current = site.Source == null ? "" : site.Source.ToString();

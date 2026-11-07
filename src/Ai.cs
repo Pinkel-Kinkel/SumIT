@@ -305,7 +305,7 @@ partial class HitStudent
             // 2. The main AI (Claude, or Gemini when that is all the student has).
             if (!AiReadyOrSay(t => { Toast(t, true); Send(new { type = "timetableStatus", busy = false, text = "" }); })) return;
             await EnsurePython(s => { });
-            string prompt = "בתיקייה הזו יש קבצים שנשמרו מפורטל HIT: מערכת שעות (תצוגת יומן עם תאריכים - ייתכנו בה חגים וימי חופשה) ו/או לוח בחינות. קרא את כולם (PDF או תמונה; אפשר להמיר PDF לתמונה עם Python ו-pymupdf). התאריך היום: " + DateTime.Now.ToString("yyyy-MM-dd") + ".\n"
+            string prompt = "בתיקייה הזו יש קבצים שנשמרו מ" + (Technion ? "CheeseFork" : "פורטל HIT") + ": מערכת שעות (תצוגת יומן עם תאריכים - ייתכנו בה חגים וימי חופשה) ו/או לוח בחינות. קרא את כולם (PDF או תמונה; אפשר להמיר PDF לתמונה עם Python ו-pymupdf). התאריך היום: " + DateTime.Now.ToString("yyyy-MM-dd") + ".\n"
                 + "כתוב את הקובץ timetable.json בתיקייה הזו, JSON תקין במבנה:\n"
                 + "{\"semester\":\"\",\"classes\":[{\"day\":\"ראשון|שני|שלישי|רביעי|חמישי|שישי\",\"start\":\"HH:MM\",\"end\":\"HH:MM\",\"course\":\"\",\"kind\":\"הרצאה|תרגול|מעבדה\",\"lecturer\":\"\",\"room\":\"\"}],"
                 + "\"exams\":[{\"course\":\"\",\"moed\":\"א|ב|ג\",\"date\":\"YYYY-MM-DD\",\"time\":\"HH:MM\",\"room\":\"\"}]}\n"
@@ -994,7 +994,7 @@ partial class HitStudent
         else if (scope == "exam")
             focus = "\nזה אימון למבחן. השתמש במבחנים ובפתרונות ב-\"" + Exams + "\" וב-\"" + LecturerProfile + "\". תן שאלה אחת בכל פעם בסגנון של המרצה, חכה לתשובה של הסטודנט, בדוק אותה כמו שהמרצה היה בודק, והסבר את הטעויות.";
 
-        string system = "אתה עוזר לימוד אישי של סטודנט ב-HIT. " + CourseContext(course) + focus
+        string system = "אתה עוזר לימוד אישי של סטודנט ב" + (Technion ? "טכניון" : "-HIT") + ". " + CourseContext(course) + focus
             + "\nכתוב נוסחאות ב-LaTeX בתוך $ או $$, קוד בתוך backticks. אל תהפוך סדר אותיות בעברית או מספרים. התחל מדף הלימוד הקיים וקרא מקורות נוספים רק לשאלה הנוכחית. ענה בעברית, קצר וברור, בסגנון של המרצה."
             + " אם חסר לך חומר (למשל הקלטה, מבחנים קודמים או דף תרגיל), אמור לסטודנט בדיוק מה חסר ומאיפה להביא אותו (Moodle, CS24, כפתור הוסף הקלטה בשיעור)."
             + " בשיעורי בית: תן קודם רמז וכיוון והסבר את השיטה; פתרון מלא רק אם הסטודנט מבקש."
