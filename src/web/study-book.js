@@ -27,27 +27,46 @@
     }
     return false;
   }
+  // Remembers what the page itself said inline, so the light theme can put it back exactly.
+  function setInk(el, prop, val) {
+    var saved = {}; try { saved = JSON.parse(el.getAttribute('data-ink') || '{}'); } catch (e) { saved = {}; }
+    if (!(prop in saved)) saved[prop] = [el.style.getPropertyValue(prop), el.style.getPropertyPriority(prop)];
+    el.setAttribute('data-ink', JSON.stringify(saved));
+    el.style.setProperty(prop, val, 'important');
+  }
+  function clearInk(el) {
+    var saved = {}; try { saved = JSON.parse(el.getAttribute('data-ink') || '{}'); } catch (e) { saved = {}; }
+    for (var prop in saved) { el.style.removeProperty(prop); if (saved[prop][0]) el.style.setProperty(prop, saved[prop][0], saved[prop][1]); }
+    el.removeAttribute('data-ink');
+  }
   function fixContrast() {
     var root = document.querySelector('.wrap'); if (!root) return;
-    var all = root.querySelectorAll('*'), i, el;
-    for (i = 0; i < all.length; i++) { el = all[i]; if (el.hasAttribute('data-ink')) { el.style.removeProperty('color'); el.removeAttribute('data-ink'); } }
+    var all = root.querySelectorAll('*'), i, el, cs;
+    for (i = 0; i < all.length; i++) if (all[i].hasAttribute('data-ink')) clearInk(all[i]);
     if (currentTheme() !== 'dark') return;
+    // 1. A box the page painted light becomes a dark box (the page's own light colours would glare on the dark page).
     for (i = 0; i < all.length; i++) {
-      el = all[i];
-      if (/^(script|style|path|line|polyline|polygon|circle|ellipse|rect|defs|g)$/i.test(el.tagName)) continue;
-      var col = rgbOf(getComputedStyle(el).color);
-      if (col && lum(col) > 0.55 && lightBackground(el)) { el.style.setProperty('color', '#1b2030', 'important'); el.setAttribute('data-ink', '1'); }
+      el = all[i]; if (/^(script|style)$/i.test(el.tagName) || el instanceof SVGElement) continue;
+      var bg = rgbOf(getComputedStyle(el).backgroundColor);
+      if (bg && bg[3] > 0.6 && lum(bg) > 0.72) setInk(el, 'background-color', '#1c2538');
     }
-    // A figure drawn on a white sheet: its text and lines that follow the text colour turn dark.
+    // 2. Text the page coloured dark now sits on a dark box or the dark page: it turns light.
+    for (i = 0; i < all.length; i++) {
+      el = all[i]; if (/^(script|style)$/i.test(el.tagName) || el instanceof SVGElement) continue;
+      var col = rgbOf(getComputedStyle(el).color);
+      if (col && lum(col) < 0.45 && !lightBackground(el)) setInk(el, 'color', '#ecebe6');
+    }
+    // 3. Figures: a white sheet disappears, and ink that is almost black turns light.
     var svgs = root.querySelectorAll('svg');
     for (i = 0; i < svgs.length; i++) {
-      var s = svgs[i], vb = (s.getAttribute('viewBox') || '').split(/[ ,]+/).map(Number), rects = s.querySelectorAll(':scope > rect, :scope > g > rect'), sheet = false, k;
-      for (k = 0; k < rects.length && k < 4; k++) {
-        var f = rgbOf(getComputedStyle(rects[k]).fill), w = parseFloat(rects[k].getAttribute('width')) || 0;
-        if (f && lum(f) > 0.85 && vb.length === 4 && w >= vb[2] * 0.9) sheet = true;
+      var s = svgs[i], vb = (s.getAttribute('viewBox') || '').split(/[ ,]+/).map(Number), parts = s.querySelectorAll('*'), k;
+      for (k = 0; k < parts.length; k++) {
+        var part = parts[k]; cs = getComputedStyle(part);
+        var f = cs.fill && cs.fill !== 'none' ? rgbOf(cs.fill) : null, st = cs.stroke && cs.stroke !== 'none' ? rgbOf(cs.stroke) : null;
+        if (f && lum(f) > 0.9 && part.tagName.toLowerCase() === 'rect' && vb.length === 4 && (parseFloat(part.getAttribute('width')) || 0) >= vb[2] * 0.85) setInk(part, 'fill', 'transparent');
+        else if (f && lum(f) < 0.2 && f[3] > 0.5) setInk(part, 'fill', '#e6e9f2');
+        if (st && lum(st) < 0.2 && st[3] > 0.5) setInk(part, 'stroke', '#cbd2e0');
       }
-      if (!sheet && lightBackground(s)) sheet = true;
-      if (sheet) { s.style.setProperty('color', '#1b2030', 'important'); s.setAttribute('data-ink', '1'); }
     }
   }
   if (window.matchMedia) { try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () { fixContrast(); }); } catch (e) { } }
