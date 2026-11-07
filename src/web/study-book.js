@@ -12,7 +12,45 @@
     if (t === 'dark' || t === 'light') return t;
     return window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
-  function applyTheme(t) { document.documentElement.setAttribute('data-theme', t); }
+  function applyTheme(t) { document.documentElement.setAttribute('data-theme', t); try { fixContrast(); } catch (e) { } }
+
+  // A page written with its own light boxes (a pale background set in the page itself) becomes light text on a light box in the dark
+  // theme. In the dark theme the text inside such a box is darkened (and a figure drawn on a white sheet gets dark ink); in the
+  // light theme everything goes back to what the page says.
+  function rgbOf(c) { var m = /rgba?\(([\d.]+)[ ,]+([\d.]+)[ ,]+([\d.]+)(?:[ ,/]+([\d.]+))?/.exec(c || ''); return m ? [+m[1], +m[2], +m[3], m[4] === undefined ? 1 : +m[4]] : null; }
+  function lum(c) { return (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) / 255; }
+  function lightBackground(el) {
+    for (var n = el; n && n.nodeType === 1; n = n.parentElement) {
+      var bg = rgbOf(getComputedStyle(n).backgroundColor);
+      if (bg && bg[3] > 0.6) return lum(bg) > 0.72;
+      if (n.classList && n.classList.contains('wrap')) break;
+    }
+    return false;
+  }
+  function fixContrast() {
+    var root = document.querySelector('.wrap'); if (!root) return;
+    var all = root.querySelectorAll('*'), i, el;
+    for (i = 0; i < all.length; i++) { el = all[i]; if (el.hasAttribute('data-ink')) { el.style.removeProperty('color'); el.removeAttribute('data-ink'); } }
+    if (currentTheme() !== 'dark') return;
+    for (i = 0; i < all.length; i++) {
+      el = all[i];
+      if (/^(script|style|path|line|polyline|polygon|circle|ellipse|rect|defs|g)$/i.test(el.tagName)) continue;
+      var col = rgbOf(getComputedStyle(el).color);
+      if (col && lum(col) > 0.55 && lightBackground(el)) { el.style.setProperty('color', '#1b2030', 'important'); el.setAttribute('data-ink', '1'); }
+    }
+    // A figure drawn on a white sheet: its text and lines that follow the text colour turn dark.
+    var svgs = root.querySelectorAll('svg');
+    for (i = 0; i < svgs.length; i++) {
+      var s = svgs[i], vb = (s.getAttribute('viewBox') || '').split(/[ ,]+/).map(Number), rects = s.querySelectorAll(':scope > rect, :scope > g > rect'), sheet = false, k;
+      for (k = 0; k < rects.length && k < 4; k++) {
+        var f = rgbOf(getComputedStyle(rects[k]).fill), w = parseFloat(rects[k].getAttribute('width')) || 0;
+        if (f && lum(f) > 0.85 && vb.length === 4 && w >= vb[2] * 0.9) sheet = true;
+      }
+      if (!sheet && lightBackground(s)) sheet = true;
+      if (sheet) { s.style.setProperty('color', '#1b2030', 'important'); s.setAttribute('data-ink', '1'); }
+    }
+  }
+  if (window.matchMedia) { try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () { fixContrast(); }); } catch (e) { } }
   try { var saved = localStorage.getItem('sumit-study-theme'); if (saved === 'dark' || saved === 'light') applyTheme(saved); } catch (e) { }
   function themeButton(parent) {
     var b = document.createElement('button'); b.type = 'button'; b.className = 'booktheme' + (parent ? '' : ' floating');
@@ -226,6 +264,6 @@
     });
   }
 
-  function start() { stripEmoji(); build(); if (!document.querySelector('.booktheme') && document.body) themeButton(null); }
+  function start() { stripEmoji(); build(); try { fixContrast(); } catch (e) { } if (!document.querySelector('.booktheme') && document.body) themeButton(null); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();

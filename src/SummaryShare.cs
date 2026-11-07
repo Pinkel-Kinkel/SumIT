@@ -35,7 +35,7 @@ partial class HitStudent
         if (!uri.IsFile) return null;
         string path = Path.GetFullPath(uri.LocalPath);
         if (!IsInside(path, root)) throw new IOException("קישור מקומי מחוץ לקורס אינו ניתן לשיתוף: " + Path.GetFileName(path));
-        if (!ShareExtensions.Contains(Path.GetExtension(path))) throw new IOException("סוג קובץ מקושר אינו נתמך לשיתוף: " + Path.GetFileName(path));
+        if (!ShareExtensions.Contains(Path.GetExtension(path))) return null; // a link to something that is not shareable (e.g. an internet shortcut) stays a plain link; it must not stop the whole ZIP
         string current = path;
         while (IsInside(current, root)) {
             if ((File.Exists(current) || Directory.Exists(current)) && (File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
