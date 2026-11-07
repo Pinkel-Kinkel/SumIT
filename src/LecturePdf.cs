@@ -43,19 +43,21 @@ partial class HitStudent
 
     // ---------- Progress: a percentage and a rough time left, from how long this course's earlier summaries took ----------
 
+    string SummaryTimeKey() { return Provider == "gemini" ? "summarySecondsGemini" : Provider == "openai" ? "summarySecondsOpenai" : "summarySeconds"; }
+
     double EstimatedSummarySeconds(string course)
     {
         var meta = LoadMeta(course);
-        string key = Provider == "gemini" ? "summarySecondsGemini" : "summarySeconds";   // Gemini writes slower than Claude: its own history
+        string key = SummaryTimeKey();   // Gemini and ChatGPT write slower than Claude: each has its own history
         var list = meta.ContainsKey(key) ? meta[key] as ArrayList : null;
-        if (list == null || list.Count == 0) return Provider == "gemini" ? 1200 : 420;
-        return Math.Max(Provider == "gemini" ? 600 : 120, list.Cast<object>().Reverse().Take(3).Select(Convert.ToDouble).Average());
+        if (list == null || list.Count == 0) return Provider == "claude" ? 420 : 1200;
+        return Math.Max(Provider == "claude" ? 120 : 600, list.Cast<object>().Reverse().Take(3).Select(Convert.ToDouble).Average());
     }
 
     void RememberSummarySeconds(string course, double seconds)
     {
         var meta = LoadMeta(course);
-        string key = Provider == "gemini" ? "summarySecondsGemini" : "summarySeconds";
+        string key = SummaryTimeKey();
         var list = (meta.ContainsKey(key) ? meta[key] as ArrayList : null) ?? new ArrayList();
         list.Add((int)seconds);
         while (list.Count > 5) list.RemoveAt(0);
