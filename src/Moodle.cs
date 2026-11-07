@@ -734,7 +734,7 @@ return out;";
 
     void AddFiles(string course, string folder, string kind = "")
     {
-        using (var dlg = new OpenFileDialog { Multiselect = true, Title = "הוסף קבצים" })
+        using (var dlg = new OpenFileDialog { Multiselect = true, Title = "הוסף קבצים", InitialDirectory = Directory.Exists(CourseDir(course)) ? CourseDir(course) : "" }) // opens in this course, not wherever Windows last looked
         {
             if (dlg.ShowDialog(this) != DialogResult.OK) return;
             // "folder" is either a lecture number or one of the course-level folders (מבחנים, מידע על הקורס).

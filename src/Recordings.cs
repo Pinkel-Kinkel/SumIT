@@ -89,7 +89,7 @@ partial class HitStudent
     {
         if (num < 1 || num > 200) return;
         string[] picked;
-        using (var dlg = new OpenFileDialog { Multiselect = true, Title = "בחר הקלטה (וגם תמלול, אם יש)", Filter = "הקלטה או תמלול|*.mp4;*.m4a;*.webm;*.mkv;*.txt;*.vtt;*.srt" })
+        using (var dlg = new OpenFileDialog { Multiselect = true, Title = "בחר הקלטה (וגם תמלול, אם יש)", Filter = "הקלטה או תמלול|*.mp4;*.m4a;*.webm;*.mkv;*.txt;*.vtt;*.srt", InitialDirectory = Directory.Exists(LectureDir(course, num)) ? LectureDir(course, num) : Directory.Exists(CourseDir(course)) ? CourseDir(course) : "" })
         {
             if (dlg.ShowDialog(this) != DialogResult.OK) return;
             picked = dlg.FileNames;
