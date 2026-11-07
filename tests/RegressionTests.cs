@@ -406,6 +406,8 @@ if ($env:FAKE_NAME -eq 'codex' -and $m.Success) {
             check("another institute's Moodle address is cleaned and kept to its host", HitStudent.NormalizeMoodleUrl("moodle.technion.ac.il/my/") == "https://moodle.technion.ac.il" && HitStudent.NormalizeMoodleUrl("  https://md.hit.ac.il/login/index.php ") == "https://md.hit.ac.il" && HitStudent.NormalizeMoodleUrl("") == "https://md.hit.ac.il" && HitStudent.NormalizeMoodleUrl("javascript:alert(1)") == "https://md.hit.ac.il" && HitStudent.NormalizeMoodleUrl("hello") == "https://md.hit.ac.il");
             string tmpBrand = Path.Combine(Path.GetTempPath(), "sumit-brand-" + Guid.NewGuid().ToString("N"), "HIT", "קורסים");
             check("a Technion student's courses folder is named Technion, and an empty HIT default follows the choice", HitStudent.DefaultStudyRootTechnionForTest().EndsWith(@"Technion\קורסים") && HitStudent.IsFreshDefaultFolder(tmpBrand, "HIT") && !HitStudent.IsFreshDefaultFolder(tmpBrand, "Technion"));
+            app.SaveMeta("online-course", new Dictionary<string, object> { { "manual", true } });
+            check("a course added by hand (not from Moodle) is listed with the others", app.OfflineCourses().Any(c => (string)c["name"] == "online-course" && c.ContainsKey("manual")) && app.WithManualCourses(new List<Dictionary<string, object>>()).Any(c => (string)c["name"] == "online-course"));
             // A second opinion on a lecture summary: the notes are added to the page, and a repeat replaces them.
             string course = "review-course";
             app.SaveLecture(course, new Dictionary<string, object> { { "num", 1 }, { "title", "L1" } });

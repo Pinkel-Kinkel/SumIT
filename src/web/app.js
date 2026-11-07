@@ -673,6 +673,16 @@ function renderCourses() {
   });
 }
 $('refreshCourses').onclick = loadCourses;
+const isManual = () => !!(S.course && S.course.manual);
+// A course that is not from Moodle (a course from the internet, for example): only a name; it gets a folder to put files in.
+$('addCourse').onclick = () => {
+  const ov = h(`<div style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:80;display:grid;place-items:center"><form class="card pad-lg" style="width:min(440px,92vw)"><h2 style="margin-top:0">הוסף קורס</h2><p class="muted">לקורס שאינו מ-Moodle, למשל קורס מהאינטרנט. אני יוצר לו תיקייה, ושם אפשר להוסיף הקלטות, מצגות ושיעורי בית מהמחשב. אחר כך אפשר לבנות ממנו סיכומים כמו בכל קורס.</p><input name="name" placeholder="שם הקורס" style="width:100%" autocomplete="off"><div class="row" style="margin-top:14px;justify-content:flex-end"><button type="button" class="ghost" data-c>ביטול</button><button class="primary">הוסף</button></div></form></div>`);
+  const close = () => ov.remove();
+  ov.querySelector('[data-c]').onclick = close;
+  ov.onclick = (e) => { if (e.target === ov) close(); };
+  ov.querySelector('form').onsubmit = (e) => { e.preventDefault(); const n = ov.querySelector('input').value.trim(); if (!n) return; send({ type: 'addCourse', name: n }); close(); };
+  document.body.append(ov); ov.querySelector('input').focus();
+};
 $('showAll').onchange = renderCourses;
 
 // ---------- One course ----------
@@ -682,7 +692,7 @@ const modLabel = { resource: 'קובץ', file: 'קובץ', assign: 'מטלה', z
 function openCourse(c) {
   rememberCourseUi();
   const saved=runtimeFor(c.name);
-  S.course = c; S.sections = []; S.open = new Set(saved.open || []); S.local = c.local || null; S.notability = null;
+  S.course = c; document.body.classList.toggle('manual-course', !!c.manual); S.sections = []; S.open = new Set(saved.open || []); S.local = c.local || null; S.notability = null;
   $('courseName').textContent = c.name;
   $('courseBand').innerHTML = ART.band(c.id);
   $('lecturer').value = ''; $('lecturer').placeholder = 'מי המרצה?';
@@ -1101,8 +1111,8 @@ function fillLecture(el, s) {
   top.append(topRec);
   top.append(h('<small class="muted">לא לכל הקורס יש הקלטה, זה לא חובה.</small>'));
 
-  btn('book', 'מצגות וחומר מה-Moodle', hasMaterial ? 'done' : 'soft', () => lectureSource(s.num, 'moodle', 'slides'));
-  btn('exam', 'שיעורי בית ופתרונות מה-Moodle', hasHomework ? 'done' : 'soft', () => lectureSource(s.num, 'moodle', 'homework'));
+  if (!isManual()) btn('book', 'מצגות וחומר מה-Moodle', hasMaterial ? 'done' : 'soft', () => lectureSource(s.num, 'moodle', 'slides'));
+  if (!isManual()) btn('exam', 'שיעורי בית ופתרונות מה-Moodle', hasHomework ? 'done' : 'soft', () => lectureSource(s.num, 'moodle', 'homework'));
   if (!instTechnion()) btn('book', 'חומר מ-CS24', 'ghost', () => lectureSource(s.num, 'cs24', 'slides'));
   btn('plus', 'קבצים מהמחשב', 'ghost', () => send({ type: 'addFiles', course: course.name, folder: String(s.num), kind: '' }));
   btn('plus','סיכום של חבר (ZIP / OneDrive)','soft',()=>showSummaryImport(course.name,s.num));
@@ -1138,7 +1148,7 @@ function fillLecture(el, s) {
   else hwText.innerHTML = '<b>זוהו שיעורי בית עם פתרונות ✓</b> הסיכום ייבדק מולם.';
   if (!hasHomework) {
     const row = h('<div class="row wrap" style="margin-top:8px"></div>');
-    const b1 = h('<button class="soft small"><span data-ic="book"></span>פתרונות מה-Moodle</button>'); b1.onclick = () => lectureSource(s.num, 'moodle', 'homework');
+    const b1 = h('<button class="soft small"><span data-ic="book"></span>פתרונות מה-Moodle</button>'); b1.onclick = () => lectureSource(s.num, 'moodle', 'homework'); b1.hidden = isManual();
     const b2 = h('<button class="ghost small"><span data-ic="plus"></span>מהמחשב</button>'); b2.onclick = () => send({ type: 'addFiles', course: course.name, folder: String(s.num), kind: 'homework' });
     row.append(b1, b2); hwText.append(row);
   }
@@ -1246,7 +1256,7 @@ function renderInfo() {
   const tips = (info.tips || []).filter(Boolean);
   if (tips.length) wrap.append(h(`<div class="card" style="margin-top:14px;--i:6"><h2>טיפים לקורס</h2><ul class="tips">${tips.map(t => `<li dir="auto">${esc(t)}</li>`).join('')}</ul></div>`));
   const row = h('<div class="row wrap" style="margin-top:14px"></div>');
-  const sy = h(`<button class="soft"><span data-ic="download"></span>הורד סילבוס מה-Moodle מחדש</button>`); sy.disabled=!!busy; sy.onclick = () => downloadMoodle('syllabus'); row.append(sy);
+  const sy = h(`<button class="soft"><span data-ic="download"></span>הורד סילבוס מה-Moodle מחדש</button>`); sy.disabled=!!busy; sy.onclick = () => downloadMoodle('syllabus'); sy.hidden = isManual(); row.append(sy);
   const r = h(`<button class="ghost"><span data-ic="refresh"></span>נתח מחדש</button>`); r.disabled = busy; r.onclick = () => { S.infoBusy = true; send({ type: 'analyzeCourse', course: S.course.name }); renderInfo(); }; row.append(r);
   wrap.append(row);
   p.append(wrap);
@@ -1264,7 +1274,7 @@ function renderExams() {
   p.append(card);
   const acts = card.querySelector('#examActs');
   const add = (ic, t, cls, fn, dis) => { const b = h(`<button class="${cls}"><span data-ic="${ic}"></span>${t}</button>`); b.onclick = fn; b.disabled = !!dis; acts.append(b); };
-  add('download', 'הורד את כל המבחנים מה-Moodle', 'primary', () => downloadMoodle('exams'), runtimeFor(S.course.name).operations.get('exams'));
+  if (!isManual()) add('download', 'הורד את כל המבחנים מה-Moodle', 'primary', () => downloadMoodle('exams'), runtimeFor(S.course.name).operations.get('exams'));
   if (!instTechnion()) add('exam', 'מבחנים מ-CS24', 'soft', () => { setSaveTarget(S.course.name, 'מבחנים'); openSite('cs24'); toast('כל קובץ שתוריד מ-CS24 יישמר בתיקיית המבחנים של הקורס'); });
   add('plus', 'הוסף מבחנים מהמחשב', 'ghost', () => send({ type: 'addFiles', course: S.course.name, folder: 'מבחנים' }));
   if (L.exams) add('folder', 'תיקיית המבחנים', 'ghost', () => send({ type: 'openPath', path: L.dir + '\\מבחנים' }));
@@ -2016,7 +2026,7 @@ function examsIntroCard() {
     <div class="row wrap" data-b></div></div></div></div>`);
   const row = c.querySelector('[data-b]');
   const add = (ic, t, cls, fn) => { const b = h(`<button class="${cls}"><span data-ic="${ic}"></span>${t}</button>`); b.onclick = fn; row.append(b); };
-  add('download', 'הורד את כל המבחנים מה-Moodle', 'primary', () => downloadMoodle('exams'));
+  if (!isManual()) add('download', 'הורד את כל המבחנים מה-Moodle', 'primary', () => downloadMoodle('exams'));
   if (!instTechnion()) add('exam', 'מבחנים מ-CS24', 'soft', () => { setSaveTarget(S.course.name, 'מבחנים'); openSite('cs24'); });
   add('plus', 'מהמחשב', 'ghost', () => send({ type: 'addFiles', course: S.course.name, folder: 'מבחנים' }));
   add('x', 'אין לי עכשיו - דלג', 'ghost', () => send({ type: 'skipExams', course: S.course.name }));

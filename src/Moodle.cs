@@ -284,6 +284,44 @@ partial class HitStudent
         catch { }
     }
 
+    // A course the student added himself (not from Moodle, e.g. a course from the internet): just a folder with a mark in its info file.
+    List<Dictionary<string, object>> ManualCourses()
+    {
+        var res = new List<Dictionary<string, object>>();
+        try
+        {
+            if (StudyRoot.Length > 0 && Directory.Exists(StudyRoot))
+                foreach (string d in Directory.GetDirectories(StudyRoot))
+                {
+                    string name = Path.GetFileName(d);
+                    if (!Bool(LoadMeta(name), "manual")) continue;
+                    int id = 0; foreach (char ch in name) id = (id * 31 + ch) % 90000;
+                    res.Add(new Dictionary<string, object> { { "id", -(id + 1) }, { "name", name }, { "short", name }, { "category", "קורס שהוספתי" }, { "current", true }, { "progress", null }, { "url", "" }, { "manual", true } });
+                }
+        }
+        catch { }
+        return res;
+    }
+
+    List<Dictionary<string, object>> WithManualCourses(List<Dictionary<string, object>> moodleCourses)
+    {
+        var all = new List<Dictionary<string, object>>(moodleCourses ?? new List<Dictionary<string, object>>());
+        foreach (var m in ManualCourses()) if (!all.Any(c => Str(c, "name") == Str(m, "name"))) all.Add(m);
+        return all;
+    }
+
+    void AddManualCourse(string name)
+    {
+        name = SafeName((name ?? "").Trim());
+        if (name.Length == 0) { Toast("כתוב שם לקורס", true); return; }
+        if (StudyRoot.Length == 0) { Toast("בחר קודם תיקיית קורסים בהגדרות", true); return; }
+        if (Directory.Exists(CourseDir(name)) && !Bool(LoadMeta(name), "manual")) { Toast("כבר יש תיקייה בשם הזה", true); return; }
+        Directory.CreateDirectory(CourseDir(name));
+        var meta = LoadMeta(name); meta["manual"] = true; meta["setupDone"] = true; SaveMeta(name, meta);
+        Toast("הקורס נוסף: " + name, false);
+        lastCourses = null; LoadCourses(true);
+    }
+
     // Courses saved earlier; failing that, the course folders on disk that remember their Moodle id.
     List<Dictionary<string, object>> OfflineCourses()
     {
@@ -294,7 +332,7 @@ partial class HitStudent
             if (all.ContainsKey("courses")) res = json.Deserialize<List<Dictionary<string, object>>>(json.Serialize(all["courses"])) ?? res;
         }
         catch { }
-        if (res.Count > 0) return res;
+        if (res.Count > 0) return WithManualCourses(res);
         try
         {
             if (StudyRoot.Length > 0 && Directory.Exists(StudyRoot))
@@ -307,7 +345,7 @@ partial class HitStudent
                 }
         }
         catch { }
-        return res;
+        return WithManualCourses(res);
     }
 
     static string Ajax(string method, string argsJson)
@@ -466,6 +504,7 @@ return out;";
             lastCourses = json.Deserialize<List<Dictionary<string, object>>>(v);
             coursesFresh = true;
             WriteMoodleCache("courses", json.DeserializeObject(v));
+            lastCourses = WithManualCourses(lastCourses);
             foreach (var c in lastCourses) c["local"] = CourseLocal(Str(c, "name"));
             Send(new { type = "courses", data = lastCourses });
         }
@@ -505,6 +544,17 @@ return out;";
     {
         try
         {
+            // A course the student added himself has no Moodle: its lessons are the ones he made here.
+            if (Bool(LoadMeta(name), "manual"))
+            {
+                var mm = LoadMeta(name);
+                Send(new
+                {
+                    type = "course", id = id, name = name, folder = CourseDir(name), sections = new ArrayList(),
+                    lecturer = Str(mm, "lecturer"), lecturerGuess = new ArrayList(), local = CourseLocal(name), notability = NotabilityInfo(name), manual = true
+                });
+                return;
+            }
             // Show the last known lessons at once; the fresh list from Moodle follows a moment later.
             var cachedMeta = LoadMeta(name);
             var cached = cachedMeta.ContainsKey("sectionsCache") ? cachedMeta["sectionsCache"] as ArrayList : null;

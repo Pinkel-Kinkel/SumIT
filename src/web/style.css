@@ -974,3 +974,5 @@ html[data-theme=dark] .card { border-color: #274a82; }
 #summaryChat .sc-icon:hover{background:var(--surface-2)}
 
 .inst-technion [data-site-link="cs24"], .inst-technion [data-site="cs24"] { display: none !important; }
+
+body.manual-course #syncAll, body.manual-course #learnAll { display: none !important; }
