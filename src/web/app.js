@@ -218,7 +218,7 @@ document.querySelector('.nav-item[data-notes]').onclick = () => { if (S.course) 
 $('brand').onclick = () => show('home');
 
 // ---------- Status ----------
-function aiName() { return (S.ai && S.ai.provider === 'gemini') ? 'Gemini' : 'Claude'; }
+function aiName() { return !S.ai ? 'Claude' : S.ai.provider === 'gemini' ? 'Gemini' : S.ai.provider === 'openai' ? 'ChatGPT' : 'Claude'; }
 function setupText(s) {
   return { 'installing-claude': 'מתקין את Claude...', 'login-claude': 'ממתין להתחברות בדפדפן...', 'installing-node': 'מכין את הכלים...', 'installing-gemini': 'מתקין את Gemini...', 'login-gemini': 'מכין את ההתחברות ל-Google...', 'installing-codex': 'מתקין את ChatGPT...', 'login-chatgpt': 'ממתין להתחברות ל-ChatGPT בדפדפן...' }[s] || '';
 }

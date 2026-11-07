@@ -134,8 +134,8 @@ partial class HitStudent
         bool geminiKey = Str(settings, "geminiKey").Length > 0;
         bool geminiGoogle = GeminiAccountReady();
         string provider = Provider;
-        // Claude is the main AI when there is one; a student with only Gemini gets the summaries from Gemini.
-        bool ready = claudeIn || geminiGoogle;
+        // Claude is the main AI when there is one; a student with only ChatGPT or only Gemini gets the summaries from that one.
+        bool ready = claudeIn || geminiGoogle || ChatGptAccountReady(); // a student with only ChatGPT connected is ready too
         return new
         {
             provider = provider, ready = ready, setup = setupState,
