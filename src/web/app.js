@@ -1113,7 +1113,7 @@ function fillLecture(el, s) {
 
   if (!isManual()) btn('book', 'מצגות וחומר מה-Moodle', hasMaterial ? 'done' : 'soft', () => lectureSource(s.num, 'moodle', 'slides'));
   if (!isManual()) btn('exam', 'שיעורי בית ופתרונות מה-Moodle', hasHomework ? 'done' : 'soft', () => lectureSource(s.num, 'moodle', 'homework'));
-  if (!instTechnion()) btn('book', 'חומר מ-CS24', 'ghost', () => lectureSource(s.num, 'cs24', 'slides'));
+  if (!instTechnion() && !isManual()) btn('book', 'חומר מ-CS24', 'ghost', () => lectureSource(s.num, 'cs24', 'slides'));
   btn('plus', 'קבצים מהמחשב', 'ghost', () => send({ type: 'addFiles', course: course.name, folder: String(s.num), kind: '' }));
   btn('plus','סיכום של חבר (ZIP / OneDrive)','soft',()=>showSummaryImport(course.name,s.num));
   (L.sharedSummaries||[]).forEach(item=>btn('book','סיכום חבר: '+item.title,'soft',()=>openViewer(item.path,item.title,'',s.num)));
@@ -1220,6 +1220,15 @@ function renderInfo() {
   const L = S.local || {};
   const info = L.info || (L.infoText ? {} : null);
   const busy = S.infoBusy;
+  if (!info && isManual()) {
+    p.append(h(`<div class="empty">${ART.empty().replace('<svg', '<svg class="art"')}<b>עוד אין מידע על הקורס</b>
+      הוסף מהמחשב את הסילבוס או כל מסמך שמתאר את הקורס (מרצה, הרכב הציון, מבנה המבחן), והאפליקציה תקרא אותו.
+      <div class="row"><button class="primary" id="addSyl"><span data-ic="plus"></span>הוסף סילבוס או מידע מהמחשב</button>
+      <button class="ghost" id="readInfo"><span data-ic="refresh"></span>קרא את מה שהוספתי</button></div></div>`));
+    $('addSyl').onclick = () => send({ type: 'addFiles', course: S.course.name, folder: 'מידע על הקורס' });
+    $('readInfo').disabled = !!busy; $('readInfo').onclick = () => { S.infoBusy = true; send({ type: 'analyzeCourse', course: S.course.name }); renderInfo(); };
+    return;
+  }
   if (!info) {
     p.append(h(`<div class="empty">${ART.empty().replace('<svg', '<svg class="art"')}<b>עוד אין מידע על הקורס</b>
       לחיצה אחת, והאפליקציה מסנכרנת את הסילבוס מה-Moodle וקוראת אותו: מרצה, הרכב הציון, האם שיעורי הבית חובה, מבנה המבחן ותאריכים חשובים.
@@ -1275,7 +1284,7 @@ function renderExams() {
   const acts = card.querySelector('#examActs');
   const add = (ic, t, cls, fn, dis) => { const b = h(`<button class="${cls}"><span data-ic="${ic}"></span>${t}</button>`); b.onclick = fn; b.disabled = !!dis; acts.append(b); };
   if (!isManual()) add('download', 'הורד את כל המבחנים מה-Moodle', 'primary', () => downloadMoodle('exams'), runtimeFor(S.course.name).operations.get('exams'));
-  if (!instTechnion()) add('exam', 'מבחנים מ-CS24', 'soft', () => { setSaveTarget(S.course.name, 'מבחנים'); openSite('cs24'); toast('כל קובץ שתוריד מ-CS24 יישמר בתיקיית המבחנים של הקורס'); });
+  if (!instTechnion() && !isManual()) add('exam', 'מבחנים מ-CS24', 'soft', () => { setSaveTarget(S.course.name, 'מבחנים'); openSite('cs24'); toast('כל קובץ שתוריד מ-CS24 יישמר בתיקיית המבחנים של הקורס'); });
   add('plus', 'הוסף מבחנים מהמחשב', 'ghost', () => send({ type: 'addFiles', course: S.course.name, folder: 'מבחנים' }));
   if (L.exams) add('folder', 'תיקיית המבחנים', 'ghost', () => send({ type: 'openPath', path: L.dir + '\\מבחנים' }));
   add('sparkles', busy ? 'עובד על זה...' : (L.examPrep ? 'בנה מחדש את דף ההכנה' : 'בנה דף הכנה למבחן'), 'primary', () => { S.examBusy = true; send({ type: 'examPrep', course: S.course.name }); renderExams(); }, busy || !L.exams);
@@ -2027,7 +2036,7 @@ function examsIntroCard() {
   const row = c.querySelector('[data-b]');
   const add = (ic, t, cls, fn) => { const b = h(`<button class="${cls}"><span data-ic="${ic}"></span>${t}</button>`); b.onclick = fn; row.append(b); };
   if (!isManual()) add('download', 'הורד את כל המבחנים מה-Moodle', 'primary', () => downloadMoodle('exams'));
-  if (!instTechnion()) add('exam', 'מבחנים מ-CS24', 'soft', () => { setSaveTarget(S.course.name, 'מבחנים'); openSite('cs24'); });
+  if (!instTechnion() && !isManual()) add('exam', 'מבחנים מ-CS24', 'soft', () => { setSaveTarget(S.course.name, 'מבחנים'); openSite('cs24'); });
   add('plus', 'מהמחשב', 'ghost', () => send({ type: 'addFiles', course: S.course.name, folder: 'מבחנים' }));
   add('x', 'אין לי עכשיו - דלג', 'ghost', () => send({ type: 'skipExams', course: S.course.name }));
   return c;
