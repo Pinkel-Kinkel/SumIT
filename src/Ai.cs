@@ -510,7 +510,7 @@ partial class HitStudent
         Directory.CreateDirectory(Path.GetDirectoryName(output));
         try
         {
-            var r = await RunCli(FindCodex(), "exec --ignore-user-config --skip-git-repo-check -s workspace-write --ephemeral -o " + Q(output) + " -",
+            var r = await RunCli(FindCodex(), "exec --ignore-user-config --skip-git-repo-check -s workspace-write -c windows.sandbox=unelevated --ephemeral -o " + Q(output) + " -",
                 (system ?? "") + "\n" + prompt, cwd, 1800000);
             string answer = File.Exists(output) ? File.ReadAllText(output, Encoding.UTF8) : "";
             return new AiResult { Provider = "openai", Error = r.Item1 != 0 || answer.Length == 0,

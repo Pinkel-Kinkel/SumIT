@@ -135,7 +135,7 @@ partial class HitStudent
                 string exe = FindCodex();
                 if(image!=null)File.WriteAllBytes(Path.Combine(dir,"selection.png"),image);
                 string answer = Path.Combine(dir, "answer.txt");
-                r = await RunCli(exe, "exec "+string.Join(" ",extraPaths.Select(p=>"--image "+Q(p)))+" "+(image!=null?"--image "+Q(Path.Combine(dir,"selection.png"))+" ":"")+"--ignore-user-config --skip-git-repo-check -s read-only --ephemeral -o " + Q(answer) + " -", prompt, dir, Math.Min(timeoutMs,240000));
+                r = await RunCli(exe, "exec "+string.Join(" ",extraPaths.Select(p=>"--image "+Q(p)))+" "+(image!=null?"--image "+Q(Path.Combine(dir,"selection.png"))+" ":"")+"--ignore-user-config --skip-git-repo-check -s read-only -c windows.sandbox=unelevated --ephemeral -o " + Q(answer) + " -", prompt, dir, Math.Min(timeoutMs,240000));
                 text = File.Exists(answer) ? File.ReadAllText(answer, Encoding.UTF8).Trim() : "";
             }
             if (r.Item1 != 0 || text.Length == 0)
