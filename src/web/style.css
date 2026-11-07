@@ -976,3 +976,9 @@ html[data-theme=dark] .card { border-color: #274a82; }
 .inst-technion [data-site-link="cs24"], .inst-technion [data-site="cs24"] { display: none !important; }
 
 body.manual-course #syncAll, body.manual-course #learnAll { display: none !important; }
+
+.head-progress { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 12.5px; color: var(--muted); }
+.head-progress .hp-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.head-progress .hp-pct { color: var(--text); }
+.head-progress .hp-bar { flex: 0 1 220px; min-width: 90px; height: 6px; }
+.head-progress .hp-bar { margin-top: 0; }

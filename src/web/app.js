@@ -1035,10 +1035,12 @@ function requestLectureSummary(course, lecture, force=false) {
 function renderLectures() {
   const box = $('lectures'); box.innerHTML = '';
   if (examsIntroNeeded()) box.append(examsIntroCard());
-  box.append(newLectureBar(), lectureCalendarEditor());
+  box.append(lectureCalendarEditor());
   const secs = S.sections;
-  if (!secs.length) { box.append(h(`<div class="empty">${ART.empty().replace('<svg', '<svg class="art"')}<b>התחל מהרצאה 1</b>צור הרצאה ובחר את המצגות, שיעורי הבית ודפי המחברת שלה. חומר מגרסאות קודמות נשאר בתיקיית הקורס ואפשר לייבא אותו מכפתורי הוספת הקבצים.</div>`)); return; }
+  // The bar that creates the next lecture sits under the last one.
+  if (!secs.length) { box.append(newLectureBar()); box.append(h(`<div class="empty">${ART.empty().replace('<svg', '<svg class="art"')}<b>התחל מהרצאה 1</b>צור הרצאה ובחר את המצגות, שיעורי הבית ודפי המחברת שלה. חומר מגרסאות קודמות נשאר בתיקיית הקורס ואפשר לייבא אותו מכפתורי הוספת הקבצים.</div>`)); return; }
   secs.forEach((s, i) => { const el = lectureEl(s); el.style.setProperty('--i', i); box.append(el); });
+  box.append(newLectureBar());
   box.classList.add('stagger');
 }
 
@@ -1174,6 +1176,17 @@ function paintStatus(el, s) {
     bar = `<div class="sum-progress"><div class="row"><b>${s.pct}%</b><span class="muted">${esc(eta.replace(/^ · /, ''))}</span></div><div class="bar big"><i style="width:${s.pct}%"></i></div></div>`;
   }
   if (!bar && job && job.state === 'running' && job.progress >= 0) bar = `<div class="sum-progress"><div class="row"><b>${job.progress}%</b><span class="muted">מוריד את ההקלטה</span></div><div class="bar big"><i style="width:${job.progress}%"></i></div></div>`;
+  // The same progress on the closed row of the lecture, so the student sees the summary being made (and when it ends) without opening it.
+  const main = el.querySelector('.lecture-main');
+  if (main) {
+    let hp = main.querySelector('.head-progress');
+    if (working) {
+      if (!hp) { hp = document.createElement('div'); hp.className = 'head-progress'; main.append(hp); }
+      const short = (s.pctText || s.status || 'עובד על הסיכום...');
+      hp.innerHTML = '<span class="spinner"></span><span class="hp-text" dir="auto">' + esc(short.length > 70 ? short.slice(0, 70) + '...' : short) + '</span>'
+        + (s.pct != null ? '<b class="hp-pct">' + s.pct + '%</b><div class="bar hp-bar"><i style="width:' + s.pct + '%"></i></div>' : '');
+    } else if (hp) hp.remove();
+  }
   st.innerHTML = (working ? '<span class="spinner"></span>' : (job && job.state !== 'failed' ? '<span class="spinner"></span>' : '')) + `<span dir="auto">${esc(text)}</span>` + bar;
 }
 function section(num) { return S.sections.find(s => s.num === num); }
