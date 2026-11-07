@@ -15,7 +15,7 @@ using Microsoft.Web.WebView2.WinForms;
 
 partial class HitStudent : Form
 {
-    public const string Version = "1.0.25";
+    public const string Version = "1.0.26";
     const string Repo = "Pinkel-Kinkel/SumIT";
     // Updates are only accepted from these repositories (the project was renamed from hit-recordings).
     static readonly string[] RepoNames = { "Pinkel-Kinkel/SumIT" };
@@ -80,7 +80,7 @@ partial class HitStudent : Form
         zoomPanel = LoginPanel(zoom, "\u05D4\u05EA\u05D7\u05D1\u05E8 \u05DC-Zoom \u05E2\u05DD \u05D4\u05DE\u05E9\u05EA\u05DE\u05E9 \u05E9\u05DC HIT. \u05D6\u05D4 \u05E7\u05D5\u05E8\u05D4 \u05E4\u05E2\u05DD \u05D0\u05D7\u05EA, \u05D5\u05D4\u05D4\u05D5\u05E8\u05D3\u05D4 \u05EA\u05DE\u05E9\u05D9\u05DA \u05DC\u05D1\u05D3.",
             delegate { if (working) zoomCancelled = true; ui.BringToFront(); });
         moodle = new WebView2 { Dock = DockStyle.Fill };
-        moodlePanel = LoginPanel(moodle, "\u05D4\u05EA\u05D7\u05D1\u05E8 \u05E2\u05DD \u05E9\u05DD \u05D4\u05DE\u05E9\u05EA\u05DE\u05E9 \u05D5\u05D4\u05E1\u05D9\u05E1\u05DE\u05D4 \u05E9\u05DC HIT. \u05D6\u05D4 \u05E7\u05D5\u05E8\u05D4 \u05E4\u05E2\u05DD \u05D0\u05D7\u05EA \u05D1\u05DC\u05D1\u05D3.",
+        moodlePanel = LoginPanel(moodle, "\u05D4\u05EA\u05D7\u05D1\u05E8 \u05E2\u05DD \u05E9\u05DD \u05D4\u05DE\u05E9\u05EA\u05DE\u05E9 \u05D5\u05D4\u05E1\u05D9\u05E1\u05DE\u05D4 \u05E9\u05DC \u05D4\u05DE\u05D5\u05E1\u05D3. \u05D6\u05D4 \u05E7\u05D5\u05E8\u05D4 \u05E4\u05E2\u05DD \u05D0\u05D7\u05EA \u05D1\u05DC\u05D1\u05D3.",
             delegate { moodleCancelled = true; ui.BringToFront(); });
         site = new WebView2 { Dock = DockStyle.Fill };
         sitePanel = new Panel { Visible = false };
@@ -246,6 +246,7 @@ partial class HitStudent : Form
                     settings[kv.Key] = kv.Value;
         }
         catch { }
+        var moodleHost = MoodleBase; // fixes the host used by the static URL checks
         bool hasD = Directory.Exists(@"D:\");
         string docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         if (Str(settings, "studyRoot").Length == 0)
@@ -380,7 +381,7 @@ partial class HitStudent : Form
             type = "settings", studyRoot = StudyRoot, recordingsDir = RecordingsDir, notabilityDir = NotabilityDir,
             aiProvider = Provider, hasGeminiKey = Str(settings, "geminiKey").Length > 0, hasOpenAiKey = Str(settings, "openaiKey").Length > 0,
             helperPref = Str(settings, "helperPref").Length > 0 ? Str(settings, "helperPref") : "auto", displayName = Str(settings, "displayName"), bio = Str(settings, "bio"),
-            onboarded = Bool(settings, "onboarded"), userName = Str(settings, "userName"), version = Version,
+            moodleUrl = MoodleBase, onboarded = Bool(settings, "onboarded"), userName = Str(settings, "userName"), version = Version,
             autoSync = Option("autoSync"), autoRecordings = Option("autoRecordings"), autoUpdate = Option("autoUpdate"), autoFallback = Option("autoFallback"), pdfDark = Option("pdfDark"),
             profileImage = ProfileImage(),
             theme = Str(settings, "theme").Length > 0 ? Str(settings, "theme") : "system", systemLight = SystemUsesLightTheme()
@@ -497,6 +498,7 @@ partial class HitStudent : Form
             case "openOpenAiKeyPage": OpenExternal("https://platform.openai.com/api-keys"); break;
 
             // Moodle
+            case "setMoodleUrl": SetMoodleUrl(Str(m, "url")); break;
             case "connectMoodle": ConnectMoodle(); break;
             case "loadCourses": LoadCourses(m.ContainsKey("cachedOnly") && m["cachedOnly"] is bool && (bool)m["cachedOnly"]); break;
             case "loadHome": LoadHome(); break;
@@ -870,6 +872,7 @@ partial class HitStudent : Form
         string key = Str(m, "site");
         string url;
         if (!Sites.TryGetValue(key, out url)) return;
+        if (key == "moodle") url = MoodleBase + "/my/";
         PlaceSite(m);
         if (key != "portal") CloseSitePopup();
         string current = site.Source == null ? "" : site.Source.ToString();

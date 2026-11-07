@@ -250,6 +250,9 @@ function renderStatus() {
 $('moodlePill').onclick = () => { if (S.moodle === 'ready') toast('Moodle מחובר ✓'); else connectMoodle(); };
 $('aiPill').onclick = () => { if (S.ai && S.ai.ready) toast(aiName() + ' מחובר ✓'); else openWizard(1); };
 $('moodleConnect').onclick = connectMoodle;
+function saveMoodleUrl(v) { send({ type: 'setMoodleUrl', url: (v || '').trim() }); S.courses = null; S.askedSavedCourses = false; }
+$('moodleUrlSave').onclick = () => { saveMoodleUrl($('moodleUrl').value); toast('הכתובת נשמרה. לחץ "התחבר"'); };
+$('wizMoodleUrl').onchange = () => saveMoodleUrl($('wizMoodleUrl').value);
 function connectMoodle() { S.moodle = 'connecting'; renderStatus(); send({ type: 'connectMoodle' }); }
 
 function renderBanners() {
@@ -1659,7 +1662,7 @@ function renderWizardMoodle() {
   const ok = S.moodle === 'ready';
   $('wizMoodle').classList.toggle('ok', ok);
   $('wizMoodleTitle').textContent = ok ? `מחובר${S.userName ? ' · ' + S.userName : ''}` : S.moodle === 'connecting' ? 'מתחבר...' : 'עוד לא מחובר';
-  $('wizMoodleSub').textContent = ok ? 'ההתחברות ל-Moodle הושלמה, ואפשר להמשיך.' : 'לחץ על "התחבר". חלון ההתחברות של HIT ייפתח כאן באפליקציה.';
+  $('wizMoodleSub').textContent = ok ? 'ההתחברות ל-Moodle הושלמה, ואפשר להמשיך.' : 'לחץ על "התחבר". חלון ההתחברות של המוסד ייפתח כאן באפליקציה.';
   $('wizMoodleBtn').hidden = ok;
 }
 
@@ -1670,6 +1673,7 @@ function onMessage(m) {
   switch (m.type) {
     case 'settings':
       S.settings = m; S.ready.settings = true; S.tasks = m.tasks || [];
+      if (m.moodleUrl) { const host = m.moodleUrl.replace(/^https?:\/\//, ''); if (document.activeElement !== $('moodleUrl')) $('moodleUrl').value = host; if (document.activeElement !== $('wizMoodleUrl')) $('wizMoodleUrl').value = host; S.moodleHost = host; }
       if (S.view === 'tasks') renderTasks($('tasksPage'), false); renderHome();
       if (m.userName) S.userName = m.userName;
       renderSettings(); renderStatus();
@@ -1684,7 +1688,7 @@ function onMessage(m) {
       // Moodle is unreachable or signed out: the courses saved on this PC still open (offline).
       else if (m.state !== 'ready' && m.state !== 'connecting' && !S.courses && !S.askedSavedCourses) { S.askedSavedCourses = true; send({ type: 'loadCourses', cachedOnly: true }); }
       if (!$('wizard').hidden) renderWizardCourses();
-      if (m.state === 'login' && S.view === 'courses' && !S.courses) { $('courses').innerHTML = ''; $('coursesState').innerHTML = ''; $('coursesState').append(h(`<div class="empty">${ART.campus().replace('<svg', '<svg class="art" style="width:220px;height:130px"')}<b>צריך להתחבר ל-Moodle</b>מתחברים פעם אחת עם המשתמש של HIT.<div class="row"><button class="primary" id="cm">התחבר</button></div></div>`)); $('cm').onclick = connectMoodle; }
+      if (m.state === 'login' && S.view === 'courses' && !S.courses) { $('courses').innerHTML = ''; $('coursesState').innerHTML = ''; $('coursesState').append(h(`<div class="empty">${ART.campus().replace('<svg', '<svg class="art" style="width:220px;height:130px"')}<b>צריך להתחבר ל-Moodle</b>מתחברים פעם אחת עם המשתמש של המוסד.<div class="row"><button class="primary" id="cm">התחבר</button></div></div>`)); $('cm').onclick = connectMoodle; }
       if (S.view === 'home') renderHome();
       break;
     case 'home': S.events = m.events || []; if (m.name) S.userName = m.name; renderHome(); renderWizardMoodle(); renderProfile(S.settings); break;
@@ -1946,7 +1950,7 @@ else start();
 function lectureSource(num, siteName, kind) {
   const base = `הרצאות\\הרצאה ${num}`;
   setSaveTarget(S.course.name, kind === 'homework' ? base + '\\תרגילים' : base);
-  openSite(siteName, siteName === 'moodle' ? `https://md.hit.ac.il/course/view.php?id=${S.course.id}` : undefined);
+  openSite(siteName, siteName === 'moodle' ? `https://${S.moodleHost || 'md.hit.ac.il'}/course/view.php?id=${S.course.id}` : undefined);
   toast(kind === 'homework' ? `קבצים שתשמור כאן ייכנסו לשיעורי הבית של הרצאה ${num}. חשוב לשמור גם את הפתרונות` : `קבצים שתשמור כאן ייכנסו להרצאה ${num}`, { ms: 5000 });
 }
 function lectureSourceOld(num, siteName) {
@@ -1954,7 +1958,7 @@ function lectureSourceOld(num, siteName) {
   const folder = `הרצאות\\הרצאה ${num}`;
   if (![...$('dlFolder').options].some(o => o.value === folder)) $('dlFolder').add(new Option(`הרצאה ${num}`, folder));
   $('dlFolder').value = folder; syncDownloadTarget();
-  openSite(siteName, siteName === 'moodle' ? `https://md.hit.ac.il/course/view.php?id=${S.course.id}` : undefined);
+  openSite(siteName, siteName === 'moodle' ? `https://${S.moodleHost || 'md.hit.ac.il'}/course/view.php?id=${S.course.id}` : undefined);
 }
 function lectureEditor(existing) {
   const form = h(`<form class="card pad-lg lecture-editor"><h3>${existing ? 'פרטי הרצאה' : 'צור הרצאה'}</h3><p class="muted">בחר חומר להרצאה אחת. לסיכום יצורף הידע הרלוונטי מההרצאות הקודמות. תאריך הגשה מזינים רק לפי הנחיית המרצה.</p><div class="row wrap"><label>מספר <input name="num" type="number" min="1" max="200" required></label><label>כותרת <input name="title" placeholder="נושא ההרצאה"></label><label>תאריך הרצאה <input name="date" type="date"></label><label>מועד הגשה (אם ידוע) <input name="due" type="date"></label><button class="primary">${existing ? 'שמור' : 'צור תיקיית הרצאה'}</button></div></form>`);

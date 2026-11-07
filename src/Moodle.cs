@@ -16,7 +16,30 @@ using Microsoft.Web.WebView2.WinForms;
 
 partial class HitStudent
 {
-    const string MoodleBase = "https://md.hit.ac.il";
+    const string DefaultMoodle = "https://md.hit.ac.il";
+    static string moodleHostNow = "md.hit.ac.il"; // host of the Moodle in use, for the static URL checks
+
+    // The student's Moodle (HIT by default). A friend at another institute types his own address once.
+    string MoodleBase
+    {
+        get
+        {
+            string b = NormalizeMoodleUrl(Str(settings, "moodleUrl"));
+            moodleHostNow = new Uri(b).Host;
+            return b;
+        }
+    }
+
+    // Keeps only "https://host[:port]" of whatever the student pasted; anything that is not a web address falls back to HIT.
+    internal static string NormalizeMoodleUrl(string s)
+    {
+        s = (s ?? "").Trim();
+        if (s.Length == 0) return DefaultMoodle;
+        if (s.IndexOf("://", StringComparison.Ordinal) < 0) s = "https://" + s;
+        Uri u;
+        if (!Uri.TryCreate(s, UriKind.Absolute, out u) || (u.Scheme != Uri.UriSchemeHttps && u.Scheme != Uri.UriSchemeHttp) || u.Host.IndexOf('.') < 0) return DefaultMoodle;
+        return "https://" + u.Authority;
+    }
     const string Exercises = "תרגילים";                          // תרגילים
     const string Exams = "מבחנים";                                    // מבחנים
     const string CourseInfoFolder = "מידע על הקורס"; // מידע על הקורס
@@ -68,7 +91,8 @@ partial class HitStudent
     {
         Uri src;
         if (!Uri.TryCreate(e.Source, UriKind.Absolute, out src)) return;
-        if (!src.Host.EndsWith("hit.ac.il", StringComparison.OrdinalIgnoreCase) && !src.Host.EndsWith("zoom.us", StringComparison.OrdinalIgnoreCase)
+        string moodleHost = new Uri(MoodleBase).Host;
+        if (!src.Host.EndsWith("hit.ac.il", StringComparison.OrdinalIgnoreCase) && !src.Host.Equals(moodleHost, StringComparison.OrdinalIgnoreCase) && !src.Host.EndsWith("zoom.us", StringComparison.OrdinalIgnoreCase)
             && !src.Host.Equals("cs24.co.il", StringComparison.OrdinalIgnoreCase)) return;
         try
         {
@@ -171,6 +195,23 @@ partial class HitStudent
             return await work();
         }
         finally { moodleLock.Release(); }
+    }
+
+    // A student at another institute points the app at his own Moodle; what was saved from the previous one is dropped.
+    void SetMoodleUrl(string url)
+    {
+        string next = NormalizeMoodleUrl(url);
+        if (string.Equals(next, MoodleBase, StringComparison.OrdinalIgnoreCase)) { SendSettings(); return; }
+        settings["moodleUrl"] = next;
+        SaveSettings();
+        var cache = ReadMoodleCache(); cache.Remove("courses"); cache.Remove("home");
+        try { File.WriteAllText(MoodleCacheFile, json.Serialize(cache), Encoding.UTF8); } catch { }
+        lastCourses = null; coursesFresh = false;
+        string unused = MoodleBase; // refreshes the host for the static checks
+        try { moodle.CoreWebView2.Navigate(next + "/my/"); } catch { }
+        SendMoodle("login", "");
+        SendSettings();
+        Send(new { type = "courses", data = new List<Dictionary<string, object>>() });
     }
 
     // Background reads never pop up the sign-in page: when Moodle is down or the session ran out, the caller keeps what is saved on this PC.
@@ -664,7 +705,7 @@ return out;";
     static bool IsMoodleUrl(string url)
     {
         Uri u;
-        return Uri.TryCreate(url, UriKind.Absolute, out u) && u.Scheme == Uri.UriSchemeHttps && u.Host.Equals("md.hit.ac.il", StringComparison.OrdinalIgnoreCase);
+        return Uri.TryCreate(url, UriKind.Absolute, out u) && u.Scheme == Uri.UriSchemeHttps && u.Host.Equals(moodleHostNow, StringComparison.OrdinalIgnoreCase);
     }
 
     static bool IsZoomUrl(string url)
@@ -890,7 +931,7 @@ return out;";
             var done = await Task.WhenAny(tcs.Task, Task.Delay(8000));
             if (done == tcs.Task) return tcs.Task.Result;
             string v = await EvalAsync(moodle,
-                "const a=document.querySelector('.urlworkaround a, [role=main] a[href^=\"http\"]:not([href*=\"md.hit.ac.il\"])');return a?a.href:'';", 5000);
+                "const a=document.querySelector('.urlworkaround a, [role=main] a[href^=\"http\"]:not([href*=\"" + new Uri(MoodleBase).Host + "\"])');return a?a.href:'';", 5000);
             return json.Deserialize<string>(v);
         }
         finally { moodle.CoreWebView2.NavigationStarting -= watch; }
