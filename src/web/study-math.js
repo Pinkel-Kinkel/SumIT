@@ -1,5 +1,25 @@
 // Runs offline in generated study pages. Do not process code, scripts or already rendered math.
 (() => {
+  // Coordinates and plain-text equations such as "P2 (110, 218)" or "Δx = 110 − 130 = −20" are left-to-right runs.
+  // Inside a Hebrew paragraph the browser reorders them, so each run gets its own isolated direction.
+  function isolateLtrRuns() {
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    const nodes = []; while (walker.nextNode()) nodes.push(walker.currentNode);
+    const run = /[A-Za-z0-9Δ(−][A-Za-z0-9Δ().,:=+\-−×÷\/^′' ]*[A-Za-z0-9Δ)]/g;
+    for (const node of nodes) {
+      const p = node.parentElement;
+      if (!p || p.closest('script,style,pre,code,textarea,svg,.katex,.sumit-math,.sumit-ltr')) continue;
+      const value = node.nodeValue; run.lastIndex = 0; let m, last = 0, frag = document.createDocumentFragment(), found = false;
+      while ((m = run.exec(value))) {
+        if (!/[(=,+−×÷\/]/.test(m[0]) || !/[0-9]/.test(m[0])) continue;
+        found = true; frag.append(document.createTextNode(value.slice(last, m.index)));
+        const el = document.createElement('span'); el.className = 'sumit-ltr'; el.dir = 'ltr'; el.style.unicodeBidi = 'isolate'; el.textContent = m[0];
+        frag.append(el); last = run.lastIndex;
+      }
+      if (found) { frag.append(document.createTextNode(value.slice(last))); node.replaceWith(frag); }
+    }
+  }
+
   function render() {
     if (!window.katex || !document.body) return;
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
@@ -19,6 +39,7 @@
       }
       if(found){frag.append(document.createTextNode(value.slice(last)));node.replaceWith(frag);}
     }
+    isolateLtrRuns();
     document.documentElement.dataset.sumitMath='ready';
     document.documentElement.dataset.sumitMathErrors=String(failures);
   }
