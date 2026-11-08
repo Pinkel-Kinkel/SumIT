@@ -987,3 +987,7 @@ body.manual-course #syncAll, body.manual-course #learnAll { display: none !impor
 .card-share { position: absolute; right: 10px; top: 10px; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: rgba(0,0,0,.28); color: #fff; cursor: pointer; z-index: 2; }
 .card-share:hover { background: rgba(0,0,0,.5); }
 .card-share svg { width: 14px; height: 14px; }
+
+.read-mark{width:26px;height:26px;min-width:26px;padding:0;border-radius:50%;border:2px solid var(--line,#456);background:transparent;color:#fff;font-size:15px;line-height:1;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;margin-inline:6px}
+.read-mark.on{background:#22c55e;border-color:#22c55e}
+.lecture.read-done .lecture-title{opacity:.65}

@@ -1112,6 +1112,18 @@ function fillLecture(el, s) {
   const quickPage=L.studyPage||(L.sharedSummaries||[])[0]?.path;
   if(quickPage){const quick=h('<button class="primary small quick-summary">פתח סיכום</button>');quick.onclick=e=>{e.stopPropagation();openViewer(quickPage,'הרצאה '+s.num+' · סיכום',L.lecturePdf||'',s.num);};el.querySelector('.lecture-head').insertBefore(quick,el.querySelector('.chevron'));}
 
+  // "Finished reading" tick, kept per course and lecture in this browser profile.
+  el.querySelector('.read-mark')?.remove();
+  if (s.num > 0) {
+    const rkey = 'sumit-read|' + course.name + '|' + s.num;
+    const getRead = () => { try { return localStorage.getItem(rkey) === '1'; } catch (e) { return false; } };
+    const mark = h('<button class="read-mark" title="סימנתי שסיימתי לקרוא את ההרצאה"></button>');
+    const paintRead = () => { const on = getRead(); mark.classList.toggle('on', on); mark.textContent = on ? '✓' : ''; el.classList.toggle('read-done', on); };
+    mark.onclick = e => { e.stopPropagation(); try { if (getRead()) localStorage.removeItem(rkey); else localStorage.setItem(rkey, '1'); } catch (er) {} paintRead(); };
+    paintRead();
+    el.querySelector('.lecture-head').insertBefore(mark, el.querySelector('.chevron'));
+  }
+
   const items = el.querySelector('.items');
   items.innerHTML = '';
   items.append(h(`<li class="muted">${s.date ? 'תאריך הרצאה: ' + esc(s.date) : 'תאריך הרצאה לא הוגדר'} · ${s.due ? 'הגשת שיעורי בית: ' + esc(s.due) : 'מועד הגשה לא ידוע'}</li>`));
