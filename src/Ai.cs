@@ -880,8 +880,9 @@ partial class HitStudent
             + StudyLearningPolicy + CompleteQuestionPolicy
             + "קרא את כל המבחנים והפתרונות ב-\"" + Exams + "\", ואת סיכומי ההרצאות (\"" + SummaryName + "/" + SummaryHtmlName + "\" בכל תיקיית הרצאה, ואת התקצירים ב-\"" + SumitDir + "/digests\" - קודם אותם), ורק לפי הצורך את קבצי ההרצאות. המטרה: להבין איך המרצה חושב.\n"
             + "כתוב את \"" + LecturerProfile + "\": איזה נושאים חוזרים ובאיזו תדירות, תבניות השאלות שלו, איך הוא מצפה שיפתרו (שלבים, סימונים, רמת פירוט), מלכודות שהוא אוהב, ומה דפוסי הבחינות הקודמות; אין להבטיח מה יופיע בבחינה הבאה.\n"
-            + "ובנה את דף \"" + Exams + "/" + ExamPrepPage + "\" עם דף נוסחאות, תבניות השאלות החוזרות ושני מבחני תרגול חדשים עם פתרונות מודרכים נפתחים. סמן אותם כמבחנים שנוצרו לתרגול, לא תחזית. התחל מסיכומי ההרצאות הקיימים וחזור למקורות רק להשלמת פערים." + WorkAlone;
+            + "ובנה את דף \"" + Exams + "/" + ExamPrepPage + "\" עם דף נוסחאות, תבניות השאלות החוזרות ושני מבחני תרגול חדשים עם פתרונות מודרכים נפתחים. סמן אותם כמבחנים שנוצרו לתרגול, לא תחזית. כל נוסחה נכתבת בשלמותה בשורה אחת: אל תפצל נוסחה לכמה תאי טבלה או לכמה שורות, ואל תדחס כמה נוסחאות לתא אחד; עדיף כרטיס לכל תבנית, ובו שורה לכל נוסחה. התחל מסיכומי ההרצאות הקיימים וחזור למקורות רק להשלמת פערים." + WorkAlone;
         var result = await CourseTask(key, course, s => Send(new { type = "courseStatus", course = course, text = s, busy = true }), prompt);
+        if (!result.Error) { try { PrepareStudyPage(Path.Combine(CourseDir(course), Exams, ExamPrepPage)); } catch { } }   // the page renders its formulas and opens inside the app
         Send(new { type = "courseStatus", course = course, text = result.Error ? Trunc(result.Text, 160) : "", busy = false, error = result.Error });
         SendCourseLocal(course);
         Notify(result.Error ? null : "ההכנה למבחן מוכנה", course);

@@ -283,6 +283,16 @@
     });
   }
 
-  function start() { stripEmoji(); build(); try { fixContrast(); } catch (e) { } if (!document.querySelector('.booktheme') && document.body) themeButton(null); }
+  // A formula in a table cell stays on one line; a table wider than the page scrolls sideways instead of breaking its formulas.
+  function wrapTables() {
+    var tables = document.querySelectorAll('table');
+    for (var i = 0; i < tables.length; i++) {
+      var t = tables[i];
+      if (t.closest('.tablewrap, .sumit-tablewrap') || t.closest('.katex')) continue;
+      var w = document.createElement('div'); w.className = 'sumit-tablewrap';
+      t.parentNode.insertBefore(w, t); w.appendChild(t);
+    }
+  }
+  function start() { stripEmoji(); try { wrapTables(); } catch (e) { } build(); try { fixContrast(); } catch (e) { } if (!document.querySelector('.booktheme') && document.body) themeButton(null); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();

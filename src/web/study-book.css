@@ -95,3 +95,6 @@
   .book-controls,.book-question-pin { display:none!important; }
   .bookreading { display:block!important; }
 }
+
+.sumit-tablewrap { overflow-x: auto; max-width: 100%; }
+td .katex, th .katex, td .katex-html, th .katex-html { white-space: nowrap !important; }

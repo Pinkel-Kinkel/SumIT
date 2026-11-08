@@ -758,6 +758,7 @@ $('learnAll').onclick = () => {
   toast(`${aiName()} מתחיל ללמוד את כל הקורס: מוריד הכל, קורא את הסילבוס, בונה דף לימוד לכל שיעור ולומד את המרצה מהמבחנים. זה לוקח זמן, אפשר להמשיך לעבוד.`, { ms: 8000 });
 };
 $('examPrepBtn').onclick = () => { setTab('exams'); setChatScope('exam'); };
+$('chatClose').onclick = () => { if (!S.chatHidden) $('toggleChat').click(); };
 $('toggleChat').onclick = () => { S.chatHidden = !S.chatHidden; $('courseBody').classList.toggle('no-chat', S.chatHidden); $('chat').hidden = S.chatHidden; };
 $('lecturer').onchange = () => S.course && send({ type: 'setLecturer', course: S.course.name, name: $('lecturer').value.trim() });
 
@@ -1331,7 +1332,7 @@ function renderExams() {
   if (L.exams) add('folder', 'תיקיית המבחנים', 'ghost', () => send({ type: 'openPath', path: L.dir + '\\מבחנים' }));
   add('sparkles', busy ? 'עובד על זה...' : (L.examPrep ? 'בנה מחדש את דף ההכנה' : 'בנה דף הכנה למבחן'), 'primary', () => { S.examBusy = true; send({ type: 'examPrep', course: S.course.name }); renderExams(); }, busy || !L.exams);
   add('chat', 'התאמן בשאלות', 'soft', () => setChatScope('exam'), !L.exams);
-  if (L.examPrep) add('external', 'דף ההכנה למבחן', 'primary', () => send({ type: 'openPath', path: L.examPrep }));
+  if (L.examPrep) add('book', 'דף ההכנה למבחן', 'primary', () => openViewer(L.examPrep, 'הכנה למבחן · ' + S.course.name, '', null));
   if (L.lecturerProfile) add('user', 'פרופיל המרצה', '', () => send({ type: 'openPath', path: L.lecturerProfile }));
 }
 
