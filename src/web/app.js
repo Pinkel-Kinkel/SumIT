@@ -250,6 +250,29 @@ function renderStatus() {
 $('moodlePill').onclick = () => { if (S.moodle === 'ready') toast('Moodle מחובר ✓'); else connectMoodle(); };
 $('aiPill').onclick = () => { if (S.ai && S.ai.ready) toast(aiName() + ' מחובר ✓'); else openWizard(1); };
 $('moodleConnect').onclick = connectMoodle;
+// ---------- Shared summaries (a OneDrive folder that friends share) ----------
+S.sync = { offers: [] };
+const syncTotal = () => (S.sync.offers || []).reduce((a, o) => a + (o.count || 0), 0);
+const syncOfferFor = (name) => (S.sync.offers || []).find(o => o.course === name);
+$('syncFind').onclick = () => send({ type: 'findSyncFolder' });
+$('syncPick').onclick = () => send({ type: 'pickSyncFolder' });
+$('syncLinkGo').onclick = () => { const v = $('syncLink').value.trim(); if (v) send({ type: 'openSyncLink', url: v }); };
+$('syncPublishAll').onclick = () => send({ type: 'syncPublish' });
+// "Share" on a course: a file to send, or the shared folder.
+function shareCourseDialog(c) {
+  const hasFolder = !!(S.settings && S.settings.syncFolder);
+  const ov = h(`<div style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:80;display:grid;place-items:center"><div class="card pad-lg" style="width:min(480px,92vw)"><h2 style="margin-top:0">שיתוף: <span dir="auto"></span></h2>
+    <p class="muted">אפשר לשלוח לחבר את כל הסיכומים של הקורס, גם אם הקורס לא מ-HIT.</p>
+    <div style="display:flex;flex-direction:column;gap:10px"><button class="primary" style="width:100%" data-zip>שמור כקובץ ZIP לשליחה (WhatsApp / OneDrive)</button><small class="muted" style="margin-top:-4px">החבר מוסיף אותו דרך "הוסף קורס" › "מקובץ של חבר".</small>
+    <button class="soft" style="width:100%" data-folder>${hasFolder ? 'פרסם בתיקייה המשותפת (החברים מקבלים הודעה)' : 'פרסם בתיקייה המשותפת (צריך קודם לבחור תיקייה בהגדרות)'}</button></div>
+    <div class="row" style="margin-top:14px;justify-content:flex-end"><button class="ghost" data-c>סגור</button></div></div></div>`);
+  ov.querySelector('h2 span').textContent = c.name;
+  const close = () => ov.remove();
+  ov.querySelector('[data-c]').onclick = close; ov.onclick = (e) => { if (e.target === ov) close(); };
+  ov.querySelector('[data-zip]').onclick = () => { send({ type: 'exportCourseZip', course: c.name }); close(); };
+  ov.querySelector('[data-folder]').onclick = () => { if (!hasFolder) { close(); show('settings'); toast('בחר או חפש כאן את התיקייה המשותפת'); return; } send({ type: 'syncPublish', course: c.name }); close(); };
+  document.body.append(ov);
+}
 function instTechnion() { return !!(S.settings && S.settings.institute === 'technion'); }
 function instName() { return instTechnion() ? 'הטכניון' : 'HIT'; }
 // HIT or the Technion: the Technion has CheeseFork instead of the personal portal, and no CS24.
@@ -284,6 +307,7 @@ function renderBanners() {
     const later = h('<button class="small ghost">לא עכשיו</button>'); later.onclick = () => { S.dismissedUpdate = S.update.version; renderBanners(); }; notice.append(later); b.append(notice);
   }
   if (S.ai && !S.ai.ready && !S.ai.setup) b.append(bannerEl('חבר את המנוע החכם כדי לסכם שיעורים ולשאול שאלות', 'חבר עכשיו', () => openWizard(1), 'warn'));
+  if (syncTotal() > 0) b.append(bannerEl(`יש ${syncTotal()} סיכומים חדשים של חברים בתיקייה המשותפת`, 'הורד אותם', () => send({ type: 'syncImport' })));
   if (S.moodle === 'login' && !(S.courses && S.courses.length)) b.append(bannerEl('צריך להתחבר ל-Moodle כדי לראות את הקורסים', 'התחבר', connectMoodle, 'warn'));
   else if (S.moodle === 'login') b.append(bannerEl('אין חיבור ל-Moodle כרגע. הקורסים והחומר שכבר הורדת פתוחים כרגיל', 'נסה שוב', () => send({ type: 'loadCourses' })));
 }
@@ -642,8 +666,12 @@ function courseCard(c, i) {
   const el = h(`<button class="course-card" style="--i:${i}" data-name="${esc(c.name)}">
     <div class="band">${ART.band(c.id)}<span class="letter">${esc((c.name || '?').trim().charAt(0))}</span>${pages ? `<div class="ring" style="--p:${pct}" data-label="${pages}"></div>` : ''}</div>
     <div class="body"><div class="name" dir="auto">${esc(c.name)}</div><div class="muted" style="font-size:12px" dir="auto">${esc(c.category || '')}</div>
-    <div class="meta">${L.exists ? '<span class="chip ok">במחשב</span>' : '<span class="chip">עוד לא הורד</span>'}${pages ? `<span class="chip accent">${pages} ${L.lecturePdfs ? 'סיכומים' : 'דפי לימוד'}</span>` : ''}${L.exams ? `<span class="chip warn">${L.exams} מבחנים</span>` : ''}</div></div></button>`);
+    <div class="meta">${syncOfferFor(c.name) ? `<span class="chip accent" data-sync>${syncOfferFor(c.name).count} סיכומים חדשים של חברים</span>` : ''}${L.exists ? '<span class="chip ok">במחשב</span>' : '<span class="chip">עוד לא הורד</span>'}${pages ? `<span class="chip accent">${pages} ${L.lecturePdfs ? 'סיכומים' : 'דפי לימוד'}</span>` : ''}${L.exams ? `<span class="chip warn">${L.exams} מבחנים</span>` : ''}</div></div></button>`);
   applyBg(el.querySelector('.band'), L.background);
+  const shareBtn = h('<span class="card-share" role="button" tabindex="0" title="שיתוף הקורס עם חבר"></span>'); shareBtn.innerHTML = IC.share || 'שיתוף';
+  shareBtn.onclick = (e) => { e.stopPropagation(); shareCourseDialog(c); };
+  el.append(shareBtn);
+  const syncChip = el.querySelector('[data-sync]'); if (syncChip) syncChip.onclick = (e) => { e.stopPropagation(); send({ type: 'syncImport', course: c.name }); };
   el.onclick = () => openCourse(c);
   return el;
 }
@@ -676,7 +704,8 @@ $('refreshCourses').onclick = loadCourses;
 const isManual = () => !!(S.course && S.course.manual);
 // A course that is not from Moodle (a course from the internet, for example): only a name; it gets a folder to put files in.
 $('addCourse').onclick = () => {
-  const ov = h(`<div style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:80;display:grid;place-items:center"><form class="card pad-lg" style="width:min(440px,92vw)"><h2 style="margin-top:0">הוסף קורס</h2><p class="muted">לקורס שאינו מ-Moodle, למשל קורס מהאינטרנט. אני יוצר לו תיקייה, ושם אפשר להוסיף הקלטות, מצגות ושיעורי בית מהמחשב. אחר כך אפשר לבנות ממנו סיכומים כמו בכל קורס.</p><input name="name" placeholder="שם הקורס" style="width:100%" autocomplete="off"><div class="row" style="margin-top:14px;justify-content:flex-end"><button type="button" class="ghost" data-c>ביטול</button><button class="primary">הוסף</button></div></form></div>`);
+  const ov = h(`<div style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:80;display:grid;place-items:center"><form class="card pad-lg" style="width:min(440px,92vw)"><h2 style="margin-top:0">הוסף קורס</h2><p class="muted">לקורס שאינו מ-Moodle, למשל קורס מהאינטרנט. אני יוצר לו תיקייה, ושם אפשר להוסיף הקלטות, מצגות ושיעורי בית מהמחשב. אחר כך אפשר לבנות ממנו סיכומים כמו בכל קורס.</p><input name="name" placeholder="שם הקורס" style="width:100%" autocomplete="off"><div class="row" style="margin-top:14px;justify-content:flex-end"><button type="button" class="ghost" data-c>ביטול</button><button class="primary">הוסף</button></div><div class="row" style="margin-top:12px"><button type="button" class="soft small" data-zip>מקובץ ZIP של חבר</button></div></form></div>`);
+  ov.querySelector('[data-zip]').onclick = () => { send({ type: 'importCourseZip' }); ov.remove(); };
   const close = () => ov.remove();
   ov.querySelector('[data-c]').onclick = close;
   ov.onclick = (e) => { if (e.target === ov) close(); };
@@ -1640,6 +1669,7 @@ function renderSettings() {
   }
   $('wizNot').textContent = st.notabilityDir || 'אם Notability מגבה את המחברות לתיקייה במחשב, בחר אותה כאן';
   $('wizNotRow').classList.toggle('ok', !!st.notabilityDir);
+  $('syncFolderPath').textContent = st.syncFolder || 'לא נבחרה'; $('optAutoPublish').checked = !!st.autoPublishSync;
   $('optFallback').checked = st.autoFallback !== false; $('optPdfDark').checked = !!st.pdfDark;
   $('refreshSummariesRow').hidden = !st.outdatedSummaries;
   $('refreshSummariesText').textContent = st.outdatedSummaries ? (st.outdatedSummaries === 1 ? 'סיכום אחד נבנה בפורמט הקודם.' : st.outdatedSummaries + ' סיכומים נבנו בפורמט הקודם.') + ' בפורמט החדש ההסבר מתחיל מאפס: הקשר לפני נוסחה, כל דוגמה מוסברת עד הסוף, וכל שאלה בשיעורי הבית כוללת את מה שצריך כדי לפתור אותה. הבנייה מחדש משתמשת ב-AI (אחד אחרי השני) והסיכום הישן נשמר אם היא נכשלת.' : '';
@@ -1656,7 +1686,7 @@ $('themeToggle').onclick = () => {
   const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
   applyTheme(next); send({ type: 'setOption', name: 'theme', value: next });
 };
-[['optSync', 'autoSync'], ['optRec', 'autoRecordings'], ['optUpdate', 'autoUpdate'], ['optFallback', 'autoFallback'], ['optPdfDark', 'pdfDark']].forEach(([id, name]) =>
+[['optAutoPublish', 'autoPublishSync'], ['optSync', 'autoSync'], ['optRec', 'autoRecordings'], ['optUpdate', 'autoUpdate'], ['optFallback', 'autoFallback'], ['optPdfDark', 'pdfDark']].forEach(([id, name]) =>
   $(id).onchange = () => send({ type: 'setOption', name, value: $(id).checked }));
 
 // ---------- First-run setup ----------
@@ -1747,6 +1777,7 @@ function onMessage(m) {
       if (m.state === 'login' && S.view === 'courses' && !S.courses) { $('courses').innerHTML = ''; $('coursesState').innerHTML = ''; $('coursesState').append(h(`<div class="empty">${ART.campus().replace('<svg', '<svg class="art" style="width:220px;height:130px"')}<b>צריך להתחבר ל-Moodle</b>מתחברים פעם אחת עם המשתמש של המוסד.<div class="row"><button class="primary" id="cm">התחבר</button></div></div>`)); $('cm').onclick = connectMoodle; }
       if (S.view === 'home') renderHome();
       break;
+    case 'syncState': S.sync = { offers: m.offers || [], ok: m.ok, folder: m.folder, publisher: m.publisher }; renderBanners(); if (S.courses) renderCourses(); break;
     case 'home': S.events = m.events || []; if (m.name) S.userName = m.name; renderHome(); renderWizardMoodle(); renderProfile(S.settings); break;
     case 'courses':
       S.courses = (m.data || []).filter(c => !/^ספרי[יה]ה?\s*$/.test((c.name || '').trim())); renderCourses(); fillDownloadCourses();

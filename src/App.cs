@@ -15,7 +15,7 @@ using Microsoft.Web.WebView2.WinForms;
 
 partial class HitStudent : Form
 {
-    public const string Version = "1.0.36";
+    public const string Version = "1.0.37";
     const string Repo = "Pinkel-Kinkel/SumIT";
     // Updates are only accepted from these repositories (the project was renamed from hit-recordings).
     static readonly string[] RepoNames = { "Pinkel-Kinkel/SumIT" };
@@ -390,7 +390,7 @@ partial class HitStudent : Form
             type = "settings", studyRoot = StudyRoot, recordingsDir = RecordingsDir, notabilityDir = NotabilityDir,
             aiProvider = Provider, hasGeminiKey = Str(settings, "geminiKey").Length > 0, hasOpenAiKey = Str(settings, "openaiKey").Length > 0,
             helperPref = Str(settings, "helperPref").Length > 0 ? Str(settings, "helperPref") : "auto", displayName = Str(settings, "displayName"), bio = Str(settings, "bio"),
-            moodleUrl = MoodleBase, onboarded = Bool(settings, "onboarded"), userName = Str(settings, "userName"), version = Version,
+            syncFolder = SyncFolder, autoPublishSync = Bool(settings, "autoPublishSync"), moodleUrl = MoodleBase, onboarded = Bool(settings, "onboarded"), userName = Str(settings, "userName"), version = Version,
             autoSync = Option("autoSync"), autoRecordings = Option("autoRecordings"), autoUpdate = Option("autoUpdate"), autoFallback = Option("autoFallback"), pdfDark = Option("pdfDark"),
             profileImage = ProfileImage(),
             theme = Str(settings, "theme").Length > 0 ? Str(settings, "theme") : "system", systemLight = SystemUsesLightTheme()
@@ -440,7 +440,7 @@ partial class HitStudent : Form
             case "checkStatus": var ignored2 = PollStatus(true); break;
             case "setOption":
                 string opt = Str(m, "name");
-                if (opt == "autoSync" || opt == "autoRecordings" || opt == "autoUpdate" || opt == "autoFallback" || opt == "pdfDark") { settings[opt] = Bool(m, "value"); SaveSettings(); SendSettings(); }
+                if (opt == "autoSync" || opt == "autoRecordings" || opt == "autoUpdate" || opt == "autoFallback" || opt == "pdfDark" || opt == "autoPublishSync") { settings[opt] = Bool(m, "value"); SaveSettings(); SendSettings(); }
                 if (opt == "helperPref") { string pv = Str(m, "value"); settings[opt] = pv == "gemini" || pv == "openai" || pv == "claude" ? pv : "auto"; SaveSettings(); SendSettings(); }
                 if (opt == "theme")
                 {
@@ -511,6 +511,7 @@ partial class HitStudent : Form
             case "setMoodleUrl": SetMoodleUrl(Str(m, "url")); break;
             case "connectMoodle": ConnectMoodle(); break;
             case "addCourse": AddManualCourse(Str(m, "name")); break;
+            case "syncState": case "pickSyncFolder": case "findSyncFolder": case "openSyncLink": case "syncPublish": case "syncImport": case "exportCourseZip": case "importCourseZip": SyncMessage(type, m); break;
             case "loadCourses": LoadCourses(m.ContainsKey("cachedOnly") && m["cachedOnly"] is bool && (bool)m["cachedOnly"]); break;
             case "loadHome": LoadHome(); break;
             case "openCourse": OpenCourse(Int(m, "id"), course); break;
@@ -710,6 +711,7 @@ partial class HitStudent : Form
             string ms = await MoodleHeartbeat();
             Send(new { type = "moodle", state = ms, message = "" });
             if (full && ms == "ready") LoadHome();
+            CheckSyncFolder();
             ImportAllNotability();
             RecoverSummaries();
             // Every few hours: anything new on Moodle in the courses that are set up? (Not while a course is downloading.)

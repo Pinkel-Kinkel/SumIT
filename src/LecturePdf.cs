@@ -189,7 +189,7 @@ partial class HitStudent
         SendSectionLocal(course, num);
         if (pageReady && !result.Error)
         {
-            File.WriteAllText(cache, fingerprint); MarkSummaryFormat(course, num);
+            File.WriteAllText(cache, fingerprint); MarkSummaryFormat(course, num); AutoPublishSummary(course);
             Notify("הסיכום של הרצאה " + num + " מוכן", course);
             if (open) Send(new { type = "summaryReady", course = course, num = num, page = StudyPagePath(course, num), pdf = pdf });   // not opened in a browser: the student opens the interactive version inside the app
         }

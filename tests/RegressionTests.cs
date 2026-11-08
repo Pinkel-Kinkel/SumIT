@@ -408,6 +408,18 @@ if ($env:FAKE_NAME -eq 'codex' -and $m.Success) {
             check("a Technion student's courses folder is named Technion, and an empty HIT default follows the choice", HitStudent.DefaultStudyRootTechnionForTest().EndsWith(@"Technion\קורסים") && HitStudent.IsFreshDefaultFolder(tmpBrand, "HIT") && !HitStudent.IsFreshDefaultFolder(tmpBrand, "Technion"));
             app.SaveMeta("online-course", new Dictionary<string, object> { { "manual", true } });
             check("a course added by hand (not from Moodle) is listed with the others", app.OfflineCourses().Any(c => (string)c["name"] == "online-course" && c.ContainsKey("manual")) && app.WithManualCourses(new List<Dictionary<string, object>>()).Any(c => (string)c["name"] == "online-course"));
+            string syncCourse = "sync-course";
+            app.SaveLecture(syncCourse, new Dictionary<string, object> { { "num", 1 }, { "title", "L1" } });
+            Directory.CreateDirectory(Path.GetDirectoryName(app.StudyPagePath(syncCourse, 1)));
+            File.WriteAllText(app.StudyPagePath(syncCourse, 1), "<html><body><h1>hello</h1></body></html>");
+            string sharedFolder = Path.Combine(Path.GetTempPath(), "sumit-sync-test-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(sharedFolder);
+            var syncIndex = new Dictionary<string, object>();
+            int syncWritten = app.PublishCourseTo(sharedFolder, syncCourse, syncIndex); app.WriteSyncIndex(sharedFolder, syncIndex);
+            check("publishing puts each finished summary in the shared folder and does not offer it back to the publisher", syncWritten == 1 && File.Exists(Path.Combine(sharedFolder, "sumit-sync.json")) && app.SyncOffers(sharedFolder).Count == 0 && app.PublishCourseTo(sharedFolder, syncCourse, syncIndex) == 0);
+            var syncMeta = app.LoadMeta(syncCourse); syncMeta.Remove("syncImported"); app.SaveMeta(syncCourse, syncMeta);
+            bool offered = app.SyncOffers(sharedFolder).Count == 1;
+            Run(async () => { await app.ImportFromFolder(sharedFolder, null, false); return 0; });
+            check("a friend is told about new summaries and downloads them next to his own", offered && ((System.Collections.IEnumerable)app.SharedSummaries(syncCourse, 1)).Cast<object>().Any() && app.SyncOffers(sharedFolder).Count == 0);
             // A second opinion on a lecture summary: the notes are added to the page, and a repeat replaces them.
             string course = "review-course";
             app.SaveLecture(course, new Dictionary<string, object> { { "num", 1 }, { "title", "L1" } });

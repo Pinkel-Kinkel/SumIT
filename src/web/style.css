@@ -982,3 +982,8 @@ body.manual-course #syncAll, body.manual-course #learnAll { display: none !impor
 .head-progress .hp-pct { color: var(--text); }
 .head-progress .hp-bar { flex: 0 1 220px; min-width: 90px; height: 6px; }
 .head-progress .hp-bar { margin-top: 0; }
+
+.course-card { position: relative; }
+.card-share { position: absolute; left: 10px; bottom: 10px; display: inline-grid; place-items: center; min-width: 30px; height: 30px; padding: 0 8px; border-radius: 10px; font-size: 12px; background: var(--surface-2); color: var(--muted); cursor: pointer; }
+.card-share:hover { color: var(--text); }
+.card-share svg { width: 16px; height: 16px; }

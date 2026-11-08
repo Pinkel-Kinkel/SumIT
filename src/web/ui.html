@@ -274,6 +274,19 @@
             <div class="grow"><b>תיקיית הקורסים</b><small>לכל קורס תיקייה, ובתוכה תיקייה לכל שיעור, מבחנים ומחברת.</small><span class="path" id="studyRoot">…</span></div>
             <button id="changeStudy">שנה</button><button id="openStudy" class="ghost">פתח</button>
           </div>
+          <div class="setting">
+            <div class="grow"><b>תיקייה משותפת עם חברים</b><small>תיקיית OneDrive שמסונכרנת במחשב ומשותפת בין החברים. מי שכותב סיכומים מפרסם אותם לשם, וחבר שיש לו את אותו קורס מקבל הודעה ומוריד אותם.</small><span class="path" id="syncFolderPath">לא נבחרה</span></div>
+            <button id="syncFind">חפש את התיקייה</button><button id="syncPick" class="ghost">בחר ידנית</button>
+          </div>
+          <div class="setting">
+            <div class="grow"><b>קישור שקיבלת מחבר</b><small>הדבק את הקישור של התיקייה המשותפת ב-OneDrive. הוא ייפתח, ושם לוחצים "הוסף קיצור דרך אל הקבצים שלי". אחרי שהתיקייה מופיעה ב-OneDrive במחשב, לוחצים "חפש את התיקייה".</small></div>
+            <input id="syncLink" dir="ltr" style="width:230px" placeholder="https://..." spellcheck="false"><button id="syncLinkGo">פתח</button>
+          </div>
+          <div class="setting">
+            <div class="grow"><b>לפרסם את הסיכומים שלי</b><small>כל סיכום שמסתיים נשמר גם בתיקייה המשותפת, ו-OneDrive מעלה אותו. החברים מקבלים הודעה שיש סיכומים חדשים.</small></div>
+            <button id="syncPublishAll" class="soft small">פרסם עכשיו</button>
+            <label class="toggle"><input type="checkbox" id="optAutoPublish"><span class="switch"></span></label>
+          </div>
           <div class="setting" hidden>
             <div class="grow"><b>Notability</b><small>ב-Notability: הגדרות › גיבוי אוטומטי › Google Drive / OneDrive / Dropbox, בפורמט PDF. אחר כך בוחרים כאן את תיקיית הגיבוי שמסונכרנת למחשב.</small><span class="path" id="notabilityDir">לא נבחרה</span></div>
             <button id="changeNotability">בחר תיקייה</button>
