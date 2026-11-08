@@ -668,7 +668,7 @@ function courseCard(c, i) {
     <div class="body"><div class="name" dir="auto">${esc(c.name)}</div><div class="muted" style="font-size:12px" dir="auto">${esc(c.category || '')}</div>
     <div class="meta">${syncOfferFor(c.name) ? `<span class="chip accent" data-sync>${syncOfferFor(c.name).count} סיכומים חדשים של חברים</span>` : ''}${L.exists ? '<span class="chip ok">במחשב</span>' : '<span class="chip">עוד לא הורד</span>'}${pages ? `<span class="chip accent">${pages} ${L.lecturePdfs ? 'סיכומים' : 'דפי לימוד'}</span>` : ''}${L.exams ? `<span class="chip warn">${L.exams} מבחנים</span>` : ''}</div></div></button>`);
   applyBg(el.querySelector('.band'), L.background);
-  const shareBtn = h('<span class="card-share" role="button" tabindex="0" title="שיתוף הקורס עם חבר"></span>'); shareBtn.innerHTML = IC.share || 'שיתוף';
+  const shareBtn = h('<span class="card-share" role="button" tabindex="0" title="שיתוף הקורס עם חבר"></span>'); shareBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>';
   shareBtn.onclick = (e) => { e.stopPropagation(); shareCourseDialog(c); };
   el.append(shareBtn);
   const syncChip = el.querySelector('[data-sync]'); if (syncChip) syncChip.onclick = (e) => { e.stopPropagation(); send({ type: 'syncImport', course: c.name }); };

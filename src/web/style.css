@@ -984,6 +984,6 @@ body.manual-course #syncAll, body.manual-course #learnAll { display: none !impor
 .head-progress .hp-bar { margin-top: 0; }
 
 .course-card { position: relative; }
-.card-share { position: absolute; left: 10px; bottom: 10px; display: inline-grid; place-items: center; min-width: 30px; height: 30px; padding: 0 8px; border-radius: 10px; font-size: 12px; background: var(--surface-2); color: var(--muted); cursor: pointer; }
-.card-share:hover { color: var(--text); }
-.card-share svg { width: 16px; height: 16px; }
+.card-share { position: absolute; right: 10px; top: 10px; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: rgba(0,0,0,.28); color: #fff; cursor: pointer; z-index: 2; }
+.card-share:hover { background: rgba(0,0,0,.5); }
+.card-share svg { width: 14px; height: 14px; }
