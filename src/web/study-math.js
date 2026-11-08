@@ -35,6 +35,9 @@
         const tex=match[1]??match[2]??match[3]??match[4];
         try { katex.render(tex,el,{displayMode:match[1]!=null||match[2]!=null,throwOnError:true,trust:false,strict:'ignore',maxExpand:1000}); }
         catch (_) { el.textContent=match[0];el.title='לא ניתן להציג את הנוסחה; מוצג המקור';el.classList.add('sumit-math-error');failures++; }
+        // A unit written right after the formula ("(130, 205) m") belongs to it; left outside, it jumps to the wrong side in Hebrew text.
+        if(match[1]==null&&match[2]==null){const u=/^[  ]?(?:m\/s²|m\/s\^2|m\/s|km\/h|cm|mm|km|kg|m|s|N|J|W|Hz|g)(?![A-Za-z0-9])/.exec(value.slice(math.lastIndex));
+          if(u){el.append(document.createTextNode(u[0]));math.lastIndex+=u[0].length;}}
         frag.append(el);last=math.lastIndex;
       }
       if(found){frag.append(document.createTextNode(value.slice(last)));node.replaceWith(frag);}
