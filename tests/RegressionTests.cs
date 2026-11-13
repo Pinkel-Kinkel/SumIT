@@ -431,7 +431,7 @@ if ($env:FAKE_NAME -eq 'codex' -and $m.Success) {
             string note = Run(() => app.SecondOpinion(course, 1, "claude"));
             string html = File.ReadAllText(app.StudyPagePath(course, 1));
             check("a reviewer's correction is made in the page itself, quietly", note != null && note.Contains("תיקן") && html.Contains("התשובה היא 7") && !html.Contains("התשובה היא 5") && html.Contains("<h1>סיכום</h1>") && !html.Contains("בדיקה שנייה"));
-            check("what could not be quoted stays as a small closed note", html.Contains("הערות לבדיקה") && !html.Contains("<section id=\"second-opinion"));
+            check("remarks that could not be quoted are not appended as a notes section", !html.Contains("הערות לבדיקה") && !html.Contains("<section id=\"second-opinion"));
             Environment.SetEnvironmentVariable("FAKE_REPLY", "{\"verdict\":\"ok\",\"issues\":[]}");
             File.WriteAllText(app.StudyPagePath(course, 1), html.Replace("התשובה היא 7", "התשובה היא 7 (בדיקה)"));
             note = Run(() => app.SecondOpinion(course, 1, "claude"));

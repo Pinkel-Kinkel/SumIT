@@ -17,10 +17,6 @@ const assert = require('assert/strict');
  await page.locator('button[data-new]').click();
  assert.equal(await page.evaluate(()=>sent.at(-1).type),'saveLecture');
  assert.equal(await page.evaluate(()=>sent.at(-1).num),1);
- await page.locator('button[data-more]').click();
- await page.locator('form.lecture-editor input[name=title]').fill('נגזרות ואינטגרלים');
- await page.locator('form.lecture-editor button').click();
- assert.equal(await page.evaluate(()=>sent.at(-1).type),'saveLecture');
  await page.evaluate(()=>onMessage({type:'courseLocal',course:S.course.name,local:{dir:'test',setupDone:true,lectures:[{num:1,title:'נגזרות ואינטגרלים',date:'2026-10-25',due:'',items:[],local:{exists:true,files:2,videos:0,dir:'test'}}]},notability:{}}));
  assert.equal(await page.locator('.lecture').count(),1);
  // Homework from Moodle: the bar above the site shows the course and the lecture's homework folder.
@@ -45,11 +41,6 @@ const assert = require('assert/strict');
  if (!(await page.locator('.rec-row').count())) await page.getByRole('button',{name:'הוסף הקלטה',exact:true}).first().click();
  await page.locator('.rec-row [data-pc]').click();
  assert.deepEqual(await page.evaluate(()=>({type:sent.at(-1).type,num:sent.at(-1).num})),{type:'addRecordingFile',num:1});
- // The lecture editor opens once, however many times the button is pressed.
- await page.getByRole('button',{name:'ערוך תאריכים וכותרת',exact:true}).click();
- await page.getByRole('button',{name:'ערוך תאריכים וכותרת',exact:true}).click();
- await page.getByRole('button',{name:'ערוך תאריכים וכותרת',exact:true}).click();
- assert.equal(await page.locator('.lecture .lecture-editor').count(),1);
  // Slides from Moodle go to the lecture; the site bar has the big "save as PDF".
  await page.getByRole('button',{name:'מצגות וחומר מה-Moodle',exact:true}).click();
  assert.equal(await page.evaluate(()=>sent.findLast(m=>m.type==='setDownloadTarget').folder),'הרצאות\\הרצאה 1');
@@ -197,10 +188,8 @@ const assert = require('assert/strict');
  await page.getByRole('button',{name:'בדוק עם AI נוסף',exact:true}).click();
  assert.deepEqual(await page.evaluate(()=>{const m=sent.at(-1);return [m.type,m.scope];}),['chatCheck','lesson:1']);
  await page.evaluate(()=>{onMessage({type:'chatDone',course:S.course.name,scope:'lesson:1'});S.local={dir:'t',lectures:[]};onMessage({type:'courseLocal',course:S.course.name,local:{dir:'test',setupDone:true,lectures:[{num:1,title:'x',date:'',due:'',items:[],local:{exists:true,files:2,studyPage:'a.html',lecturePdf:'a.pdf',dir:'test'}}]},notability:{}});show('course');setTab('lessons');});
- await page.getByRole('button',{name:'בדיקה שנייה עם AI נוסף',exact:true}).click();
- assert.deepEqual(await page.evaluate(()=>{const m=sent.at(-1);return [m.type,m.num];}),['secondOpinion',1]);
  await page.evaluate(()=>{S.ai=Object.assign({},S.ai,{helpers:{gemini:'',openai:'',order:[]}});renderLectures();});
- assert.equal(await page.getByRole('button',{name:'בדיקה שנייה עם AI נוסף',exact:true}).count(),0);
+ assert.equal(await page.getByRole('button',{name:'בדיקה שנייה עם AI נוסף',exact:true}).count(),0); // The lecture row stays lean: no second opinion, PDF, question or date buttons.
  await page.screenshot({path:path.resolve(__dirname,'../build/timetable-ui.png'),fullPage:true,animations:'disabled'});
  // A finished summary is not opened in a browser: the app offers it, and the interactive version opens inside the app, with a PDF button.
  await page.evaluate(()=>onMessage({type:'summaryReady',course:S.course?S.course.name:'x',num:1,page:'C:\\x\\s.html',pdf:'C:\\x\\s.pdf'}));

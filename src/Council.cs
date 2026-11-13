@@ -100,18 +100,8 @@ partial class HitStudent
                 }
             if (done) fixedCount++; else left.Add(i);
         }
-        if (left.Count > 0)
-        {
-            var sb = new StringBuilder("<details id=\"" + marker + "\" dir=\"rtl\" style=\"margin:28px auto;max-width:900px;padding:12px 18px;border:1px solid #cbd5e1;border-radius:12px\"><summary style=\"cursor:pointer;font-weight:700\">הערות לבדיקה (" + left.Count + ")</summary><ol>");
-            foreach (var i in left)
-                sb.Append("<li style=\"margin:10px 0\"><b>").Append(WebUtility.HtmlEncode(Str(i, "where"))).Append("</b><br>").Append(WebUtility.HtmlEncode(Str(i, "problem")))
-                  .Append(Str(i, "new").Length > 0 ? "<br><i>נכון יותר:</i> " + WebUtility.HtmlEncode(Str(i, "new")) : "").Append("</li>");
-            sb.Append("</ol></details>");
-            int body = html.LastIndexOf("</body>", StringComparison.OrdinalIgnoreCase);
-            html = body >= 0 ? html.Insert(body, sb.ToString()) : html + sb;
-        }
         File.WriteAllText(page, html, new UTF8Encoding(false));
-        return clean ? BrainName(r.Provider) + " בדק ולא מצא טעויות ✓" : BrainName(r.Provider) + " תיקן " + fixedCount + (left.Count > 0 ? " והשאיר " + left.Count + " הערות" : "");
+        return clean ? BrainName(r.Provider) + " בדק ולא מצא טעויות ✓" : BrainName(r.Provider) + " תיקן " + fixedCount;
     }
     // The button on a lecture: the check again, and the PDF made again with the notes in it.
     async void SecondOpinionAndPdf(string course, int num)

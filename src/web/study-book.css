@@ -98,3 +98,11 @@
 
 .sumit-tablewrap { overflow-x: auto; max-width: 100%; }
 td .katex, th .katex, td .katex-html, th .katex-html { white-space: nowrap !important; }
+
+/* Summary figures: one idea each, centred, never wider than the page, quiet captions. */
+.figrow{display:flex;flex-wrap:wrap;gap:20px;justify-content:center;margin:20px 0}
+.figrow figure,figure[data-visual]{margin:0;flex:1 1 300px;max-width:560px}
+figure[data-visual] svg{width:100%;height:auto;max-height:420px;display:block;margin-inline:auto}
+figure[data-visual] figcaption{margin-top:8px;text-align:center;font-size:.92em;opacity:.78;text-wrap:balance}
+.sumit-ltr{unicode-bidi:isolate}
+h2,h3,h4{text-wrap:balance}

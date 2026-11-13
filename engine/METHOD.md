@@ -97,11 +97,14 @@ built *from his worked solutions*, not from the topic:
   `python -I scripts/assemble.py body.html "<course>/דפי לימוד/שבוע-N.html" "<Course> – שבוע N" <course>-wN-done`
 - Sections, in order: compact constants/units table (`#cheat`) · must/skip · core explanation
   (numbered subsections with the formula cards from step 1b) · gaps (`g1..`) · question patterns table (`pat-A..`: recognise -> start from ->
-  trap) · errata · **שימוש בתרגילים** (`#use`, always last).
+  trap) · **שימוש בתרגילים** (`#use`, always last).
 - "שימוש בתרגילים": one collapsed card per exercise, `id="use-<key>"`, class `q`. First show the complete source-faithful question in `<section class="question-statement" data-source="file, page, question/subpart">`, before any hint or solution. Include all givens, units, constraints and what must be found/proved; reproduce necessary diagrams/tables. A short title or a PDF link is not enough. Each subpart includes its necessary common givens. Keep assumptions separate from source facts. If data is missing/unreadable, say exactly what is missing; never invent the question from its answer. Newly authored practice is labeled as such, including `data-source="תרגול שנוצר"`. Deferred questions also need the statement and source, then the reason for deferral. After the statement comes a **hint**:
   numbered steps per sub-question - where to start, which formulas (links to `#f-*`) in which order, the
   trap. Do not leak the final answer in the hint. A nested `<details class="reveal">`, initially closed, holds the full worked solution, reasons for important steps, and a units/sign/substitution check. Add a brief self-check when it helps catch a typical mistake. Keep the small
   script from the skeleton that auto-opens the card when the page is opened at `#use-...`.
+- **No errata section and no review-notes section.** A mistake in an official solution or source is corrected inside the question it belongs to (one plain sentence in the worked solution, e.g. "בפתרון הרשמי כתוב X; הנכון Y"). Anything that would only be a remark at the bottom is either fixed in the page or left out.
+- **Coverage.** The exercises must exercise all of the lecture's material. After the source questions are in, list every topic of the lecture that no question practises. For each, write a new practice question (labelled "תרגול שנוצר", `data-source="תרגול שנוצר"`, with a visible note that it is not part of the official homework), with the same hint and worked-solution structure as the others.
+- **Readability.** Hebrew text with Latin letters, numbers or formulas: every coordinate pair, unit and equation stays one left-to-right unit. One idea per figure: few labels, generous spacing, large text, colours from the page theme, and a caption of one sentence. Prefer two simple figures to one crowded one.
 - Every subsection that a pointer may target gets a stable `id`. Record the ids in the log.
 - Explanations in the user's language, short, concrete; show the step the official solution skipped.
 - KaTeX pitfalls: no `·` inside `\text{}`; no `\vec p\,'`. Verify in a browser: count `.katex-error`

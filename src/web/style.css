@@ -991,3 +991,17 @@ body.manual-course #syncAll, body.manual-course #learnAll { display: none !impor
 .read-mark{width:26px;height:26px;min-width:26px;padding:0;border-radius:50%;border:2px solid var(--line,#456);background:transparent;color:#fff;font-size:15px;line-height:1;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;margin-inline:6px}
 .read-mark.on{background:#22c55e;border-color:#22c55e}
 .lecture.read-done .lecture-title{opacity:.65}
+
+/* Interface polish (Apple-style details): crisp text, balanced headings, springy press feedback, quiet focus rings. */
+body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+h1,h2,h3,.lecture-title{text-wrap:balance}
+button{transition:transform .18s cubic-bezier(.2,.9,.3,1.2),background-color .18s,border-color .18s,opacity .18s}
+button:not(:disabled):active{transform:scale(.97)}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid color-mix(in srgb,var(--accent,#3b82f6) 70%,transparent);outline-offset:2px}
+.lecture{transition:border-color .2s,background-color .2s,box-shadow .25s}
+.lecture-head .chevron{transition:transform .28s cubic-bezier(.2,.9,.3,1.1)}
+.pct,.badge,.head-progress,.chip{font-variant-numeric:tabular-nums}
+.new-lecture-bar{display:flex;justify-content:center}
+.portal-hint{display:flex;align-items:center;gap:12px;padding:6px 14px;font-size:13px}
+.portal-hint .grow{opacity:.8}
+@media (prefers-reduced-motion:reduce){button,.lecture,.lecture-head .chevron{transition:none}button:active{transform:none}}

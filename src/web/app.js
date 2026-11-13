@@ -284,9 +284,7 @@ function applyInstitute() {
   if ($('institute') && document.activeElement !== $('institute')) $('institute').value = t ? 'technion' : 'hit';
   if ($('wizInstitute') && document.activeElement !== $('wizInstitute')) $('wizInstitute').value = t ? 'technion' : 'hit';
   const hint = $('portalHint');
-  if (hint) hint.querySelector('.grow').innerHTML = t
-    ? '<b>איך טוענים את המערכת והמבחנים</b><ol><li>ב-CheeseFork בונים את המערכת ושומרים אותה כקובץ (PDF או תמונה).</li><li>שמים את הקובץ בתיקייה "מערכת שעות" בתוך Technion.</li><li>חוזרים לדף הבית ולוחצים <b>"עדכן מערכת"</b>, או לוחצים כאן:</li></ol><small class="muted">קובץ ששומרים מכאן נכנס לתיקייה "מערכת שעות" לבד.</small>'
-    : '<b>איך טוענים את המערכת והמבחנים</b><ol><li>במערכת שעות בוחרים <b>"מבנה יומן"</b> ולוחצים למעלה <b>"שמור את הדף כ-PDF"</b>.</li><li>ב<b>"לוח בחינות"</b> לוחצים שוב <b>"שמור את הדף כ-PDF"</b>.</li><li>חוזרים לדף הבית ולוחצים <b>"עדכן מערכת"</b>, או לוחצים כאן:</li></ol><small class="muted">הקבצים נשמרים לבד בתיקייה "מערכת שעות" בתוך HIT.</small>';
+  if (hint) hint.querySelector('.grow').innerHTML = t ? 'שומרים את המערכת כקובץ ולוחצים "עדכן מערכת"' : 'שומרים "מבנה יומן" ו"לוח בחינות" כ-PDF ולוחצים "עדכן מערכת"';
   renderQuick();
 }
 function saveMoodleUrl(v) { send({ type: 'setMoodleUrl', url: (v || '').trim() }); S.courses = null; S.askedSavedCourses = false; }
@@ -1065,7 +1063,6 @@ function requestLectureSummary(course, lecture, force=false) {
 function renderLectures() {
   const box = $('lectures'); box.innerHTML = '';
   if (examsIntroNeeded()) box.append(examsIntroCard());
-  box.append(lectureCalendarEditor());
   const secs = S.sections;
   // The bar that creates the next lecture sits under the last one.
   if (!secs.length) { box.append(newLectureBar()); box.append(h(`<div class="empty">${ART.empty().replace('<svg', '<svg class="art"')}<b>התחל מהרצאה 1</b>צור הרצאה ובחר את המצגות, שיעורי הבית ודפי המחברת שלה. חומר מגרסאות קודמות נשאר בתיקיית הקורס ואפשר לייבא אותו מכפתורי הוספת הקבצים.</div>`)); return; }
@@ -1126,7 +1123,6 @@ function fillLecture(el, s) {
 
   const items = el.querySelector('.items');
   items.innerHTML = '';
-  if (s.date || s.due) items.append(h(`<li class="muted">${[s.date ? 'תאריך הרצאה: ' + esc(s.date) : '', s.due ? 'הגשת שיעורי בית: ' + esc(s.due) : ''].filter(Boolean).join(' · ')}</li>`));
   files.forEach(file => {
     const li = h('<li><span class="ic file" data-ic="file"></span><span class="nm" dir="auto"></span><button class="small ghost">פתח</button></li>');
     li.querySelector('.nm').textContent = file.name;
@@ -1160,26 +1156,17 @@ function fillLecture(el, s) {
   btn('plus', 'קבצים מהמחשב', 'ghost', () => send({ type: 'addFiles', course: course.name, folder: String(s.num), kind: '' }));
   btn('plus','סיכום של חבר (ZIP / OneDrive)','soft',()=>showSummaryImport(course.name,s.num));
   (L.sharedSummaries||[]).forEach(item=>btn('book','סיכום חבר: '+item.title,'soft',()=>openViewer(item.path,item.title,'',s.num)));
-  btn('calendar', 'ערוך תאריכים וכותרת', 'ghost', () => {
-    const existing = el.querySelector('.lecture-editor');
-    if (existing) { existing.remove(); return; }
-    el.querySelector('.actions').after(lectureEditor(s));
-  });
   // The main thing per lecture: the summary with the homework (how to answer, and where each question comes from).
   if (s.aiBusy) btn('x', 'עצור', 'danger', () => send({ type: 'cancelAi', key: `sum|${course.name}|${s.num}` }));
   else if (s.num > 0 && (L.lecturePdf || L.studyPage)) {
     // The summary opens inside the app (with the chat next to it for questions); the PDF is a file in the lecture's folder.
     btn('book', 'פתח את הסיכום', 'primary', () => openViewer(L.studyPage || L.lecturePdf, `הרצאה ${s.num} · סיכום`, L.lecturePdf, s.num));
-    if (L.lecturePdf) btn('file', 'פתח כ-PDF', 'soft', () => send({ type: 'openPath', path: L.lecturePdf }));
     if (s.formatOutdated) btn('sparkles', 'שדרג לסיכום בפורמט החדש (הסבר מאפס)', 'primary', () => requestLectureSummary(course, s, true), s.busy);
     btn('sparkles', 'עדכן סיכום אם החומר השתנה', 'soft', () => requestLectureSummary(course, s), s.busy);
-    // Another AI (ChatGPT / Gemini on the student's account) checks every solution in the summary and adds its notes at the end.
-    if (helpersConnected()) btn('check', 'בדיקה שנייה עם AI נוסף', 'soft', () => send({ type: 'secondOpinion', course: course.name, num: s.num }), s.busy);
     btn('refresh', 'בנה מחדש מההתחלה', 'ghost', () => requestLectureSummary(course, s, true), s.busy);
   } else if (s.num > 0) btn('sparkles', 'צור סיכום PDF של ההרצאה', L.files || L.transcripts ? 'primary' : 'soft',
     () => requestLectureSummary(course, s), s.busy || !(L.files || L.transcripts));
   if (L.exists) btn('folder', 'תיקייה', 'ghost', () => send({ type: 'openPath', path: L.dir }));
-  if (s.num > 0) btn('chat', 'שאל על השיעור', 'ghost', () => setChatScope('lesson:' + s.num));
 
   // Notebooks come from the student's own app: they export a PDF into the lecture's folder in OneDrive and it is noticed there.
   const hint = el.querySelector('.notebook-hint'); hint.innerHTML = '';
@@ -2082,17 +2069,12 @@ function examsIntroCard() {
 
 function newLectureBar() {
   const next = Math.max(0, ...S.sections.map(s => s.num)) + 1;
-  const bar = h(`<div class="card pad-lg new-lecture-bar"><div class="row wrap" style="gap:14px">
-    <div class="grow"><b>אחרי כל הרצאה: צור אותה והכנס את החומר שלה</b>
-    <div class="muted" style="font-size:12.5px;margin-top:3px">1. יוצרים את ההרצאה · 2. מכניסים מצגות, שיעורי בית והקלטה · 3. לוחצים "צור סיכום PDF" ומקבלים סיכום עם שיעורי הבית</div></div>
-    <button class="primary big" data-new><span data-ic="plus"></span>הרצאה ${next}</button>
-    <button class="link" data-more>עם כותרת ותאריכים</button></div></div>`);
+  const bar = h(`<div class="card pad-lg new-lecture-bar"><div class="row wrap"><button class="primary big" data-new><span data-ic="plus"></span>הרצאה ${next}</button></div></div>`);
   bar.querySelector('[data-new]').onclick = () => {
     const date = suggestedLectureDate(next, S.local && S.local.lectureCalendar, timetableLectureDays());
     send({ type: 'saveLecture', course: S.course.name, num: next, title: '', date: date || '', due: '' });
     S.open.add(next);
   };
-  bar.querySelector('[data-more]').onclick = () => { if (!bar.querySelector('form')) bar.append(lectureEditor()); };
   return bar;
 }
 

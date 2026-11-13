@@ -182,7 +182,7 @@
     <section class="view" id="view-sites">
       <div class="site-bar" id="siteBarMain">
         <button class="small primary" id="siteBackCourse" hidden><span data-ic="back"></span>חזרה לקורס</button>
-        <div class="site-tabs" id="siteTabs">
+        <div class="site-tabs" id="siteTabs" hidden>
           <button data-site="moodle" class="active">Moodle</button>
           <button data-site="portal">פורטל מידע אישי</button>
           <button data-site="cs24">CS24</button>
@@ -194,8 +194,7 @@
         <button class="small icon ghost" id="siteReload" title="רענן"><span data-ic="refresh"></span></button>
         <span class="url ltr" id="siteUrl"></span>
         <div class="grow"></div>
-        <span class="muted" style="font-size:12.5px">קבצים נשמרים ב:</span>
-        <select id="dlCourse"><option value="">תיקיית "הורדות"</option></select>
+                <select id="dlCourse"><option value="">תיקיית "הורדות"</option></select>
         <select id="dlFolder"></select>
         <button class="small primary" id="sitePrint" title="שומר את הדף שמוצג עכשיו כקובץ PDF בתיקיית ההרצאה">שמור את הדף כ-PDF</button>
         <button class="small ghost" id="siteDownloads">הורדות</button>
@@ -203,11 +202,7 @@
         <button class="small ghost" id="siteExternal" title="פתח בדפדפן"><span data-ic="external"></span></button>
       </div>
       <div class="portal-hint" id="portalHint" hidden>
-        <div class="grow"><b>איך טוענים את המערכת והמבחנים</b>
-          <ol><li>במערכת שעות בוחרים <b>"מבנה יומן"</b> ולוחצים למעלה <b>"שמור את הדף כ-PDF"</b>.</li>
-          <li>ב<b>"לוח בחינות"</b> לוחצים שוב <b>"שמור את הדף כ-PDF"</b>.</li>
-          <li>חוזרים לדף הבית ולוחצים <b>"עדכן מערכת"</b>, או לוחצים כאן:</li></ol>
-          <small class="muted">הקבצים נשמרים לבד בתיקייה "מערכת שעות" בתוך HIT.</small></div>
+        <div class="grow">שומרים "מבנה יומן" ו"לוח בחינות" כ-PDF ולוחצים "עדכן מערכת"</div>
         <div class="col"><button class="primary small" id="portalUpdate"><span data-ic="refresh"></span>עדכן מערכת</button></div>
       </div>
       <div class="dl-strip" id="dlStrip" hidden><span class="grow" id="dlText" dir="auto"></span><b id="dlPct"></b><div class="bar"><i id="dlBar"></i></div></div>
