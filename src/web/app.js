@@ -1126,7 +1126,7 @@ function fillLecture(el, s) {
 
   const items = el.querySelector('.items');
   items.innerHTML = '';
-  items.append(h(`<li class="muted">${s.date ? 'תאריך הרצאה: ' + esc(s.date) : 'תאריך הרצאה לא הוגדר'} · ${s.due ? 'הגשת שיעורי בית: ' + esc(s.due) : 'מועד הגשה לא ידוע'}</li>`));
+  if (s.date || s.due) items.append(h(`<li class="muted">${[s.date ? 'תאריך הרצאה: ' + esc(s.date) : '', s.due ? 'הגשת שיעורי בית: ' + esc(s.due) : ''].filter(Boolean).join(' · ')}</li>`));
   files.forEach(file => {
     const li = h('<li><span class="ic file" data-ic="file"></span><span class="nm" dir="auto"></span><button class="small ghost">פתח</button></li>');
     li.querySelector('.nm').textContent = file.name;
@@ -1153,7 +1153,6 @@ function fillLecture(el, s) {
   const topRec = h(`<button class="${recs.length ? 'done' : 'soft'} small"><span data-ic="video"></span>${recs.length ? 'הקלטה נוספה ✓' : 'הוסף הקלטה'}</button>`);
   topRec.onclick = (e) => { e.stopPropagation(); recRow(); };
   top.append(topRec);
-  top.append(h('<small class="muted">לא לכל הקורס יש הקלטה, זה לא חובה.</small>'));
 
   if (!isManual()) btn('book', 'מצגות וחומר מה-Moodle', hasMaterial ? 'done' : 'soft', () => lectureSource(s.num, 'moodle', 'slides'));
   if (!isManual()) btn('exam', 'שיעורי בית ופתרונות מה-Moodle', hasHomework ? 'done' : 'soft', () => lectureSource(s.num, 'moodle', 'homework'));
@@ -1184,24 +1183,6 @@ function fillLecture(el, s) {
 
   // Notebooks come from the student's own app: they export a PDF into the lecture's folder in OneDrive and it is noticed there.
   const hint = el.querySelector('.notebook-hint'); hint.innerHTML = '';
-  // Homework: say why the solutions matter, and whether they are there.
-  const hw = h(`<div class="hw-hint ${hasHomework ? 'ok' : 'warn'}"><span class="ic" data-ic="${hasHomework ? 'check' : 'alert'}"></span><div class="grow"></div></div>`);
-  const hwText = hw.querySelector('.grow');
-  if (!hasHomework) hwText.innerHTML = '<b>יש שיעורי בית להרצאה הזו?</b> הוסף אותם <b>יחד עם הפתרונות</b> (של המרצה או המתרגל). הפתרונות הם מה שמאפשר לסכם את שיעורי הבית בלי טעויות, וללמוד איך המרצה שלך עונה.';
-  else if (!hasSolutions) hwText.innerHTML = '<b>זוהו שיעורי בית.</b> אם בין הקבצים יש גם פתרונות של המרצה או המתרגל (גם אם השם שלהם לא מכיל "פתרון"), ה-AI ישתמש בהם ויתאים אליהם את הסיכום. אם אין, הוא יפתור לבד ויסמן שהפתרון לא אומת מול פתרון רשמי.';
-  else hwText.innerHTML = '<b>זוהו שיעורי בית עם פתרונות ✓</b> הסיכום ייבדק מולם.';
-  if (!hasHomework) {
-    const row = h('<div class="row wrap" style="margin-top:8px"></div>');
-    const b1 = h('<button class="soft small"><span data-ic="book"></span>פתרונות מה-Moodle</button>'); b1.onclick = () => lectureSource(s.num, 'moodle', 'homework'); b1.hidden = isManual();
-    const b2 = h('<button class="ghost small"><span data-ic="plus"></span>מהמחשב</button>'); b2.onclick = () => send({ type: 'addFiles', course: course.name, folder: String(s.num), kind: 'homework' });
-    row.append(b1, b2); hwText.append(row);
-  }
-  icons(hw); hint.append(hw);
-  hint.append(h(`<div class="muted" style="font-size:12.5px;margin-top:10px">יש לך מחברת (Notability או אחרת)? ייצא אותה ל-PDF ושמור בתיקיית "מחברת תלמיד" של ההרצאה - האפליקציה מזהה אותה לבד ומשתמשת בה בסיכום. ${hasNotes ? '<b>זוהתה מחברת ✓</b>' : ''}</div>`));
-  const nb = h('<button class="link">פתח את תיקיית מחברת תלמיד</button>');
-  nb.onclick = () => send({ type: 'openPath', path: L.dir + '\\מחברת תלמיד' });
-  hint.append(nb);
-
   paintStatus(el, s);
 }
 // The status line of a lecture; while a summary is being made it shows a bar with a percentage and a rough time left.
