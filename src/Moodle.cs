@@ -416,7 +416,7 @@ if (!lecturers.length) {
     doc.querySelectorAll('.teachers a, .course-contacts a, ul.teachers li a').forEach(a => lecturers.push(nameOf(a)));
   } catch (e) {}
 }
-return [...new Set(lecturers)].slice(0, 3);";
+return [...new Set(lecturers)].slice(0, 8);";
 
     // Reads the course page (and any per-section pages) into sections of activities.
     const string SectionsJs = @"

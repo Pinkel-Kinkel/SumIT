@@ -758,6 +758,15 @@ $('learnAll').onclick = () => {
 $('examPrepBtn').onclick = () => { setTab('exams'); setChatScope('exam'); };
 $('chatClose').onclick = () => { if (!S.chatHidden) $('toggleChat').click(); };
 $('toggleChat').onclick = () => { S.chatHidden = !S.chatHidden; $('courseBody').classList.toggle('no-chat', S.chatHidden); $('chat').hidden = S.chatHidden; };
+// The lecturers Moodle lists for the course can be picked from a list instead of typed.
+function fillLecturerPick(names) {
+  const sel = $('lecturerPick'); S.lecturerGuess = [...new Set((names || []).filter(Boolean))];
+  sel.innerHTML = ''; sel.hidden = S.lecturerGuess.length === 0;
+  const first = document.createElement('option'); first.value = ''; first.textContent = 'בחר מרצה מהרשימה'; sel.append(first);
+  S.lecturerGuess.forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = n; sel.append(o); });
+  sel.value = S.lecturerGuess.includes($('lecturer').value) ? $('lecturer').value : '';
+}
+$('lecturerPick').onchange = () => { if (!$('lecturerPick').value) return; $('lecturer').value = $('lecturerPick').value; $('lecturer').onchange(); };
 $('lecturer').onchange = () => S.course && send({ type: 'setLecturer', course: S.course.name, name: $('lecturer').value.trim() });
 
 document.querySelectorAll('#courseTabs button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
@@ -848,6 +857,7 @@ const SETUP_Q = [
       const ok = h('<button class="primary">זה נכון</button>');
       ok.onclick = () => { $('lecturer').value = inp.value.trim(); $('lecturer').onchange(); done(inp.value.trim() || 'לא יודע'); };
       inp.onkeydown = (e) => { if (e.key === 'Enter') ok.onclick(); };
+      (S.lecturerGuess || []).forEach(n => { const c = h('<button class="soft small"></button>'); c.textContent = n; c.onclick = () => { inp.value = n; ok.onclick(); }; box.append(c); });
       box.append(inp, ok);
       return box;
     }
@@ -1772,6 +1782,7 @@ function onMessage(m) {
       if (document.activeElement !== $('lecturer')) $('lecturer').value = m.lecturer || '';
       // The lecturer found in Moodle is offered in the setup questions, not announced with a pop-up.
       if (!m.lecturer && m.lecturerGuess && m.lecturerGuess.length && !$('lecturer').value) $('lecturer').value = m.lecturerGuess[0];
+      fillLecturerPick(m.lecturerGuess || []);
       renderCourseHeader(); renderLectures();
       // A course that hasn't been set up yet shows only the setup questions; afterwards the lessons.
       if (inSetup()) applySetupMode();

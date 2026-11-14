@@ -1060,3 +1060,5 @@ button.ghost, button.soft { background: var(--surface-2); border-color: var(--bo
 .quiet *, .quiet *::before, .quiet *::after { animation: none !important; transition: none !important; }.course-hero { min-height: 150px; padding-top: 60px; }
 .course-hero input { background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.22); color: #fff; border-radius: 10px; }
 .course-hero input::placeholder { color: rgba(255,255,255,.65); }
+#lecturerPick { max-width: 190px; height: 30px; margin-inline-start: 6px; border-radius: 10px; background: rgba(255,255,255,.14); color: #fff; border: 1px solid rgba(255,255,255,.25); padding: 0 8px; font-size: 12.5px; }
+#lecturerPick option { color: #111827; }
