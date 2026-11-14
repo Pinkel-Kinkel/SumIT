@@ -19,7 +19,7 @@ Keep the page proportional to what was actually taught, not to a fixed template 
 
 Before saving or revising, check each paragraph: does it explain this lecture, bridge a necessary prerequisite, or support an assigned current exercise? Remove it otherwise. Preserve these choices during review and question-text repairs. A source preference is not a factual contradiction: flag actual mistakes or missing information briefly, without inventing facts or expanding the whole topic.
 
-## Teaching standard (overrides every instruction to be brief)
+## Teaching standard
 
 The student may never have attended the lecture and remembers little of earlier courses; the page is their only source. Teach from zero, like a patient private tutor:
 
@@ -29,7 +29,7 @@ The student may never have attended the lecture and remembers little of earlier 
 - Plain, everyday language and short sentences. Never pack several claims into one line separated by commas and colons. One idea per paragraph or line, with space between. Explain words such as "does not exist", "bounded", "tends to" before using them, and what they mean in practice.
 - No fun facts, side remarks or background in the middle of an explanation. Anything not essential goes in a final "extension" section, or is left out.
 - After each topic add a self-check question with a collapsed solution.
-- Long and clear beats short and dense, even if it is too much. Cut only repetition and unrelated material.
+- Complete but focused: everything needed to understand and to solve, and nothing more. No detours, no explaining the same thing twice, no overload that confuses; if one sentence says it, do not write three. The page should read easily and never bore: short paragraphs, clear headings, an example instead of a long abstract explanation. A student who skips straight to the exercises must find the recipe of each question type and succeed without reading the rest.
 
 ## 0. Always start from the course log
 

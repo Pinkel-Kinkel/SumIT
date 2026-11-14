@@ -254,6 +254,28 @@
     });
     addEventListener('hashchange', goHash);
     show(order[0], false); goHash();
+
+    // Two ways in, right under the title: read the lecture, or go straight to the questions (each type has its recipe).
+    var head = document.querySelector('header.top');
+    if (head && !head.querySelector('.book-paths')) {
+      var words = ((pages.over ? pages.over.textContent : '') + ' ' + (pages.sum ? pages.sum.textContent : '')).split(/\s+/).length, mins = Math.max(3, Math.round(words / 180));
+      var count = main.querySelectorAll('details.q').length;
+      var paths = document.createElement('div'); paths.className = 'book-paths';
+      function path(page, title, sub, primary) {
+        var b = document.createElement('button'); b.type = 'button'; b.className = 'book-path' + (primary ? ' primary' : '');
+        b.innerHTML = '<b></b><small></small>'; b.querySelector('b').textContent = title; b.querySelector('small').textContent = sub;
+        b.onclick = function () { restoreQuestion(); show(page, true); }; paths.appendChild(b);
+      }
+      if (pages.over || pages.sum) path(pages.over ? 'over' : 'sum', 'להבין את ההרצאה', 'קריאה של כ-' + mins + ' דקות, מההתחלה', true);
+      if (pages.hw) path('hw', 'ישר לתרגילים', count + ' שאלות, ולכל סוג שאלה מתכון פתרון', false);
+      head.appendChild(paths);
+    }
+    // A thin bar at the top shows how far down the page the student is.
+    if (!document.querySelector('.book-readbar')) {
+      var bar = document.createElement('div'); bar.className = 'book-readbar'; bar.innerHTML = '<i></i>'; document.body.appendChild(bar);
+      var fill = function () { var max = document.documentElement.scrollHeight - innerHeight; bar.firstChild.style.width = (max > 0 ? Math.min(100, 100 * scrollY / max) : 0) + '%'; };
+      addEventListener('scroll', fill, { passive: true }); fill();
+    }
   }
 
   // The homework, question by question: one block for each, the parts (א, ב, ...) inside it. A question that is not for this lecture
