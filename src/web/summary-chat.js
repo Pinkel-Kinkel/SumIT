@@ -23,7 +23,7 @@ function toggleModelMenu(open){const menu=$('scModelMenu');if(open==null)open=me
 $('scModel').onclick=e=>{e.stopPropagation();toggleModelMenu();};
 document.addEventListener('click',e=>{if(!$('scModelMenu').hidden&&!e.target.closest('#scModelMenu'))toggleModelMenu(false);});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('scModelMenu').hidden)toggleModelMenu(false);});
-function setSummaryChatOpen(open){$('summaryChat').hidden=!open;$('viewerChat').classList.toggle('on',open);$('viewerChat').setAttribute('aria-pressed',String(open));requestAnimationFrame(()=>placeSite(false));}
+function setSummaryChatOpen(open){if(open&&$('flashcards'))$('flashcards').hidden=true;$('summaryChat').hidden=!open;$('viewerChat').classList.toggle('on',open);$('viewerChat').setAttribute('aria-pressed',String(open));requestAnimationFrame(()=>placeSite(false));}
 function openSummaryChat(){if(!S.viewer)return;setSummaryChatOpen(true);renderChatModel();renderSummaryChat();$('summaryChatText').focus();}
 function closeSummaryChat(){setSummaryChatOpen(false);}
 function growSummaryInput(){const t=$('summaryChatText');t.style.height='auto';t.style.height=Math.min(t.scrollHeight,180)+'px';}

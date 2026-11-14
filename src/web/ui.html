@@ -40,6 +40,7 @@
     <div class="nav-label nav-text"></div>
     <button class="nav-item" data-view="settings"><span class="ni" data-ic="settings"></span><span class="nav-text">הגדרות</span></button>
     <div class="grow"></div>
+    <div class="pomo" id="pomo"></div>
     <button class="theme-toggle" id="themeToggle" title="מצב בהיר / כהה"><span id="themeIcon"></span><span class="nav-text" id="themeText">מצב כהה</span></button>
     <button class="status-pill" id="moodlePill"><span class="dot" id="moodleDot"></span><span><span id="moodleText">Moodle</span><small id="moodleSub">בודק...</small></span></button>
     <button class="status-pill" id="aiPill"><span class="dot" id="aiDot"></span><span><span id="aiText">AI</span><small id="aiSub">בודק...</small></span></button>
@@ -214,6 +215,7 @@
         <button class="small soft" id="viewerShare" aria-controls="viewerShareNote" title="שמור את הסיכום בקובץ ZIP לשיתוף"><span data-ic="download"></span><span id="viewerShareLabel">שיתוף</span></button>
         <button class="small soft" id="viewerSelect">הקף אזור לשאלה</button>
         <button class="small soft" id="viewerChat"><span data-ic="chat"></span>שאל את הצ'אט</button>
+        <button class="small soft" id="viewerCards"><span data-ic="book"></span>כרטיסי זיכרון</button>
         <button class="small soft" id="viewerPdf"><span data-ic="file"></span>פתח כ-PDF</button>
       </div>
       <div id="viewerShareNote" hidden>
@@ -237,6 +239,14 @@
           <div class="sc-actions"><button id="summaryChatAttach" class="sc-icon" type="button" title="צרף תמונות" aria-label="צרף תמונות"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 01-7.8-7.8l8.6-8.6a3.7 3.7 0 115.2 5.2l-8.6 8.6a1.8 1.8 0 01-2.6-2.6l7.9-7.9"/></svg></button><input id="summaryChatFiles" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden><small id="summaryChatStatus" role="status"></small><button id="summaryChatSend" class="sc-send" type="button" title="שלח" aria-label="שלח"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ><path d="M12 19V5M5 12l7-7 7 7"/></svg></button></div>
         </div>
         <div class="sc-foot"><small>השאלות והתמונות שלך נשמרות במחשב בלבד, ועוזרות לסיכומים הבאים להסביר בדרך שמתאימה לך.</small><button id="summaryLearningReset" class="sc-link" type="button">מחק את מה שנשמר</button></div>
+      </aside>
+      <aside id="flashcards" hidden dir="rtl" aria-label="כרטיסי זיכרון מהסיכום">
+        <div class="row"><b class="grow">כרטיסי זיכרון</b><button id="cardsRedo" class="ghost small" title="מכין את הכרטיסים מחדש מהסיכום">צור מחדש</button><button id="cardsClose" class="ghost small">סגור</button></div>
+        <div id="cardsProgress" hidden><small id="cardsStep" role="status" aria-live="polite"></small><div class="bar"><i id="cardsBar"></i></div><small class="muted">שלושה שלבים: חילוץ, כתיבה ובדיקה. בפעם הבאה הכרטיסים נפתחים מיד.</small></div>
+        <div id="cardsError" hidden role="alert"></div>
+        <button id="cardsCard" hidden aria-live="polite"><small id="cardsTag"></small><span id="cardsSide"></span><div id="cardsText"></div><small class="muted" id="cardsHint"></small></button>
+        <div class="row" id="cardsRate" hidden><button class="soft small" data-g="again">לא ידעתי</button><button class="soft small" data-g="hard">בערך</button><button class="primary small" data-g="good">ידעתי</button></div>
+        <div class="row" id="cardsNav" hidden><button id="cardsPrev" class="soft small">הקודם</button><b class="grow" id="cardsCount"></b><button id="cardsNext" class="soft small">הבא</button></div>
       </aside>
       </div>
     </section>
@@ -396,8 +406,11 @@
 <link rel="stylesheet" href="vendor/katex/katex.min.css">
 <script src="vendor/katex/katex.min.js"></script>
 <script src="extras.js"></script>
+<script src="pomodoro.js"></script>
 <script src="app.js"></script>
 <script src="summary-chat.js"></script>
+<script src="flashcards.js"></script>
+<script src="pomodoro-ui.js"></script>
 <script src="support-ui.js"></script>
 </body>
 </html>

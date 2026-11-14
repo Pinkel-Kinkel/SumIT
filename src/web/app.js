@@ -1940,6 +1940,7 @@ function onMessage(m) {
     }
     case 'summaryChatProvider': $('summaryChatStatus').textContent=m.text; break;
     case 'summarySelectionReady': case 'summaryChatResult': summaryChatEvent(m); break;
+    case 'flashcardsProgress': case 'flashcardsResult': flashcardsEvent(m); break;
     case 'summaryShareProgress': case 'summaryShareResult': summaryShareStatus(m); break;
     case 'toast': toast(m.text, { error: m.error }); break;
     case 'updateCheck': { const t = document.getElementById('updateCheckText'); if (t) t.textContent = ' · ' + m.text; break; }

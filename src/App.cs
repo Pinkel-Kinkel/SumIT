@@ -15,7 +15,7 @@ using Microsoft.Web.WebView2.WinForms;
 
 partial class HitStudent : Form
 {
-    public const string Version = "1.0.49";
+    public const string Version = "1.0.50";
     const string Repo = "Pinkel-Kinkel/SumIT";
     // Updates are only accepted from these repositories (the project was renamed from hit-recordings).
     static readonly string[] RepoNames = { "Pinkel-Kinkel/SumIT" };
@@ -604,6 +604,8 @@ partial class HitStudent : Form
             case "viewFile": ShowFile(m); break;
             case "selectSummary": SelectSummary(m); break;
             case "summaryChat": AskSummary(m); break;
+            case "flashcards": MakeFlashcards(m); break;
+            case "rateCard": RateCard(m); break;
             case "resetLearningNeeds": ResetLearningNeeds(m); break;
             case "summaryChatReset": try { summaryChats.Remove(CheckedSummaryPath(m)); } catch { } break;
             case "sendDeveloperLogs": SendDeveloperLogs(); break;
