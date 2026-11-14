@@ -112,7 +112,9 @@ partial class HitStudent : Form
         Controls.Add(sitePanel);
         ui.BringToFront();
 
-        if (selfTest) { WindowState = FormWindowState.Minimized; ShowInTaskbar = false; }
+        // --rebuild "course|N" ...: rebuilds those lecture summaries with the current method, in the background, then exits.
+        for (int a = Array.IndexOf(args, "--rebuild") + 1; a > 0 && a < args.Length && !args[a].StartsWith("--"); a++) rebuildJobs.Add(args[a]);
+        if (selfTest || rebuildJobs.Count > 0) { WindowState = FormWindowState.Minimized; ShowInTaskbar = false; }
         HandleCreated += delegate { ApplyTitleBarTheme(); };
         Microsoft.Win32.SystemEvents.UserPreferenceChanged += delegate { if (IsHandleCreated) BeginInvoke((MethodInvoker)ApplyTitleBarTheme); };
         CleanUpOldFiles();
@@ -239,6 +241,7 @@ partial class HitStudent : Form
         InstallSkill();
         if (demo) return;
         if (selfTest) { await RunSelfTest(); return; }
+        if (rebuildJobs.Count > 0) { await RunRebuild(); return; }
         statusTimer.Start();
         CheckForUpdate();
     }

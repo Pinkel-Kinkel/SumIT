@@ -1020,7 +1020,8 @@ html[data-theme=dark] {
   --hero-1: #1a2f66; --hero-2: #2858b8; --hero-3: #d9a02e;
 }
 body { background: var(--bg); }
-main > .view { max-width: 1180px; margin-inline: auto; }
+/* The sites / summary viewer uses the whole window; only the reading screens are centered. */
+main > .view:not(#view-sites) { max-width: 1180px; margin-inline: auto; }
 .card { border-radius: var(--radius); box-shadow: var(--shadow); border-color: var(--border); }
 html[data-theme=dark] .card { background: linear-gradient(180deg, var(--surface), color-mix(in srgb, var(--surface) 92%, #000)); }
 

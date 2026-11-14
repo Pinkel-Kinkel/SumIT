@@ -82,6 +82,33 @@ partial class HitStudent
         }
     }
 
+    readonly List<string> rebuildJobs = new List<string>();
+
+    // Runs the same full summary pipeline as "build again" for each "course|N", writes rebuild.log next to the app, and closes.
+    async Task RunRebuild()
+    {
+        string log = Path.Combine(AppDir, "rebuild.log");
+        Action<string> say = t => { try { File.AppendAllText(log, DateTime.Now.ToString("HH:mm:ss") + " " + t + Environment.NewLine, new UTF8Encoding(false)); } catch { } };
+        try
+        {
+            await AiStatus();
+            foreach (string job in rebuildJobs)
+            {
+                int bar = job.LastIndexOf('|'); int num;
+                if (bar <= 0 || !int.TryParse(job.Substring(bar + 1), out num)) { say("skip " + job); continue; }
+                string course = job.Substring(0, bar);
+                string title = "הרצאה " + num;
+                var lectures = LoadMeta(course).ContainsKey("lectures") ? LoadMeta(course)["lectures"] as System.Collections.ArrayList : null;
+                if (lectures != null) foreach (Dictionary<string, object> l in lectures) if (Int(l, "num") == num && Str(l, "title").Length > 0) title = Str(l, "title");
+                say("start " + course + " | " + num + " | " + title);
+                var r = await LecturePdfCoreAsync(course, num, title, false, true);
+                say("done " + course + " | " + num + " | " + (r == null ? "not started" : (r.Error ? "error: " + r.Text : "ok")) + " | page=" + File.Exists(StudyPagePath(course, num)) + " pdf=" + File.Exists(LecturePdfPath(course, num)));
+            }
+        }
+        catch (Exception ex) { say("failed: " + ex); }
+        Close();
+    }
+
     async Task<AiResult> LecturePdfCoreAsync(string course, int num, string title, bool open = false, bool force = false)
     {
         string key = "sum|" + course + "|" + num;
