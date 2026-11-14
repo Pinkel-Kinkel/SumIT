@@ -284,7 +284,7 @@ function applyInstitute() {
   if ($('institute') && document.activeElement !== $('institute')) $('institute').value = t ? 'technion' : 'hit';
   if ($('wizInstitute') && document.activeElement !== $('wizInstitute')) $('wizInstitute').value = t ? 'technion' : 'hit';
   const hint = $('portalHint');
-  if (hint) hint.querySelector('.grow').innerHTML = t ? 'שומרים את המערכת כקובץ ולוחצים "עדכן מערכת"' : 'שומרים "מבנה יומן" ו"לוח בחינות" כ-PDF ולוחצים "עדכן מערכת"';
+  if (hint) hint.querySelector('.grow').innerHTML = t ? 'פותחים את המערכת ולוחצים "עדכן מערכת"' : 'פותחים "מבנה יומן" ולוחצים "עדכן מערכת"; אחר כך אותו דבר ב"לוח בחינות"';
   renderQuick();
 }
 function saveMoodleUrl(v) { send({ type: 'setMoodleUrl', url: (v || '').trim() }); S.courses = null; S.askedSavedCourses = false; }
@@ -1548,7 +1548,7 @@ $('sitePrint').onclick = () => send({ type: 'siteAction', action: 'savepdf' });
 $('siteCopy').onclick = () => send({ type: 'siteAction', action: 'copylink' });
 $('refreshSummaries').onclick = () => { if (confirm('לבנות מחדש את כל הסיכומים הישנים בפורמט החדש? זה משתמש ב-AI, אחד אחרי השני, ויכול לקחת זמן.')) send({ type: 'refreshSummaries' }); };
 if ($('checkUpdate')) $('checkUpdate').onclick = () => send({ type: 'checkUpdate' });
-$('portalUpdate').onclick = () => { send({ type: 'importTimetable', fromFolder: true }); toast('קורא את הקבצים מתיקיית מערכת שעות...'); };
+$('portalUpdate').onclick = () => { send({ type: 'importTimetable', fromFolder: true, capture: true }); toast('שומר את הדף ומעדכן את המערכת...'); };
 function syncDownloadTarget() { send({ type: 'setDownloadTarget', course: $('dlCourse').value, folder: $('dlFolder').value }); $('dlFolder').disabled = !$('dlCourse').value; }
 // The bar above a site always shows the course and the lecture that files are saved into.
 function fillSaveFolders(course, selected) {

@@ -120,7 +120,8 @@ return f ? (f.getAttribute('src') || f.getAttribute('href')) : '';", 8000);
     }
 
     // Downloads the whole CS24 folder of a course: exams/quizzes into "מבחנים\CS24", everything else into "CS24".
-    async Task<int> Cs24SyncCourse(string course)
+    // examsOnly: only what sits in a folder (any level) or has a name that is about exams / quizzes; every file inside such a folder counts.
+    async Task<int> Cs24SyncCourse(string course, bool examsOnly = false)
     {
         if (!cs24Running.Add(course)) return 0;
         int saved = 0;
@@ -172,7 +173,8 @@ return f ? (f.getAttribute('src') || f.getAttribute('href')) : '';", 8000);
                     {
                         string asset = await Cs24FileUrl(f.Item2.Href);
                         if (asset == null) continue;
-                        bool exam = Regex.IsMatch(f.Item1 + " " + f.Item2.Name, "(מבחן|מבחנים|בוחן|בחנים|מועד)");
+                        bool exam = ExamName.IsMatch(f.Item1 + " " + f.Item2.Name);
+                        if (examsOnly && !exam) continue;
                         string dir = exam ? Path.Combine(CourseDir(course), Exams, Cs24Folder, f.Item1) : Path.Combine(CourseDir(course), Cs24Folder, f.Item1);
                         string ext = Path.GetExtension(Uri.UnescapeDataString(new Uri(asset).AbsolutePath));
                         string name = SafeName(f.Item2.Name);

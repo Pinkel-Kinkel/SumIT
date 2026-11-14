@@ -291,6 +291,31 @@ partial class HitStudent
         catch (Exception ex) { Toast("לא הצלחתי לשמור כ-PDF: " + ex.Message, true); }
     }
 
+    // "Update timetable" from the portal: the page on screen is saved by the app itself (text, picture and PDF), then everything saved is read.
+    // The student only opens "מבנה יומן" / "לוח בחינות" and presses the button once on each.
+    async void ImportFromPortal()
+    {
+        try
+        {
+            var c = ActiveSiteCore(); Uri au;
+            bool onPortal = c != null && Uri.TryCreate(c.Source ?? "", UriKind.Absolute, out au) && (au.Host.IndexOf("webrashim.hit.ac.il", StringComparison.OrdinalIgnoreCase) >= 0 || au.Host.IndexOf("cheesefork", StringComparison.OrdinalIgnoreCase) >= 0);
+            if (onPortal)
+            {
+                string dir = Path.Combine(AppRoot, TimetableFolder); Directory.CreateDirectory(dir);
+                string text = "";
+                try { text = json.Deserialize<string>(await c.ExecuteScriptAsync("(function(){var t=document.body?document.body.innerText:'';document.querySelectorAll('iframe').forEach(function(f){try{t+='\\n'+f.contentDocument.body.innerText}catch(e){}});return t})()")) ?? ""; } catch { }
+                string title = c.DocumentTitle ?? "";
+                string kind = System.Text.RegularExpressions.Regex.IsMatch(text + " " + title, "(לוח בחינות|בחינות|מועד א)") ? "לוח בחינות" : System.Text.RegularExpressions.Regex.IsMatch(text + " " + title, "(יומן|מערכת שעות|מערכת)") ? "מבנה יומן" : SafeName(string.IsNullOrWhiteSpace(title) ? "דף מהפורטל" : title);
+                if (text.Trim().Length > 80) File.WriteAllText(Path.Combine(dir, kind + ".txt"), text, new System.Text.UTF8Encoding(true));
+                try { var ps = env.CreatePrintSettings(); ps.ShouldPrintBackgrounds = true; ps.ShouldPrintHeaderAndFooter = false; await c.PrintToPdfAsync(Path.Combine(dir, kind + ".pdf"), ps); } catch { }
+                try { using (var fs = File.Create(Path.Combine(dir, kind + ".png"))) await c.CapturePreviewAsync(CoreWebView2CapturePreviewImageFormat.Png, fs); } catch { }
+                if (text.Trim().Length <= 80) Toast("הדף עוד ריק. פתח בפורטל את \"מבנה יומן\" או \"לוח בחינות\" ולחץ שוב", true);
+            }
+            ImportTimetable(null, true);
+        }
+        catch (Exception ex) { Toast("לא הצלחתי לשמור את הדף: " + ex.Message, true); }
+    }
+
     static string UniquePathIn(string dir, string name)
     {
         string path = Path.Combine(dir, name);

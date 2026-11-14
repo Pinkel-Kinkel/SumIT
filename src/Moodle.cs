@@ -762,7 +762,7 @@ return out;";
         "(תרגיל|תרגול|פתרון|פתרונות|שיעורי בית|מטלה|ש\"ב|targ|tirgul|solut|homework|\\bhw|exercise|assignment|\\bsol)",
         RegexOptions.IgnoreCase);
     static readonly Regex ExamName = new Regex(
-        "(מבחן|מבחנ|בחינ|מועד [אבג]|שנים קודמות|\\bexam|midterm|\\bfinal)",
+        "(מבחן|מבחנ|בחינ|בוחן|בחנים|מועד [אבג]|מועד|שנים קודמות|\\bexam|midterm|\\bquiz|\\bfinal)",
         RegexOptions.IgnoreCase);
     static readonly Regex SyllabusName = new Regex(
         "(סילבוס|סילב|syllabus|syllabi|סילאבוס|course outline|course description|תוכנית הקורס|תכנית הקורס|מידע על הקורס|דרישות הקורס|מבנה הציון)",

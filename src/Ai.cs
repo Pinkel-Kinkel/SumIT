@@ -276,7 +276,7 @@ partial class HitStudent
         Directory.CreateDirectory(dir);
         string[] files = pastedFiles;
         if (files == null && fromFolder && TimetableFiles().Count == 0)
-        { Toast("עוד אין קבצים. בפורטל לוחצים \"שמור את הדף כ-PDF\" על \"מבנה יומן\" ועל \"לוח בחינות\", ואז \"עדכן מערכת\"", true); return; }
+        { Toast("עוד אין מה לקרוא. פתח בפורטל את \"מבנה יומן\" או \"לוח בחינות\" ולחץ \"עדכן מערכת\"", true); return; }
         if (files == null && !fromFolder) using (var dlg = new OpenFileDialog
         {
             Multiselect = true, Title = "בחר את מערכת השעות ולוח המבחנים מהפורטל",

@@ -68,6 +68,16 @@ partial class HitStudent
     }
     class ArchiveBudget { public int Entries; public long Bytes; }
 
+    // A syllabus is often just "קורס 3.pdf": judge it by what is written inside (grading, goals, topics, office hours...).
+    static readonly string[] SyllabusWords = { "סילבוס", "מטרות", "דרישות", "נושאי הקורס", "נושאים", "תוצאות למידה", "ציון", "הרכב", "מבחן", "שיעורי בית", "ספרות", "ביבליוגרפיה", "שעות קבלה", "נקודות זכות", "מרצה", "קדם", "syllabus", "grading", "prerequisite", "office hours" };
+    internal static bool LooksLikeSyllabus(string sample)
+    {
+        if (string.IsNullOrWhiteSpace(sample)) return false;
+        string head = sample.Length > 12000 ? sample.Substring(0, 12000) : sample;
+        if (SyllabusName.IsMatch(head)) return true;
+        return SyllabusWords.Count(w => head.IndexOf(w, StringComparison.OrdinalIgnoreCase) >= 0) >= 4;
+    }
+
     async Task<List<string>> DiscoverMoodleFiles(HttpClient http, string url, string what)
     {
         var found = new HashSet<string>(); var visited = new HashSet<string>();
@@ -83,8 +93,9 @@ partial class HitStudent
                 string label = Uri.UnescapeDataString(target.AbsoluteUri) + " " + HtmlToText(link.Groups[2].Value);
                 bool relevant = what == "exams" ? ExamName.IsMatch(label) : SyllabusName.IsMatch(label);
                 bool archive = target.AbsolutePath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
-                if (target.AbsolutePath.Contains("pluginfile.php") && (relevant || archive)) found.Add(target.AbsoluteUri);
-                else if (relevant && target.AbsolutePath.Contains("/mod/resource/view.php")) found.Add(target.AbsoluteUri + "&redirect=1");
+                bool anyDoc = what == "syllabus" && found.Count < 40 && Regex.IsMatch(target.AbsolutePath, @"\.(pdf|docx?|txt)$", RegexOptions.IgnoreCase);
+                if (target.AbsolutePath.Contains("pluginfile.php") && (relevant || archive || anyDoc)) found.Add(target.AbsoluteUri);
+                else if ((relevant || (what == "syllabus" && found.Count < 40)) && target.AbsolutePath.Contains("/mod/resource/view.php")) found.Add(target.AbsoluteUri + "&redirect=1");
                 else if (next.Item2 < 3 && Regex.IsMatch(target.AbsolutePath, @"/mod/(folder|page|resource|url)/view\.php$") && !visited.Contains(target.AbsoluteUri)) pending.Enqueue(Tuple.Create(target.AbsoluteUri, next.Item2 + 1));
             }
         }
@@ -114,7 +125,15 @@ partial class HitStudent
                     if (Str(item, "mod") == "resource" && !picked.Any(p => Str(p, "url") == Str(item, "url"))) {
                         var candidate = new Dictionary<string, object>(item); candidate["discoveryOnly"] = true; picked.Add(candidate);
                     }
-            picked = picked.Take(80).ToList();
+            picked = picked.OrderBy(p => Bool(p, "discoveryOnly") ? 1 : 0).Take(what == "syllabus" ? 120 : 80).ToList();
+            if (picked.Count == 0 && what == "exams" && !Technion)
+            {
+                int fromCs24 = 0; try { fromCs24 = await Cs24SyncCourse(course, true); } catch { }
+                Send(new { type = "courseStatus", course = course, busy = false, error = fromCs24 == 0,
+                    text = fromCs24 > 0 ? "ירדו " + fromCs24 + " קבצים של מבחנים מ-CS24" : "לא מצאתי מבחנים ב-Moodle וגם לא ב-CS24. אפשר להוסיף מהמחשב." });
+                SendCourseLocal(course);
+                return;
+            }
             if (picked.Count == 0)
             {
                 Send(new { type = "courseStatus", course = course, busy = false, error = true,
@@ -147,7 +166,7 @@ partial class HitStudent
                                 bool matches = (what == "exams" ? ExamName : SyllabusName).IsMatch(Path.GetFileName(path)) || (mod != "resource" && mod != "file");
                                 if (!matches && what == "syllabus") {
                                     string sample = await ExtractTexts(new[] { path });
-                                    matches = SyllabusName.IsMatch(sample) || (sample.Contains("מטרות הקורס") && sample.Contains("דרישות"));
+                                    matches = LooksLikeSyllabus(sample);
                                 }
                                 if (matches) { File.Copy(path, Path.Combine(dest, Path.GetFileName(path)), true); saved++; }
                             }
@@ -157,6 +176,8 @@ partial class HitStudent
                     catch (Exception ex) { failed++; Toast(Trunc(name, 40) + ": " + ex.Message, true); }
                 }
             }
+            // Exams are also collected from CS24 (the same course there), so one click gets everything.
+            if (what == "exams" && !Technion) { try { saved += await Cs24SyncCourse(course, true); } catch { } }
             Send(new { type = "courseStatus", course = course, busy = false, text = saved > 0 ? "ירדו " + saved + " קבצים: " + label + (failed > 0 ? " (" + failed + " נכשלו)" : "") : "לא ירד שום קובץ", error = saved == 0 });
             SendCourseLocal(course);
             // The syllabus is read straight away: one click does both.
