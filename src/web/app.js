@@ -719,7 +719,7 @@ const modLabel = { resource: 'קובץ', file: 'קובץ', assign: 'מטלה', z
 function openCourse(c) {
   rememberCourseUi();
   const saved=runtimeFor(c.name);
-  S.course = c; document.body.classList.toggle('manual-course', !!c.manual); S.sections = []; S.open = new Set(saved.open || []); S.local = c.local || null; S.notability = null;
+  S.course = c; S.localSig = null; document.body.classList.toggle('manual-course', !!c.manual); S.sections = []; S.open = new Set(saved.open || []); S.local = c.local || null; S.notability = null;
   $('courseName').textContent = c.name;
   $('courseBand').innerHTML = ART.band(c.id);
   $('lecturer').value = ''; $('lecturer').placeholder = 'מי המרצה?';
@@ -1545,7 +1545,8 @@ $('siteReload').onclick = () => send({ type: 'siteAction', action: 'reload' });
 $('siteDownloads').onclick = () => send({type:'siteAction',action:'downloads'});
 $('siteExternal').onclick = () => send({ type: 'siteAction', action: 'external' });
 $('sitePrint').onclick = () => send({ type: 'siteAction', action: 'savepdf' });
-$('siteCopy').onclick = () => send({ type: 'siteAction', action: 'copylink' });
+$('siteGetAll').onclick = () => send({ type: 'siteAction', action: 'getall' });
+$('siteCopy').onclick =() => send({ type: 'siteAction', action: 'copylink' });
 $('refreshSummaries').onclick = () => { if (confirm('לבנות מחדש את כל הסיכומים הישנים בפורמט החדש? זה משתמש ב-AI, אחד אחרי השני, ויכול לקחת זמן.')) send({ type: 'refreshSummaries' }); };
 if ($('checkUpdate')) $('checkUpdate').onclick = () => send({ type: 'checkUpdate' });
 $('portalUpdate').onclick = () => { send({ type: 'importTimetable', fromFolder: true, capture: true }); toast('שומר את הדף ומעדכן את המערכת...'); };
@@ -1814,11 +1815,19 @@ function onMessage(m) {
     }
     case 'courseLocal':
       if (!S.course || S.course.name !== m.course) break;
+      {
+        // The same data again (e.g. after a file finished downloading) changes nothing, so the screen is left alone.
+        const sig = JSON.stringify([m.local, m.notability]);
+        if (S.localSig === sig) break;
+        S.localSig = sig;
+      }
+      document.body.classList.add('quiet');
       S.local = m.local; S.notability = m.notability;
       S.sections = (m.local.lectures || []).map(row => Object.assign({}, S.sections.find(s => s.num === row.num), row, lectureState(row)));
       restoreCourseRuntime();
       renderLectures(); renderCourseHeader();
       if (S.tab !== 'lessons') setTab(S.tab);
+      requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.remove('quiet')));
       if (S.courses) { const c = S.courses.find(x => x.name === m.course); if (c) c.local = m.local; }
       break;
     case 'newMaterial': {

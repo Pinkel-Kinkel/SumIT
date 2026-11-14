@@ -15,7 +15,7 @@ using Microsoft.Web.WebView2.WinForms;
 
 partial class HitStudent : Form
 {
-    public const string Version = "1.0.44";
+    public const string Version = "1.0.45";
     const string Repo = "Pinkel-Kinkel/SumIT";
     // Updates are only accepted from these repositories (the project was renamed from hit-recordings).
     static readonly string[] RepoNames = { "Pinkel-Kinkel/SumIT" };
@@ -37,7 +37,7 @@ partial class HitStudent : Form
     static readonly Dictionary<string, string> Sites = new Dictionary<string, string>
     {
         { "moodle", "https://md.hit.ac.il/my/" },
-        { "portal", "https://portal.hit.ac.il/" },
+        { "portal", "https://webrashim.hit.ac.il/Michlol3SP/" },
         { "cs24", "https://cs24.co.il/drive?d=e47d12" },
         { "outlook", "https://outlook.office365.com/mail/" },
         { "onedrive", "https://hitacil-my.sharepoint.com/_layouts/15/onedrive.aspx" },
@@ -920,6 +920,7 @@ partial class HitStudent : Form
         else if (action == "reload") c.Reload();
         else if (action == "print") c.ShowPrintUI(CoreWebView2PrintDialogKind.Browser);
         else if (action == "savepdf") SavePageAsPdf();
+        else if (action == "getall") DownloadOpenFolder();
         else if (action == "copylink" && c.Source != null) { try { Clipboard.SetText(c.Source); Toast("הקישור הועתק", false); } catch { } }
         else if (action == "downloads") c.OpenDefaultDownloadDialog();
         else if (action == "external" && c.Source != null) OpenExternal(c.Source);

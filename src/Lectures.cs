@@ -316,6 +316,34 @@ partial class HitStudent
         catch (Exception ex) { Toast("לא הצלחתי לשמור את הדף: " + ex.Message, true); }
     }
 
+    // "Download all files here": everything in the Moodle folder / CS24 folder the student has open goes where the bar above the site says.
+    async void DownloadOpenFolder()
+    {
+        var c = ActiveSiteCore(); Uri u;
+        if (c == null || !Uri.TryCreate(c.Source ?? "", UriKind.Absolute, out u)) return;
+        try
+        {
+            string where; string dir = SiteSaveDir("x.pdf", out where);
+            int saved = 0;
+            if (u.Host.EndsWith("cs24.co.il", StringComparison.OrdinalIgnoreCase))
+            {
+                Toast("מוריד את כל הקבצים בתיקייה אל: " + where, false);
+                saved = await Cs24DownloadFolder(u.AbsoluteUri, dir);
+            }
+            else if (IsMoodleUrl(u.AbsoluteUri))
+            {
+                Toast("מוריד את כל הקבצים בדף אל: " + where, false);
+                using (var http = await MoodleHttp())
+                    foreach (string f in await PluginFiles(http, u.AbsoluteUri))
+                        try { if (await DownloadFile(http, f, dir, true) != null) saved++; } catch { }
+            }
+            else { Toast("ההורדה של כל הקבצים עובדת ב-Moodle וב-CS24", true); return; }
+            Toast(saved > 0 ? "ירדו " + saved + " קבצים אל: " + where : "לא מצאתי קבצים חדשים בדף הזה", saved == 0);
+            if (siteDownloadCourse != null) SendCourseLocal(siteDownloadCourse);
+        }
+        catch (Exception ex) { Toast("ההורדה נכשלה: " + ex.Message, true); }
+    }
+
     static string UniquePathIn(string dir, string name)
     {
         string path = Path.Combine(dir, name);

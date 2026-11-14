@@ -1005,3 +1005,58 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
 .portal-hint{display:flex;align-items:center;gap:12px;padding:6px 14px;font-size:13px}
 .portal-hint .grow{opacity:.8}
 @media (prefers-reduced-motion:reduce){button,.lecture,.lecture-head .chevron{transition:none}button:active{transform:none}}
+
+/* ===== 1.0.44 visual refresh: calmer palette, one radius scale, quieter shadows, pill tabs, centered content ===== */
+:root {
+  --bg: #f4f5f9; --bg-2: #eceef4; --surface: #ffffff; --surface-2: #f1f3f8; --surface-3: #e5e9f2; --border: #e0e4ee;
+  --text: #111827; --muted: #626d83; --accent: #2563eb; --accent-2: #3b82f6; --accent-hover: #1d4fd0; --accent-soft: #e6eefe; --accent-text: #1c4cc4;
+  --shadow-sm: 0 1px 2px rgba(17,24,39,.05); --shadow: 0 1px 2px rgba(17,24,39,.04), 0 6px 20px rgba(17,24,39,.05); --shadow-lg: 0 20px 50px rgba(17,24,39,.16);
+  --radius: 18px; --hero-1: #1e3a8a; --hero-2: #2f6fe0; --hero-3: #f5b83d;
+}
+html[data-theme=dark] {
+  --bg: #0b1019; --bg-2: #101725; --surface: #131b2b; --surface-2: #1a2438; --surface-3: #243049; --border: #25304a;
+  --text: #edf1f8; --muted: #94a0b8; --accent: #4f8cff; --accent-2: #5fa8ff; --accent-hover: #74a2ff; --accent-soft: #1a2c52; --accent-text: #b5d0ff;
+  --shadow-sm: none; --shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 10px 30px rgba(0,0,0,.28); --shadow-lg: 0 24px 60px rgba(0,0,0,.6);
+  --hero-1: #1a2f66; --hero-2: #2858b8; --hero-3: #d9a02e;
+}
+body { background: var(--bg); }
+main > .view { max-width: 1180px; margin-inline: auto; }
+.card { border-radius: var(--radius); box-shadow: var(--shadow); border-color: var(--border); }
+html[data-theme=dark] .card { background: linear-gradient(180deg, var(--surface), color-mix(in srgb, var(--surface) 92%, #000)); }
+
+nav.side { background: var(--surface); border-inline-start: 1px solid var(--border); }
+.nav-item { border-radius: 12px; font-weight: 600; }
+.nav-item.active { background: var(--accent-soft); color: var(--accent-text); }
+.nav-item.active::before { background: var(--accent); }
+
+button { border-radius: 12px; font-weight: 600; }
+button.primary { background: var(--accent); box-shadow: 0 1px 2px rgba(0,0,0,.2), 0 6px 16px color-mix(in srgb, var(--accent) 35%, transparent); }
+button.primary:hover:not(:disabled) { filter: none; background: var(--accent-hover); box-shadow: 0 1px 2px rgba(0,0,0,.2), 0 8px 20px color-mix(in srgb, var(--accent) 45%, transparent); }
+button.ghost, button.soft { background: var(--surface-2); border-color: var(--border); }
+
+.hero { min-height: 230px; padding: 26px 34px; gap: 28px; border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent); background: linear-gradient(120deg, var(--hero-1), var(--hero-2)); }
+.hero .illus { width: 190px; height: 190px; }
+.hero h1 { font-size: 30px; letter-spacing: -.3px; }
+.hero button.white { background: var(--hero-3); border-color: var(--hero-3); color: #2a1c00; }
+.stats { gap: 12px; }
+.stat-tile { border-radius: 16px; padding: 14px 16px; background: var(--surface); box-shadow: var(--shadow-sm); }
+.stat-tile b { font-size: 22px; }
+
+.course-hero { min-height: 118px; padding: 18px 24px; border-radius: 20px; background: linear-gradient(120deg, var(--hero-1), var(--hero-2)); }
+.course-hero h1 { font-size: 24px; letter-spacing: -.2px; }
+.course-hero .chip { background: rgba(255,255,255,.16); }
+
+.tabs { display: inline-flex; gap: 2px; padding: 4px; margin: 16px 0 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2); }
+.tabs button { height: 36px; padding: 0 16px; border-radius: 10px; color: var(--muted); }
+.tabs button:hover { background: color-mix(in srgb, var(--surface-3) 60%, transparent); color: var(--text); }
+.tabs button.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.18); }
+.tabs button.active::after { display: none; }
+.tabs .badge { background: var(--surface-3); }
+.tabs button.active .badge { background: var(--accent); color: #fff; }
+
+.chip { background: var(--surface-2); }
+.card-head h2 { font-size: 16px; letter-spacing: -.1px; }
+.toast { background: var(--surface); border-radius: 14px; }
+.quiet *, .quiet *::before, .quiet *::after { animation: none !important; transition: none !important; }.course-hero { min-height: 150px; padding-top: 60px; }
+.course-hero input { background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.22); color: #fff; border-radius: 10px; }
+.course-hero input::placeholder { color: rgba(255,255,255,.65); }

@@ -212,6 +212,62 @@ return f ? (f.getAttribute('src') || f.getAttribute('href')) : '';", 8000);
 
     async void Cs24Sync(string course) { await Cs24SyncCourse(course); }
 
+    // "Download everything in this folder": the CS24 folder the student has open (with its sub-folders) goes into dir.
+    async Task<int> Cs24DownloadFolder(string url, string dir)
+    {
+        int saved = 0;
+        await cs24Lock.WaitAsync();
+        try
+        {
+            var files = new List<Tuple<string, Cs24Entry>>();
+            var seen = new HashSet<string> { url };
+            var queue = new Queue<Tuple<string, string, int>>(); queue.Enqueue(Tuple.Create(url, "", 0));
+            while (queue.Count > 0 && files.Count < Cs24MaxFiles && seen.Count < 40)
+            {
+                var cur = queue.Dequeue();
+                foreach (var e in await Cs24List(cur.Item1))
+                {
+                    if (e.Folder) { if (cur.Item3 < 3 && seen.Add(e.Href)) queue.Enqueue(Tuple.Create(e.Href, cur.Item2.Length > 0 ? cur.Item2 + "\\" + SafeName(e.Name) : SafeName(e.Name), cur.Item3 + 1)); }
+                    else files.Add(Tuple.Create(cur.Item2, e));
+                }
+            }
+            using (var http = new HttpClient())
+            {
+                http.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "SumIT/" + Version);
+                http.Timeout = TimeSpan.FromMinutes(10);
+                for (int i = 0; i < files.Count; i++)
+                {
+                    var f = files[i];
+                    try
+                    {
+                        string asset = await Cs24FileUrl(f.Item2.Href);
+                        if (asset == null) continue;
+                        string target = Path.Combine(dir, f.Item1);
+                        string ext = Path.GetExtension(Uri.UnescapeDataString(new Uri(asset).AbsolutePath));
+                        string name = SafeName(f.Item2.Name);
+                        if (ext.Length > 0 && !name.EndsWith(ext, StringComparison.OrdinalIgnoreCase)) name += ext;
+                        string path = Path.Combine(target, name);
+                        if (!IsInside(path, dir) || File.Exists(path)) continue;
+                        Directory.CreateDirectory(target);
+                        using (var resp = await http.GetAsync(asset, HttpCompletionOption.ResponseHeadersRead))
+                        {
+                            if (!resp.IsSuccessStatusCode) continue;
+                            if (resp.Content.Headers.ContentLength.HasValue && resp.Content.Headers.ContentLength.Value > 200L * 1024 * 1024) continue;
+                            string temp = path + ".part";
+                            using (var fs = File.Create(temp)) await resp.Content.CopyToAsync(fs);
+                            File.Move(temp, path); saved++;
+                        }
+                    }
+                    catch { }
+                    Toast("מוריד מ-CS24 (" + (i + 1) + " מתוך " + files.Count + ")", false);
+                    await Task.Delay(250);
+                }
+            }
+        }
+        finally { cs24Lock.Release(); if (cs24View.CoreWebView2 != null) cs24View.CoreWebView2.Navigate("about:blank"); }
+        return saved;
+    }
+
     // The whole setup in one go, after the student answered the questions: Moodle, then CS24, then the study material.
     async void SetupRun(string course, System.Collections.ArrayList sections, bool cs24)
     {
