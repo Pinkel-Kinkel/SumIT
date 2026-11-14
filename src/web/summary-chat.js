@@ -37,7 +37,7 @@ function summaryMessageHtml(m){
 function renderSummaryChat(){const t=summaryThread();if(!t)return;
  const busy=summaryChatJob?.path===S.viewer.path,box=$('summaryChatMessages');
  if(!t.messages.length&&!busy){
-  box.innerHTML='<div class="sc-empty"><div class="sc-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z"/><path d="M19 15l.8 1.9 1.9.8-1.9.8L19 20.4l-.8-1.9-1.9-.8 1.9-.8z"/></svg></div><h3>מה תרצה להבין?</h3><p>הסיכום כולו כבר בהקשר. אפשר לצרף תמונה או לסמן אזור בסיכום.</p><div class="sc-suggest">'+SUMMARY_SUGGESTIONS.map(x=>'<button type="button" class="sc-chip" data-q="'+esc(x[0])+'"><b>'+esc(x[1])+'</b><span>'+esc(x[0])+'</span></button>').join('')+'</div></div>';
+  box.innerHTML='<div class="sc-empty"><div class="sc-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z"/><path d="M19 15l.8 1.9 1.9.8-1.9.8L19 20.4l-.8-1.9-1.9-.8 1.9-.8z"/></svg></div><h3>מה תרצה להבין?</h3><p>הסיכום כולו כבר בהקשר. אפשר להדביק צילום מסך של החלק שמעניין אותך.</p><div class="sc-suggest">'+SUMMARY_SUGGESTIONS.map(x=>'<button type="button" class="sc-chip" data-q="'+esc(x[0])+'"><b>'+esc(x[1])+'</b><span>'+esc(x[0])+'</span></button>').join('')+'</div></div>';
   box.querySelectorAll('.sc-chip').forEach(b=>b.onclick=()=>{$('summaryChatText').value=b.dataset.q;t.draft=b.dataset.q;growSummaryInput();$('summaryChatText').focus();});
  }else box.innerHTML=t.messages.map(summaryMessageHtml).join('')+(busy?'<div class="sc-row assistant"><div class="sc-typing" role="status" aria-label="מכין תשובה"><i></i><i></i><i></i></div></div>':'');
  $('summaryChatText').value=t.draft;growSummaryInput();$('summaryChatSelection').hidden=!t.attachments.length;
@@ -55,7 +55,6 @@ async function addChatImage(blob,text='',thread=summaryThread()){
 $('viewerChat').onclick=()=>{if(!$('summaryChat').hidden)closeSummaryChat();else openSummaryChat();};
 $('summaryChatNew').onclick=()=>{const t=summaryThread();if(!t||summaryChatJob?.path===S.viewer.path)return;t.messages=[];t.attachments=[];t.draft='';send({type:'summaryChatReset',course:S.course?S.course.name:'',path:S.viewer.path});renderSummaryChat();$('summaryChatText').focus();};
 $('summaryLearningReset').onclick=()=>{if(S.viewer&&S.course)send({type:'resetLearningNeeds',course:S.course.name,path:S.viewer.path});};
-$('viewerSelect').onclick=()=>{if(S.viewer&&S.course)send({type:'selectSummary',course:S.course.name,path:S.viewer.path});};
 $('summaryChatClose').onclick=closeSummaryChat;
 $('summaryChatClearSelection').onclick=()=>{const t=summaryThread();if(t){t.attachments=[];renderSummaryChat();}};
 $('summaryChatAttach').onclick=()=>$('summaryChatFiles').click();

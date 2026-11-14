@@ -1224,3 +1224,15 @@ button.ghost, button.soft { background: var(--surface-2); border-color: var(--bo
 .pomo-big-btns { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
 .pomo-big-btns button { font-size: 17px; padding: 12px 22px; border-radius: 14px; }
 .pomo-big-toggle { min-width: 150px; }
+
+/* Share choices open inline in the bar (a dropdown would fall behind the summary, which is a separate browser view). */
+.share-menu { display: inline-flex; gap: 6px; padding: 3px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--border); animation: rise .18s var(--ease) both; }
+.share-menu[hidden] { display: none; }
+.share-menu button { display: inline-flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 0; height: 34px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; box-shadow: none; line-height: 1.15; }
+.share-menu button:hover { background: var(--surface); }
+.share-menu b { font-size: 12.5px; }
+.share-menu small { font-size: 10.5px; color: var(--muted); font-weight: 500; }
+/* A drawing the AI sent as SVG: a clean card that follows the theme. */
+.sc-figure { margin: 10px 0; padding: 12px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text); display: flex; justify-content: center; }
+.sc-figure svg { width: 100%; max-width: 420px; height: auto; overflow: visible; font-family: "Segoe UI", system-ui, sans-serif; }
+.sc-figure svg text:not([fill]) { fill: currentColor; }

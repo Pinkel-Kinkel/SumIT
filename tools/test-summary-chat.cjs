@@ -18,7 +18,7 @@ const fs=require('fs');const assert=require('assert/strict');
   await page.locator('#summaryChatExpand').click();
   await page.locator('#summaryChatResize').focus();await page.keyboard.press('ArrowRight');
   assert.equal(await page.locator('#summaryChatResize').getAttribute('aria-valuenow'),'440');
-  await page.locator('#viewerSelect').click();assert.equal(await page.evaluate(()=>sent.at(-1).type),'selectSummary');
+  
   await page.evaluate(()=>onMessage({type:'summarySelectionReady',path:S.viewer.path,text:'s = v t',image:(()=>{const c=document.createElement('canvas');c.width=40;c.height=40;c.getContext('2d').fillRect(0,0,40,40);return c.toDataURL('image/png');})()}));
   await page.waitForFunction(()=>summaryThread().attachments.length===1);
   await page.evaluate(async()=>{const blob=summaryImageBlob(summaryThread().attachments[0].image);const dt=new DataTransfer();dt.items.add(new File([blob],'extra.png',{type:'image/png'}));$('summaryChatText').dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true}));});

@@ -109,9 +109,31 @@ function toast(text, opts = {}) {
   setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 300); }, opts.ms || 4800);
 }
 
+// A drawing the AI sent as SVG: only drawing elements and plain attributes survive (no scripts, events, links or embedded HTML).
+const SVG_TAGS = new Set(['svg','g','path','line','polyline','polygon','circle','ellipse','rect','text','tspan','defs','marker','title','lineargradient','stop']);
+function safeSvg(source) {
+  try {
+    const doc = new DOMParser().parseFromString(source.trim(), 'image/svg+xml');
+    const root = doc.documentElement;
+    if (!root || root.nodeName.toLowerCase() !== 'svg' || doc.querySelector('parsererror')) return '';
+    for (const el of [...root.querySelectorAll('*'), root]) {
+      if (!SVG_TAGS.has(el.nodeName.toLowerCase())) { el.remove(); continue; }
+      for (const a of [...el.attributes]) {
+        const n = a.name.toLowerCase(), v = a.value.trim().toLowerCase();
+        if (n.startsWith('on') || (n === 'style' && /url\(|expression/.test(v)) || (/href$/.test(n) && !v.startsWith('#')) || /javascript:|data:/.test(v)) el.removeAttribute(a.name);
+      }
+    }
+    root.removeAttribute('width'); root.removeAttribute('height');
+    root.setAttribute('role', 'img');
+    return new XMLSerializer().serializeToString(root);
+  } catch { return ''; }
+}
+
 function md(text) {
   const blocks = [], math = [];
-  let t = esc(text).replace(/```[\w-]*\n?([\s\S]*?)```/g, (_, code) => { blocks.push(`<pre>${code}</pre>`); return `\u0000${blocks.length - 1}\u0000`; });
+  let t = esc(text).replace(/```([\w-]*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+    const figure = /^(svg|xml)$/i.test(lang) || /^\s*&lt;svg[\s&]/.test(code) ? safeSvg(code.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&')) : '';
+    blocks.push(figure ? `<div class="sc-figure" dir="ltr">${figure}</div>` : `<pre>${code}</pre>`); return `\u0000${blocks.length - 1}\u0000`; });
   t = t.replace(/`([^`]+)`/g, (_, code) => { blocks.push(`<code>${code}</code>`); return `\u0000${blocks.length-1}\u0000`; });
   t = t.replace(/\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|\\\(([\s\S]+?)\\\)|(?<!\\)\$([^$\n]+?)\$/g, (match, display, bracket, inline, dollar) => {
     const raw = display || bracket || inline || dollar;
@@ -1498,7 +1520,13 @@ function openViewer(path, title, pdf, lec) {
 $('viewerBack').onclick = () => { S.viewer = null; show('course'); };
 // The Gemini-only summary chat is connected in summary-chat.js.
 $('viewerPdf').onclick = () => S.viewer && S.viewer.pdf && send({ type: 'openPath', path: S.viewer.pdf });
-$('viewerShare').onclick = () => {
+// "Share" opens a small menu: a ZIP file, or the shared OneDrive folder.
+$('viewerShare').onclick = (e) => { e.stopPropagation(); if (!S.viewer || !S.course || S.shareJob?.busy) return; $('viewerShareMenu').hidden = !$('viewerShareMenu').hidden; };
+document.addEventListener('click', (e) => { if (!e.target.closest('#viewerShareMenu')) $('viewerShareMenu').hidden = true; });
+$('viewerShareZip').onclick = () => shareSummary(false);
+$('viewerShareCloud').onclick = () => shareSummary(true);
+function shareSummary(cloud) {
+  $('viewerShareMenu').hidden = true;
   if (!S.viewer || !S.course || S.shareJob?.busy) return;
   const requestId = 'share-' + Date.now();
   S.shareJob = { requestId, path: S.viewer.path, busy: true };
@@ -1507,8 +1535,8 @@ $('viewerShare').onclick = () => {
   $('viewerShareNote').hidden = false;
   $('viewerShareNote').classList.remove('error');
   $('viewerShareStatus').textContent = 'בחר היכן לשמור את קובץ ה־ZIP';
-  send({ type: 'shareSummary', onedrive:!!S.shareToCloud, requestId, course: S.course.name, path: S.viewer.path, pdf: S.viewer.pdf || '', title: S.viewer.title });
-};
+  send({ type: 'shareSummary', onedrive: !!cloud, requestId, course: S.course.name, path: S.viewer.path, pdf: S.viewer.pdf || '', title: S.viewer.title });
+}
 $('viewerShareDismiss').onclick = () => { $('viewerShareNote').hidden = true; $('viewerShare').focus(); };
 function summaryShareStatus(m) {
   if (!S.shareJob || S.shareJob.requestId !== m.requestId) return;
