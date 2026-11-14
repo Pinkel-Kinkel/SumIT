@@ -146,8 +146,19 @@ function md(text) {
     return `\u0001${math.length-1}\u0001`;
   });
   t = t.replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/^#{1,4} (.*)$/gm, '<h4>$1</h4>');
-  let html = '', list = null;
+  let html = '', list = null, table = null;
+  const cells = (line) => line.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+  const endTable = () => { if (table) { html += `<div class="md-table"><table><tr>${table[0].map(c => `<th>${c}</th>`).join('')}</tr>${table.slice(1).map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</table></div>`; table = null; } };
   for (const line of t.split('\n')) {
+    // A Markdown table ("| a | b |" rows, with a "|---|---|" line under the header) becomes a real table.
+    if (/^\s*\|.*\|\s*$/.test(line)) {
+      if (list) { html += `</${list}>`; list = null; }
+      if (/^\s*\|[\s:|-]+\|\s*$/.test(line)) continue;
+      (table = table || []).push(cells(line));
+      continue;
+    }
+    endTable();
+    if (/^\s*(-{3,}|\*{3,})\s*$/.test(line)) { if (list) { html += `</${list}>`; list = null; } html += '<hr>'; continue; }
     const ul = line.match(/^\s*[-*•] (.*)/), ol = line.match(/^\s*\d+[.)] (.*)/);
     if (ul || ol) {
       const type = ul ? 'ul' : 'ol';
@@ -159,6 +170,7 @@ function md(text) {
       if (line.trim()) html += line.startsWith('<h4>') ? line : /^\s*\u0001\d+\u0001\s*$/.test(line) ? `<div class="eq-line">${line.trim()}</div>` : `<p>${line}</p>`;
     }
   }
+  endTable();
   if (list) html += `</${list}>`;
   return html.replace(/\u0000(\d+)\u0000/g, (_, i) => blocks[i]).replace(/\u0001(\d+)\u0001/g, (_, i) => math[i]);
 }

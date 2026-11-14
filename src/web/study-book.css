@@ -106,3 +106,15 @@ figure[data-visual] svg{width:100%;height:auto;max-height:420px;display:block;ma
 figure[data-visual] figcaption{margin-top:8px;text-align:center;font-size:.92em;opacity:.78;text-wrap:balance}
 .sumit-ltr{unicode-bidi:isolate}
 h2,h3,h4{text-wrap:balance}
+
+/* The recipe of a question type: when to use it, short numbered steps, how to remember (METHOD.md, "Recipes"). */
+.recipe{margin:14px 0;padding:14px 16px;border-radius:14px;border:1px solid color-mix(in srgb,var(--accent,#2f5bd3) 35%,transparent);border-inline-start:4px solid var(--accent,#2f5bd3);background:color-mix(in srgb,var(--accent,#2f5bd3) 7%,transparent);line-height:1.8}
+.recipe .recipe-title{display:block;font-size:1.05em;color:var(--accent,#2f5bd3);margin-bottom:6px}
+.recipe p{margin:6px 0}
+.recipe .recipe-steps{margin:8px 0;padding-inline-start:0;list-style:none;counter-reset:none}
+.recipe .recipe-steps li{margin:6px 0;padding:6px 10px;border-radius:10px;background:color-mix(in srgb,var(--accent,#2f5bd3) 6%,transparent)}
+.recipe .recipe-remember{font-size:.95em;opacity:.9}
+.recipe table{width:100%;border-collapse:collapse;margin:8px 0;font-size:.95em}
+.recipe th,.recipe td{border-bottom:1px solid color-mix(in srgb,currentColor 15%,transparent);padding:6px 8px;text-align:start}
+.recipe-ref{display:inline-block;margin:6px 0;padding:4px 10px;border-radius:999px;font-size:.92em;background:color-mix(in srgb,var(--accent,#2f5bd3) 10%,transparent)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .recipe .recipe-title{color:var(--accent,#93c5fd)}}

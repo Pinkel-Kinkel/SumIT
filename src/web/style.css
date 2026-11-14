@@ -1236,3 +1236,10 @@ button.ghost, button.soft { background: var(--surface-2); border-color: var(--bo
 .sc-figure { margin: 10px 0; padding: 12px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text); display: flex; justify-content: center; }
 .sc-figure svg { width: 100%; max-width: 420px; height: auto; overflow: visible; font-family: "Segoe UI", system-ui, sans-serif; }
 .sc-figure svg text:not([fill]) { fill: currentColor; }
+/* Markdown tables and dividers in AI answers. */
+.sc-answer hr, .md-table + hr { border: 0; border-top: 1px solid var(--border); margin: 14px 0; }
+.md-table { margin: 10px 0; overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; }
+.md-table table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.md-table th { background: var(--surface-2); font-weight: 700; text-align: start; }
+.md-table th, .md-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.md-table tr:last-child td { border-bottom: 0; }
