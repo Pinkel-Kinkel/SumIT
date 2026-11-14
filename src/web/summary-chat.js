@@ -1,21 +1,44 @@
 // Each summary owns its conversation and up to six removable image attachments.
 const summaryThreads=new Map();let summaryChatJob=null;
 function summaryThread(){if(!S.viewer)return null;const key=S.viewer.path;if(!summaryThreads.has(key))summaryThreads.set(key,{messages:[],attachments:[],draft:''});return summaryThreads.get(key);}
-const SUMMARY_SUGGESTIONS=['הסבר לי את הנקודה המרכזית בסיכום במילים פשוטות','עזור לי להתחיל את שאלה 1, רמזים בלבד','תן לי תרגיל דומה כדי לתרגל'];
+const SUMMARY_SUGGESTIONS=[['הסבר לי את הנקודה המרכזית בסיכום במילים פשוטות','הסבר פשוט'],['עזור לי להתחיל את שאלה 1, רמזים בלבד','רמזים בלבד'],['תן לי תרגיל דומה כדי לתרגל','תרגיל דומה']];
+// Models the student can pick. The recommendation depends on the course: math and physics go to the strongest reasoning model.
+const CHAT_MODELS=[
+ {id:'claude:opus',p:'claude',label:'Claude Opus',note:'הכי חזק בהוכחות, חישובים והסברים מתמטיים'},
+ {id:'claude:sonnet',p:'claude',label:'Claude Sonnet',note:'מהיר ומדויק, טוב לרוב השאלות'},
+ {id:'claude:haiku',p:'claude',label:'Claude Haiku',note:'הכי מהיר, לשאלות קצרות'},
+ {id:'gemini:gemini-4-hydrogen-high',p:'gemini',label:'Gemini 4 Hydrogen',note:'חשיבה מעמיקה, טוב בחישוב'},
+ {id:'gemini:gemini-3.8-flash-medium',p:'gemini',label:'Gemini 3.8 Flash',note:'מהיר'},
+ {id:'openai:',p:'openai',label:'ChatGPT',note:'המודל של המנוי שלך'}];
+const PROVIDER_NAME={claude:'Claude',gemini:'Gemini',openai:'ChatGPT'};
+function mathCourse(){return /חשבון|אינפי|משוואות|דיפרנציאל|פיסיקה|פיזיקה|אלגברה|לינארית|הסתברות|סטטיסטיקה|מתמטיקה|מכניקה|אותות|calculus|physics|algebra|math/i.test(S.course?.name||'');}
+function modelReady(p){const a=S.ai||{};return p==='claude'?!!a.claude?.loggedIn:!!(a.helpers&&a.helpers[p]==='account');}
+function recommendedModel(){const order=mathCourse()?['claude:opus','gemini:gemini-4-hydrogen-high','openai:','claude:sonnet']:['claude:sonnet','gemini:gemini-3.8-flash-medium','openai:','claude:opus'];return order.find(id=>modelReady(CHAT_MODELS.find(m=>m.id===id).p))||order[0];}
+function chatModel(){let id='';try{id=localStorage.getItem('sumit-chat-model')||'';}catch{}const m=CHAT_MODELS.find(x=>x.id===id);return m&&modelReady(m.p)?m.id:recommendedModel();}
+function renderChatModel(){const m=CHAT_MODELS.find(x=>x.id===chatModel());$('scModelLabel').textContent=m.label;$('scModel').dataset.p=m.p;}
+function renderModelMenu(){const cur=chatModel(),rec=recommendedModel(),menu=$('scModelMenu');
+ menu.innerHTML='<div class="sc-menu-head">'+(mathCourse()?'קורס מתמטי: מומלץ מודל חזק בחשיבה':'בחר את המודל שיענה לך')+'</div>'+['claude','gemini','openai'].map(p=>'<div class="sc-menu-group"><small>'+PROVIDER_NAME[p]+(modelReady(p)?'':' · לא מחובר')+'</small>'+CHAT_MODELS.filter(m=>m.p===p).map(m=>'<button type="button" role="option" class="sc-opt" data-id="'+m.id+'" data-p="'+p+'" aria-selected="'+(m.id===cur)+'"'+(modelReady(p)?'':' disabled')+'><i class="sc-model-dot"></i><span><b>'+esc(m.label)+'</b>'+(m.id===rec?'<em>מומלץ</em>':'')+'<small>'+esc(m.note)+'</small></span>'+(m.id===cur?'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>':'')+'</button>').join('')+'</div>').join('');
+ menu.querySelectorAll('.sc-opt').forEach(b=>b.onclick=()=>{try{localStorage.setItem('sumit-chat-model',b.dataset.id);}catch{}toggleModelMenu(false);renderChatModel();});}
+function toggleModelMenu(open){const menu=$('scModelMenu');if(open==null)open=menu.hidden;if(open)renderModelMenu();menu.hidden=!open;$('scModel').setAttribute('aria-expanded',String(open));}
+$('scModel').onclick=e=>{e.stopPropagation();toggleModelMenu();};
+document.addEventListener('click',e=>{if(!$('scModelMenu').hidden&&!e.target.closest('#scModelMenu'))toggleModelMenu(false);});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('scModelMenu').hidden)toggleModelMenu(false);});
 function setSummaryChatOpen(open){$('summaryChat').hidden=!open;$('viewerChat').classList.toggle('on',open);$('viewerChat').setAttribute('aria-pressed',String(open));requestAnimationFrame(()=>placeSite(false));}
-function openSummaryChat(){if(!S.viewer)return;setSummaryChatOpen(true);renderSummaryChat();$('summaryChatText').focus();}
+function openSummaryChat(){if(!S.viewer)return;setSummaryChatOpen(true);renderChatModel();renderSummaryChat();$('summaryChatText').focus();}
 function closeSummaryChat(){setSummaryChatOpen(false);}
 function growSummaryInput(){const t=$('summaryChatText');t.style.height='auto';t.style.height=Math.min(t.scrollHeight,180)+'px';}
+// A formula typed inside a Hebrew question ("z = arctan(y/x)") keeps its left-to-right order.
+function ltrRuns(t){return t.replace(/[A-Za-z0-9(][A-Za-z0-9 ()\/=+\-*^.,']*[A-Za-z0-9)]/g,r=>/[=()\/+\-*^]/.test(r)?'<bdi dir="ltr">'+r+'</bdi>':r);}
 function summaryMessageHtml(m){
- if(m.role==='user')return '<div class="sc-row user">'+((m.images&&m.images.length)?'<div class="sc-thumbs">'+m.images.map(i=>'<img src="'+i+'" alt="תמונה שצורפה">').join('')+'</div>':'')+'<div class="sc-bubble">'+esc(m.text).replace(/\n/g,'<br>')+'</div></div>';
+ if(m.role==='user')return '<div class="sc-row user">'+((m.images&&m.images.length)?'<div class="sc-thumbs">'+m.images.map(i=>'<img src="'+i+'" alt="תמונה שצורפה">').join('')+'</div>':'')+'<div class="sc-bubble">'+ltrRuns(esc(m.text)).replace(/\n/g,'<br>')+'</div></div>';
  if(m.role==='error')return '<div class="sc-row error"><div class="sc-error">'+esc(m.text)+'</div></div>';
- return '<div class="sc-row assistant"><div class="sc-answer">'+md(m.text)+'</div>'+(m.provider?'<small class="sc-who">'+esc(m.provider)+'</small>':'')+'</div>';
+ return '<div class="sc-row assistant"><div class="sc-who-row"><i class="sc-avatar" aria-hidden="true"></i><small class="sc-who">'+esc(m.model||PROVIDER_NAME[m.provider]||m.provider||'SumIT')+'</small></div><div class="sc-answer" dir="rtl">'+md(m.text)+'</div></div>';
 }
 function renderSummaryChat(){const t=summaryThread();if(!t)return;
  const busy=summaryChatJob?.path===S.viewer.path,box=$('summaryChatMessages');
  if(!t.messages.length&&!busy){
-  box.innerHTML='<div class="sc-empty"><div class="sc-mark" aria-hidden="true"></div><h3>מה תרצה להבין?</h3><p>כל הסיכום כבר בהקשר. אפשר לצרף תמונות או לסמן אזור בסיכום.</p><div class="sc-suggest">'+SUMMARY_SUGGESTIONS.map(x=>'<button type="button" class="sc-chip">'+esc(x)+'</button>').join('')+'</div></div>';
-  box.querySelectorAll('.sc-chip').forEach(b=>b.onclick=()=>{$('summaryChatText').value=b.textContent;t.draft=b.textContent;growSummaryInput();$('summaryChatText').focus();});
+  box.innerHTML='<div class="sc-empty"><div class="sc-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z"/><path d="M19 15l.8 1.9 1.9.8-1.9.8L19 20.4l-.8-1.9-1.9-.8 1.9-.8z"/></svg></div><h3>מה תרצה להבין?</h3><p>הסיכום כולו כבר בהקשר. אפשר לצרף תמונה או לסמן אזור בסיכום.</p><div class="sc-suggest">'+SUMMARY_SUGGESTIONS.map(x=>'<button type="button" class="sc-chip" data-q="'+esc(x[0])+'"><b>'+esc(x[1])+'</b><span>'+esc(x[0])+'</span></button>').join('')+'</div></div>';
+  box.querySelectorAll('.sc-chip').forEach(b=>b.onclick=()=>{$('summaryChatText').value=b.dataset.q;t.draft=b.dataset.q;growSummaryInput();$('summaryChatText').focus();});
  }else box.innerHTML=t.messages.map(summaryMessageHtml).join('')+(busy?'<div class="sc-row assistant"><div class="sc-typing" role="status" aria-label="מכין תשובה"><i></i><i></i><i></i></div></div>':'');
  $('summaryChatText').value=t.draft;growSummaryInput();$('summaryChatSelection').hidden=!t.attachments.length;
  $('summaryChatAttachments').innerHTML=t.attachments.map((a,i)=>'<div class="chat-attachment"><img src="'+a.image+'" alt="תמונה '+(i+1)+'"><button type="button" class="sc-x" data-remove="'+a.id+'" aria-label="הסר תמונה '+(i+1)+'">×</button></div>').join('');
@@ -43,10 +66,10 @@ $('summaryChatSend').onclick=()=>{const t=summaryThread(),text=$('summaryChatTex
  const requestId='summary-chat-'+Date.now(),sent=t.attachments,images=sent.map(a=>a.image),notes=sent.map((a,i)=>'תמונה '+(i+1)+': '+a.text).join('\n');
  // The question goes with its own pictures; the next question starts clean.
  summaryChatJob={requestId,path:S.viewer.path,text,attachments:sent};t.messages.push({role:'user',text,images});t.draft='';t.attachments=[];
- send({type:'summaryChat',requestId,course:S.course.name,path:S.viewer.path,text,images,imageNotes:notes});renderSummaryChat();};
+ const model=chatModel();summaryChatJob.model=CHAT_MODELS.find(x=>x.id===model).label;send({type:'summaryChat',requestId,course:S.course.name,path:S.viewer.path,text,images,imageNotes:notes,model});renderSummaryChat();};
 $('summaryChatText').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();$('summaryChatSend').click();}};
 function summaryImageBlob(data){return new Blob([Uint8Array.from(atob(data.split(',')[1]),c=>c.charCodeAt(0))],{type:'image/png'});}
-async function summaryChatEvent(m){if(m.type==='summarySelectionReady'){if(S.viewer?.path!==m.path||S.view!=='sites')return;const t=summaryThread();openSummaryChat();await addChatImage(summaryImageBlob(m.image),m.text,t);return;}if(m.type!=='summaryChatResult'||m.requestId!==summaryChatJob?.requestId||m.path!==summaryChatJob.path)return;const t=summaryThreads.get(m.path);if(t){if(m.error){const last=t.messages[t.messages.length-1];if(last&&last.role==='user')t.messages.pop();t.messages.push({role:'error',text:m.text});t.draft=summaryChatJob.text;t.attachments=summaryChatJob.attachments||[];}else t.messages.push({role:'assistant',text:m.text,provider:m.provider});}summaryChatJob=null;if(S.viewer)renderSummaryChat();}
+async function summaryChatEvent(m){if(m.type==='summarySelectionReady'){if(S.viewer?.path!==m.path||S.view!=='sites')return;const t=summaryThread();openSummaryChat();await addChatImage(summaryImageBlob(m.image),m.text,t);return;}if(m.type!=='summaryChatResult'||m.requestId!==summaryChatJob?.requestId||m.path!==summaryChatJob.path)return;const t=summaryThreads.get(m.path);if(t){if(m.error){const last=t.messages[t.messages.length-1];if(last&&last.role==='user')t.messages.pop();t.messages.push({role:'error',text:m.text});t.draft=summaryChatJob.text;t.attachments=summaryChatJob.attachments||[];}else t.messages.push({role:'assistant',text:m.text,provider:m.provider,model:summaryChatJob.model&&CHAT_MODELS.find(x=>x.label===summaryChatJob.model)?.p===m.provider?summaryChatJob.model:''});}summaryChatJob=null;if(S.viewer)renderSummaryChat();}
 let summaryChatWidth=400;
 function setSummaryChatWidth(value){summaryChatWidth=Math.max(320,Math.min(800,Number(value)||400));$('summaryWorkspace').style.setProperty('--summary-chat-width',summaryChatWidth+'px');$('summaryChatExpand').title=summaryChatWidth>=560?'הקטן':'הגדל';$('summaryChatExpand').setAttribute('aria-pressed',String(summaryChatWidth>=560));$('summaryChatResize').setAttribute('aria-valuenow',summaryChatWidth);try{localStorage.setItem('sumit-summary-chat-width',summaryChatWidth);}catch{}requestAnimationFrame(()=>placeSite(false));}
 $('summaryChatExpand').onclick=()=>setSummaryChatWidth(summaryChatWidth>=560?400:640);

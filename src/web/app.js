@@ -133,7 +133,8 @@ function md(text) {
       html += `<li>${(ul || ol)[1]}</li>`;
     } else {
       if (list) { html += `</${list}>`; list = null; }
-      if (line.trim()) html += line.startsWith('<h4>') ? line : `<p>${line}</p>`;
+      // An equation on its own line gets its own centered card instead of sitting inside a paragraph.
+      if (line.trim()) html += line.startsWith('<h4>') ? line : /^\s*\u0001\d+\u0001\s*$/.test(line) ? `<div class="eq-line">${line.trim()}</div>` : `<p>${line}</p>`;
     }
   }
   if (list) html += `</${list}>`;

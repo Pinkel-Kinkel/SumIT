@@ -531,11 +531,12 @@ partial class HitStudent
         return m.Success ? m.Groups[1].Value.Trim() : "";
     }
 
-    Task<AiResult> RunClaude(string key, string cwd, string prompt, string session, string system, Action<AiEvent> onEvent)
+    Task<AiResult> RunClaude(string key, string cwd, string prompt, string session, string system, Action<AiEvent> onEvent, string model = null)
     {
         string claude = FindClaude();
         if (claude == null) return Task.FromResult(new AiResult { Error = true, Text = "Claude לא מותקן" });
         string args = "-p --output-format stream-json --verbose --permission-mode acceptEdits"
+                    + (string.IsNullOrEmpty(model) ? "" : " --model " + Q(model))
                     + " --allowedTools " + Q(ClaudeTools) + " --disallowedTools " + Q(ClaudeDenied)
                     + " --add-dir " + Q(SkillDir)
                     + (session != null ? " --resume " + Q(session) : "")
