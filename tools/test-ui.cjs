@@ -119,7 +119,7 @@ const assert = require('assert/strict');
  assert.ok(popRect[1]<=popRect[4]&&popRect[0]>=0&&popRect[1]-popRect[0]>120&&popRect[3]<=popRect[5],'popover rect '+popRect.join(','));
  // Exams and the syllabus come from Moodle with one click.
  await page.evaluate(()=>{document.body.click();S.local={dir:'t',lectures:[],exams:0};S.sections=[];renderLectures();});
- await page.getByRole('button',{name:'הורד את כל המבחנים מה-Moodle',exact:true}).click();
+ await page.getByRole('button',{name:'הורד את כל המבחנים (Moodle ו-CS24)',exact:true}).click();
  assert.deepEqual(await page.evaluate(()=>{const m=sent.at(-1);return [m.type,m.what];}),['downloadMoodle','exams']);
  await page.evaluate(()=>{S.local={dir:'t',lectures:[]};setTab('info');});
  await page.getByRole('button',{name:'לחץ כאן כדי לסנכרן את הסילבוס',exact:true}).click();

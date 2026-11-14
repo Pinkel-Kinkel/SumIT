@@ -1300,18 +1300,16 @@ function renderExams() {
   const busy = S.examBusy;
   const card = h(`<div class="card pad-lg">
     <div class="row" style="align-items:flex-start;gap:18px"><div style="width:150px;flex:none">${ART.chat().replace('<svg', '<svg style="width:150px;height:104px"')}</div>
-    <div class="grow"><h2>הכנה למבחן</h2><p class="muted" style="margin:6px 0 14px">מוסיפים מבחנים משנים קודמות, עדיף עם פתרונות. ${aiName()} קורא אותם יחד עם ההרצאות והתרגילים ומבין אילו נושאים חוזרים, איזה שאלות המרצה נותן ואיך הוא רוצה שתפתור. בסוף מקבלים דף הכנה למבחן, ואפשר להתאמן בשאלות בסגנון שלו.</p>
+    <div class="grow"><h2>הכנה למבחן</h2><p class="muted" style="margin:6px 0 14px">מוסיפים מבחנים משנים קודמות, עדיף עם פתרונות. ${aiName()} קורא אותם יחד עם ההרצאות והתרגילים ומבין אילו נושאים חוזרים, איזה שאלות המרצה נותן ואיך הוא רוצה שתפתור. בסוף מקבלים דף הכנה למבחן, שמתבסס גם על הסיכומים של כל ההרצאות ועל מה שהמרצה הדגיש.</p>
     <div class="row wrap"><span class="chip ${L.exams ? 'ok' : ''}">${L.exams || 0} קבצי מבחנים</span>${L.lecturerProfile ? '<span class="chip ok">פרופיל מרצה מוכן ✓</span>' : ''}${L.examPrep ? '<span class="chip ok">דף הכנה מוכן ✓</span>' : ''}</div></div></div>
     <div class="row wrap" style="margin-top:18px" id="examActs"></div></div>`);
   p.append(card);
   const acts = card.querySelector('#examActs');
   const add = (ic, t, cls, fn, dis) => { const b = h(`<button class="${cls}"><span data-ic="${ic}"></span>${t}</button>`); b.onclick = fn; b.disabled = !!dis; acts.append(b); };
-  if (!isManual()) add('download', 'הורד את כל המבחנים מה-Moodle', 'primary', () => downloadMoodle('exams'), runtimeFor(S.course.name).operations.get('exams'));
-  if (!instTechnion() && !isManual()) add('exam', 'מבחנים מ-CS24', 'soft', () => { setSaveTarget(S.course.name, 'מבחנים'); openSite('cs24'); toast('כל קובץ שתוריד מ-CS24 יישמר בתיקיית המבחנים של הקורס'); });
+  if (!isManual()) add('download', 'הורד את כל המבחנים' + (instTechnion() ? ' מה-Moodle' : ' (Moodle ו-CS24)'), 'primary', () => downloadMoodle('exams'), runtimeFor(S.course.name).operations.get('exams'));
   add('plus', 'הוסף מבחנים מהמחשב', 'ghost', () => send({ type: 'addFiles', course: S.course.name, folder: 'מבחנים' }));
   if (L.exams) add('folder', 'תיקיית המבחנים', 'ghost', () => send({ type: 'openPath', path: L.dir + '\\מבחנים' }));
   add('sparkles', busy ? 'עובד על זה...' : (L.examPrep ? 'בנה מחדש את דף ההכנה' : 'בנה דף הכנה למבחן'), 'primary', () => { S.examBusy = true; send({ type: 'examPrep', course: S.course.name }); renderExams(); }, busy || !L.exams);
-  add('chat', 'התאמן בשאלות', 'soft', () => setChatScope('exam'), !L.exams);
   if (L.examPrep) add('book', 'דף ההכנה למבחן', 'primary', () => openViewer(L.examPrep, 'הכנה למבחן · ' + S.course.name, '', null));
   if (L.lecturerProfile) add('user', 'פרופיל המרצה', '', () => send({ type: 'openPath', path: L.lecturerProfile }));
 }
@@ -2069,8 +2067,7 @@ function examsIntroCard() {
     <div class="row wrap" data-b></div></div></div></div>`);
   const row = c.querySelector('[data-b]');
   const add = (ic, t, cls, fn) => { const b = h(`<button class="${cls}"><span data-ic="${ic}"></span>${t}</button>`); b.onclick = fn; row.append(b); };
-  if (!isManual()) add('download', 'הורד את כל המבחנים מה-Moodle', 'primary', () => downloadMoodle('exams'));
-  if (!instTechnion() && !isManual()) add('exam', 'מבחנים מ-CS24', 'soft', () => { setSaveTarget(S.course.name, 'מבחנים'); openSite('cs24'); });
+  if (!isManual()) add('download', 'הורד את כל המבחנים' + (instTechnion() ? ' מה-Moodle' : ' (Moodle ו-CS24)'), 'primary', () => downloadMoodle('exams'));
   add('plus', 'מהמחשב', 'ghost', () => send({ type: 'addFiles', course: S.course.name, folder: 'מבחנים' }));
   add('x', 'אין לי עכשיו - דלג', 'ghost', () => send({ type: 'skipExams', course: S.course.name }));
   return c;
