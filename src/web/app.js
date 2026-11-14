@@ -757,7 +757,7 @@ function openCourse(c) {
   S.course = c; S.localSig = null; document.body.classList.toggle('manual-course', !!c.manual); S.sections = []; S.open = new Set(saved.open || []); S.local = c.local || null; S.notability = null;
   $('courseName').textContent = c.name;
   $('courseBand').innerHTML = ART.band(c.id);
-  $('lecturer').value = ''; $('lecturer').placeholder = 'מי המרצה?';
+  $('lecturer').value = ''; $('lecturer').placeholder = 'מי המרצה?'; $('lecturer').hidden = false; $('lecturerPick').hidden = true;
   $('courseCount').textContent = 'טוען...'; $('courseReady').hidden = true;
   $('courseStatus').hidden = true;
   $('lectures').innerHTML = '';
@@ -793,15 +793,23 @@ $('learnAll').onclick = () => {
 $('examPrepBtn').onclick = () => { setTab('exams'); setChatScope('exam'); };
 $('chatClose').onclick = () => { if (!S.chatHidden) $('toggleChat').click(); };
 $('toggleChat').onclick = () => { S.chatHidden = !S.chatHidden; $('courseBody').classList.toggle('no-chat', S.chatHidden); $('chat').hidden = S.chatHidden; };
-// The lecturers Moodle lists for the course can be picked from a list instead of typed.
+// The lecturers Moodle lists for the course are picked from one list; the text box shows only without a list, or for "another name".
 function fillLecturerPick(names) {
-  const sel = $('lecturerPick'); S.lecturerGuess = [...new Set((names || []).filter(Boolean))];
-  sel.innerHTML = ''; sel.hidden = S.lecturerGuess.length === 0;
-  const first = document.createElement('option'); first.value = ''; first.textContent = 'בחר מרצה מהרשימה'; sel.append(first);
-  S.lecturerGuess.forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = n; sel.append(o); });
-  sel.value = S.lecturerGuess.includes($('lecturer').value) ? $('lecturer').value : '';
+  const sel = $('lecturerPick'), cur = $('lecturer').value.trim(); S.lecturerGuess = [...new Set((names || []).filter(Boolean))];
+  const list = cur && !S.lecturerGuess.includes(cur) ? [cur, ...S.lecturerGuess] : S.lecturerGuess;
+  sel.innerHTML = ''; sel.hidden = S.lecturerGuess.length === 0; $('lecturer').hidden = !sel.hidden;
+  const add = (v, t) => { const o = document.createElement('option'); o.value = v; o.textContent = t; sel.append(o); };
+  if (!cur) add('', 'בחר מרצה');
+  list.forEach(n => add(n, n));
+  add('__other', 'שם אחר…');
+  sel.value = cur;
 }
-$('lecturerPick').onchange = () => { if (!$('lecturerPick').value) return; $('lecturer').value = $('lecturerPick').value; $('lecturer').onchange(); };
+$('lecturerPick').onchange = () => {
+  const v = $('lecturerPick').value;
+  if (v === '__other') { $('lecturerPick').hidden = true; $('lecturer').hidden = false; $('lecturer').value = ''; $('lecturer').focus(); return; }
+  if (!v) return;
+  $('lecturer').value = v; $('lecturer').onchange();
+};
 $('lecturer').onchange = () => S.course && send({ type: 'setLecturer', course: S.course.name, name: $('lecturer').value.trim() });
 
 document.querySelectorAll('#courseTabs button').forEach(b => b.onclick = () => setTab(b.dataset.tab));

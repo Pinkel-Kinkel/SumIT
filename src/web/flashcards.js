@@ -62,7 +62,7 @@ function flashcardsEvent(m) {
   renderFlashcards();
 }
 
-$('viewerCards').onclick = () => { $('flashcards').dataset.error = ''; $('flashcards').hidden ? openFlashcards(false) : ($('flashcards').hidden = true, requestAnimationFrame(() => placeSite(false))); };
+if ($('viewerCards')) $('viewerCards').onclick = () => { $('flashcards').dataset.error = ''; $('flashcards').hidden ? openFlashcards(false) : ($('flashcards').hidden = true, requestAnimationFrame(() => placeSite(false))); };
 $('cardsClose').onclick = () => { $('flashcards').hidden = true; requestAnimationFrame(() => placeSite(false)); };
 $('cardsRedo').onclick = () => { $('flashcards').dataset.error = ''; openFlashcards(true); };
 $('cardsCard').onclick = () => { const set = cardSet(); if (set) { set.back = !set.back; renderFlashcards(); } };

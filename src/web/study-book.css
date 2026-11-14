@@ -123,10 +123,9 @@ h2,h3,h4{text-wrap:balance}
 .recommended .recommended-title{display:block;font-size:1.05em;color:#15803d;margin-bottom:4px}
 .recommended ul{margin:6px 0 0;padding-inline-start:20px}
 .recommended li{margin:3px 0}
-details.q[data-recommended="1"]>summary .qtitle::after{content:"מומלץ";margin-inline-start:8px;padding:1px 8px;border-radius:999px;font-size:.75em;font-weight:700;color:#fff;background:#16a34a;vertical-align:middle}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .recommended .recommended-title{color:#4ade80}}
 /* ===== Reading design (1.0.54): the app's calm palette, a title card with two ways in, cards with room, clear question states ===== */
-:root,:root[data-theme="light"]{--bg:#f4f5f9;--surface:#ffffff;--surface2:#f1f3f8;--text:#111827;--muted:#5f6b80;--line:#e3e7ef;--accent:#2563eb;--accent-soft:#e8effe;--must:#15803d;--must-soft:#e6f6ec;--exam:#7c3aed;--exam-soft:#f0e9fe;--warn:#c2410c;--warn-soft:#fff1e6}
+:root[data-theme="light"]{--bg:#f4f5f9;--surface:#ffffff;--surface2:#f1f3f8;--text:#111827;--muted:#5f6b80;--line:#e3e7ef;--accent:#2563eb;--accent-soft:#e8effe;--must:#15803d;--must-soft:#e6f6ec;--exam:#7c3aed;--exam-soft:#f0e9fe;--warn:#c2410c;--warn-soft:#fff1e6}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b1019;--surface:#131b2b;--surface2:#1a2438;--text:#edf1f8;--muted:#9aa6bd;--line:#25304a;--accent:#6ea0ff;--accent-soft:#17284a;--must:#4ade80;--must-soft:#11291c;--exam:#c4a5ff;--exam-soft:#221a3d;--warn:#fb923c;--warn-soft:#33210f}}
 :root[data-theme="dark"]{--bg:#0b1019;--surface:#131b2b;--surface2:#1a2438;--text:#edf1f8;--muted:#9aa6bd;--line:#25304a;--accent:#6ea0ff;--accent-soft:#17284a;--must:#4ade80;--must-soft:#11291c;--exam:#c4a5ff;--exam-soft:#221a3d;--warn:#fb923c;--warn-soft:#33210f}
 body{background:var(--bg);font-size:17px;-webkit-font-smoothing:antialiased}
@@ -158,8 +157,6 @@ header.top .bar{max-width:none;height:8px}
 .booktabs button.on .bn{background:var(--accent);color:#fff}
 
 /* reading rhythm */
-.bookpage{max-width:72ch}
-.wrap.has-question .bookpage,.bookpage:has(details.q){max-width:none}
 .bookpage h2{font-size:25px;letter-spacing:-.3px;padding-inline-start:14px;border-inline-start:4px solid var(--accent);padding-top:0}
 .bookpage h3{font-size:19.5px}
 .bookpage > p{font-size:17.5px}
@@ -186,3 +183,37 @@ details.q:has(.done input:checked) .done{background:var(--must-soft);color:var(-
 .pagenav button{background:var(--accent);color:#fff;border-color:var(--accent);border-radius:14px;padding:12px 22px}
 .pagenav button:hover{filter:brightness(1.08)}
 footer{opacity:.8}
+/* ===== 1.0.55: dark first, the full width, and colour that guides the eye ===== */
+:root:not([data-theme="light"]){color-scheme:dark;--bg:#0b1019;--surface:#131b2b;--surface2:#1a2438;--text:#edf1f8;--muted:#9aa6bd;--line:#25304a;--accent:#6ea0ff;--accent-soft:#17284a;--must:#4ade80;--must-soft:#11291c;--exam:#c4a5ff;--exam-soft:#221a3d;--warn:#fb923c;--warn-soft:#33210f;--teal:#2dd4bf;--pink:#f472b6;--gold:#fbbf24}
+:root[data-theme="light"]{--teal:#0d9488;--pink:#db2777;--gold:#b45309}
+.wrap{max-width:1500px;padding-inline:24px}
+.bookgrid{grid-template-columns:210px minmax(0,1fr);gap:24px}
+.bookpage,.bookmain{max-width:none;width:100%}
+
+/* each page has its own colour, so the student always knows where they are */
+#bp-over{--page:var(--teal)}#bp-sum{--page:var(--accent)}#bp-hw{--page:var(--gold)}
+.bookpage h2{border-inline-start-color:var(--page,var(--accent));background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--page,var(--accent)) 10%,transparent));padding-block:8px;border-radius:0 10px 10px 0}
+.bookpage h3{color:color-mix(in srgb,var(--page,var(--accent)) 75%,var(--text))}
+.booktabs button[data-p="over"].on{background:color-mix(in srgb,var(--teal) 16%,transparent);color:var(--teal)}
+.booktabs button[data-p="over"].on .bn{background:var(--teal)}
+.booktabs button[data-p="hw"].on{background:color-mix(in srgb,var(--gold) 16%,transparent);color:var(--gold)}
+.booktabs button[data-p="hw"].on .bn{background:var(--gold);color:#1b1300}
+
+/* key words and formulas stand out without shouting */
+.bookpage p b,.bookpage li b,.qbody b{color:color-mix(in srgb,var(--page,var(--accent)) 65%,var(--text))}
+.bookpage .katex-display{padding:12px 16px;border-radius:12px;background:color-mix(in srgb,var(--page,var(--accent)) 7%,var(--surface2));border:1px solid color-mix(in srgb,var(--page,var(--accent)) 22%,transparent)}
+.callout{background:color-mix(in srgb,var(--accent) 10%,var(--surface))}
+.callout.must{background:color-mix(in srgb,var(--must) 10%,var(--surface))}
+.callout.exam{background:color-mix(in srgb,var(--exam) 12%,var(--surface))}
+.callout.warn{background:color-mix(in srgb,var(--warn) 11%,var(--surface))}
+.card{background:var(--surface)}
+.tag.t-must,.t-must{background:color-mix(in srgb,var(--must) 18%,transparent)}
+.t-exam{background:color-mix(in srgb,var(--exam) 18%,transparent)}
+
+/* the steps of a worked solution: a coloured number, one step per row */
+.qbody ol>li::marker,.reveal ol>li::marker,.recipe-steps li b{color:var(--gold);font-weight:800}
+.recipe{border-inline-start-color:var(--gold);background:color-mix(in srgb,var(--gold) 9%,var(--surface));border-color:color-mix(in srgb,var(--gold) 35%,transparent)}
+.recipe .recipe-title{color:var(--gold)}
+.recipe .recipe-steps li{background:color-mix(in srgb,var(--gold) 8%,transparent)}
+.question-statement{border-inline-start:4px solid var(--accent)}
+details.q>summary .qtitle{color:var(--text)}

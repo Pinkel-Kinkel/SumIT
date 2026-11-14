@@ -6,11 +6,11 @@
   var LONG = { over: 'סקירה: מה חובה לדעת', sum: 'הסיכום', hw: 'שיעורי בית' };
 
 
-  // Light or dark, as the student likes (the choice is remembered on this PC); without a choice the page follows Windows.
+  // Dark by default; light only when the student chose it (the choice is remembered on this PC).
   function currentTheme() {
     var t = document.documentElement.getAttribute('data-theme');
     if (t === 'dark' || t === 'light') return t;
-    return window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    return 'dark';
   }
   function applyTheme(t) { document.documentElement.setAttribute('data-theme', t); try { fixContrast(); } catch (e) { } }
 
@@ -70,7 +70,7 @@
     }
   }
   if (window.matchMedia) { try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () { fixContrast(); }); } catch (e) { } }
-  try { var saved = localStorage.getItem('sumit-study-theme'); if (saved === 'dark' || saved === 'light') applyTheme(saved); } catch (e) { }
+  try { var saved = localStorage.getItem('sumit-study-theme'); applyTheme(saved === 'light' ? 'light' : 'dark'); } catch (e) { applyTheme('dark'); }
   function themeButton(parent) {
     var b = document.createElement('button'); b.type = 'button'; b.className = 'booktheme' + (parent ? '' : ' floating');
     function label() { b.textContent = currentTheme() === 'dark' ? 'מצב בהיר' : 'מצב כהה'; }
