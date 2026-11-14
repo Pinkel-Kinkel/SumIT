@@ -118,3 +118,10 @@ h2,h3,h4{text-wrap:balance}
 .recipe th,.recipe td{border-bottom:1px solid color-mix(in srgb,currentColor 15%,transparent);padding:6px 8px;text-align:start}
 .recipe-ref{display:inline-block;margin:6px 0;padding:4px 10px;border-radius:999px;font-size:.92em;background:color-mix(in srgb,var(--accent,#2f5bd3) 10%,transparent)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .recipe .recipe-title{color:var(--accent,#93c5fd)}}
+/* "What to solve": the shortest set of questions that covers the lecture (METHOD.md, "What to solve"). */
+.recommended{margin:12px 0 18px;padding:14px 16px;border-radius:14px;border:1px solid color-mix(in srgb,#16a34a 40%,transparent);border-inline-start:4px solid #16a34a;background:color-mix(in srgb,#16a34a 8%,transparent);line-height:1.8}
+.recommended .recommended-title{display:block;font-size:1.05em;color:#15803d;margin-bottom:4px}
+.recommended ul{margin:6px 0 0;padding-inline-start:20px}
+.recommended li{margin:3px 0}
+details.q[data-recommended="1"]>summary .qtitle::after{content:"מומלץ";margin-inline-start:8px;padding:1px 8px;border-radius:999px;font-size:.75em;font-weight:700;color:#fff;background:#16a34a;vertical-align:middle}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .recommended .recommended-title{color:#4ade80}}
