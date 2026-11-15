@@ -217,3 +217,10 @@ footer{opacity:.8}
 .recipe .recipe-steps li{background:color-mix(in srgb,var(--gold) 8%,transparent)}
 .question-statement{border-inline-start:4px solid var(--accent)}
 details.q>summary .qtitle{color:var(--text)}
+
+/* 1.0.56: figures sit in the middle of the page and shrink to fit instead of scrolling sideways */
+figure[data-visual]{margin:24px auto;max-width:820px}
+.figrow figure{margin:0}
+.diagram-scroll{overflow-x:visible;display:flex;justify-content:center}
+.diagram-scroll svg{max-height:520px}
+.diagram-legend{max-width:820px;margin-inline:auto}

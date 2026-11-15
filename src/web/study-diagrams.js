@@ -59,7 +59,7 @@
         const left=Math.min(original[0],box.x-18),top=Math.min(original[1],box.y-18);
         const width=Math.max(original[0]+original[2],box.x+box.width+18)-left,height=Math.max(original[1]+original[3],box.y+box.height+18)-top;
         svg.setAttribute('viewBox',`${left} ${top} ${width} ${height}`);
-        svg.style.width=`${Math.max(280,width)}px`;svg.style.height='auto';svg.style.maxWidth='none';
+        svg.style.width='100%';svg.style.height='auto';svg.style.maxWidth=`${Math.max(280,width)}px`;
       } catch (_) {}
     });
   }
