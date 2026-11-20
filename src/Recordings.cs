@@ -174,10 +174,26 @@ partial class HitStudent
             {
                 string body = reader.ReadToEnd();
                 // Without a valid session Zoom answers this call too, just without the video URL.
-                if (body.Contains("viewMp4Url")) tcs.TrySetResult(body);
+                if (body.Contains("Mp4Url")) tcs.TrySetResult(body);
             }
         }
         catch { }
+    }
+
+    // The recording page as the student sees it: null while it has no video player yet.
+    async Task<string> ProbeZoomPage()
+    {
+        try
+        {
+            string v = await EvalAsync(zoom, "const v=document.querySelector('video');if(!v)return '';"
+                + "const src=[v.currentSrc,v.src].concat([].map.call(v.querySelectorAll('source'),s=>s.src)).find(s=>/^https:/.test(s||''))||'';"
+                + "const t=document.querySelector('track[src]');"
+                + "const h=document.querySelector('[class*=topic],h1');"
+                + "return JSON.stringify({result:{viewMp4Url:src,transcriptUrl:t&&/^https:/.test(t.src)?t.src:'',meet:{topic:((h&&h.textContent)||document.title||'').trim()}}});", 8000);
+            string s = json.Deserialize<string>(v);
+            return string.IsNullOrEmpty(s) ? null : s;
+        }
+        catch { return null; }
     }
 
     async void Pump()
@@ -211,6 +227,7 @@ partial class HitStudent
         zoomCancelled = false;
         zoom.CoreWebView2.Navigate(job.Url);
         var clock = Stopwatch.StartNew();
+        var lastProbe = TimeSpan.Zero;
         bool shown = false;
         while (!playInfoTcs.Task.IsCompleted)
         {
@@ -222,7 +239,20 @@ partial class HitStudent
             }
             string src = zoom.Source == null ? "" : zoom.Source.ToString();
             bool onRecording = src.IndexOf("/rec/", StringComparison.OrdinalIgnoreCase) >= 0;
-            if (!shown && ((!onRecording && clock.Elapsed.TotalSeconds > 2) || clock.Elapsed.TotalSeconds > 15))
+            // Zoom does not always send its play-info call (or sends it before the page is ready), so the open
+            // recording page is also read directly: the video player's file and the subtitles track.
+            if (onRecording && clock.Elapsed.TotalSeconds > 6 && clock.Elapsed - lastProbe > TimeSpan.FromSeconds(2))
+            {
+                lastProbe = clock.Elapsed;
+                string found = await ProbeZoomPage();
+                if (found != null && (found.Contains("\"viewMp4Url\":\"https") || clock.Elapsed.TotalSeconds > 30))
+                {
+                    Log(job, "Read the recording from the open page.");
+                    playInfoTcs.TrySetResult(found);
+                    break;
+                }
+            }
+            if (!shown && ((!onRecording && clock.Elapsed.TotalSeconds > 2) || clock.Elapsed.TotalSeconds > 40))
             {
                 shown = true;
                 zoomPanel.BringToFront();
@@ -307,7 +337,8 @@ partial class HitStudent
             if (!ok)
             {
                 Log(job, "Trying the Zoom page link instead...");
-                ok = await RunYtDlp(job, ytdlp, common + " -- " + Q(job.Url));
+                string page = zoom.Source == null ? "" : zoom.Source.ToString();
+                ok = await RunYtDlp(job, ytdlp, common + " -- " + Q(IsZoomUrl(page) && page.IndexOf("/rec/", StringComparison.OrdinalIgnoreCase) >= 0 ? page : job.Url));
             }
         }
         finally { try { File.Delete(cookieFile); } catch { } }
