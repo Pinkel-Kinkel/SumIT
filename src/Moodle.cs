@@ -140,7 +140,7 @@ partial class HitStudent
                 throw new Exception("ההתחברות ל-Moodle בוטלה");
             }
             if (await MoodleReady()) break;
-            if (clock.Elapsed.TotalSeconds > 4 && !shown)
+            if (clock.Elapsed.TotalSeconds > 4 && !shown && (DateTime.Now - moodleBounced).TotalSeconds > 10) // a silent sign-in from the portal page gets time to finish
             {
                 if (!interactive) { SendMoodle("login", ""); throw new Exception("צריך להתחבר ל-Moodle"); }
                 shown = true;
@@ -793,6 +793,26 @@ return out;";
     {
         Uri u;
         return Uri.TryCreate(url, UriKind.Absolute, out u) && u.Scheme == Uri.UriSchemeHttps && u.Host.Equals(moodleHostNow, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // When a Moodle session runs out, the institute's sign-in server sometimes finishes on its own portal page,
+    // which never loads inside the app, instead of returning to Moodle. The sign-in is still valid there,
+    // so going back to the Moodle page signs in again silently. At most once every 20 seconds, so it can never loop.
+    string siteLastMoodle;
+    DateTime siteBounced = DateTime.MinValue, moodleBounced = DateTime.MinValue;
+
+    static bool IsIdpPortal(string url)
+    {
+        Uri u;
+        return Uri.TryCreate(url ?? "", UriKind.Absolute, out u) && !IsMoodleUrl(url)
+            && u.AbsolutePath.StartsWith("/nidp/portal", StringComparison.OrdinalIgnoreCase);
+    }
+
+    bool BounceFromIdpPortal(CoreWebView2 core, string back, ref DateTime last)
+    {
+        if (!IsIdpPortal(core.Source) || !IsMoodleUrl(back) || (DateTime.Now - last).TotalSeconds < 20) return false;
+        last = DateTime.Now;
+        try { core.Navigate(back); return true; } catch { return false; }
     }
 
     static bool IsZoomUrl(string url)

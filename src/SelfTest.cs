@@ -25,6 +25,7 @@ partial class HitStudent
             check("IsInside blocks traversal", !IsInside(@"D:\HIT\Courses\..\secret.txt", @"D:\HIT\Courses"), null);
             check("IsInside allows children", IsInside(@"D:\HIT\Courses\a\b.pdf", @"D:\HIT\Courses"), null);
             check("Zoom URL check", IsZoomUrl("https://hit-ac-il.zoom.us/rec/play/abc") && !IsZoomUrl("https://zoom.us.evil.com/rec/x") && !IsZoomUrl("http://hit-ac-il.zoom.us/rec/x"), null);
+            check("Sign-in portal check", IsIdpPortal("https://is.hit.ac.il/nidp/portal?locale=en_US") && !IsIdpPortal("https://is.hit.ac.il/nidp/saml2/sso") && !IsIdpPortal(MoodleBase + "/my/"), null);
             check("Moodle URL check", IsMoodleUrl("https://md.hit.ac.il/mod/resource/view.php?id=1") && !IsMoodleUrl("https://md.hit.ac.il.evil.com/x"), null);
             check("Exercise names", IsExercise("\u05EA\u05E8\u05D2\u05D9\u05DC 3.pdf") && IsExercise("HW2 solution.pdf") && !IsExercise("\u05D4\u05E8\u05E6\u05D0\u05D4 3.pdf"), null);
             check("Exam names", ExamName.IsMatch("\u05DE\u05D1\u05D7\u05DF \u05DE\u05D5\u05E2\u05D3 \u05D0 2023.pdf") && ExamName.IsMatch("Final exam 2022") && !ExamName.IsMatch("\u05D4\u05E8\u05E6\u05D0\u05D4 1"), null);

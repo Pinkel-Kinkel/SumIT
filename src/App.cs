@@ -15,7 +15,7 @@ using Microsoft.Web.WebView2.WinForms;
 
 partial class HitStudent : Form
 {
-    public const string Version = "1.0.58";
+    public const string Version = "1.0.59";
     const string Repo = "Pinkel-Kinkel/SumIT";
     // Updates are only accepted from these repositories (the project was renamed from hit-recordings).
     static readonly string[] RepoNames = { "Pinkel-Kinkel/SumIT" };
@@ -205,6 +205,9 @@ partial class HitStudent : Form
             if (a.StartsWith("--demo-")) demoArgs += "&" + Uri.EscapeDataString(a.Substring(7).Split('=')[0]) + "=" + Uri.EscapeDataString(a.Contains("=") ? a.Split('=')[1] : "1");
         u.Navigate("https://app.local/ui.html" + (demo ? "?demo=1" + demoArgs : ""));
 
+        var mc = moodle.CoreWebView2;
+        mc.SourceChanged += delegate { BounceFromIdpPortal(mc, MoodleBase + "/my/", ref moodleBounced); };
+
         foreach (var view in new[] { zoom, moodle })
         {
             var core = view.CoreWebView2;
@@ -231,6 +234,8 @@ partial class HitStudent : Form
         sc.PermissionRequested += OnDownloadPermission;
         sc.SourceChanged += delegate
         {
+            if (IsMoodleUrl(sc.Source) && sc.Source.IndexOf("/login/", StringComparison.OrdinalIgnoreCase) < 0) siteLastMoodle = sc.Source;
+            if (BounceFromIdpPortal(sc, siteLastMoodle, ref siteBounced)) return;
             Send(new { type = "siteNav", url = sc.Source, canBack = sc.CanGoBack, canForward = sc.CanGoForward });
             // A Zoom recording page: the page offers to download it into the lecture the student is working on.
             if (IsZoomUrl(sc.Source)) Send(new { type = "zoomRecording", url = sc.Source });

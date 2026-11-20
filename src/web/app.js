@@ -2013,7 +2013,7 @@ function onMessage(m) {
       break;
     }
     case 'academicCalendar': S.academic = m.data; if (S.view === 'course') renderLectures(); break;
-    case 'siteNav': followSummaryNavigation(m.url); { const onPortal = (instTechnion() ? /cheesefork\.cf/i : /webrashim\.hit\.ac\.il/i).test(m.url || ''); if (document.getElementById('portalHint').hidden === onPortal) { $('portalHint').hidden = !onPortal; requestAnimationFrame(() => placeSite(true)); } } $('siteUrl').textContent = m.url || ''; $('siteBack').disabled = !m.canBack; $('siteForward').disabled = !m.canForward; break;
+    case 'siteNav': followSummaryNavigation(m.url); { const onPortal = (instTechnion() ? /cheesefork\.cf/i : /webrashim\.hit\.ac\.il/i).test(m.url || ''); if (document.getElementById('portalHint').hidden === onPortal) { $('portalHint').hidden = !onPortal; requestAnimationFrame(() => placeSite(true)); } } { const oneFile = /\/pluginfile\.php\//i.test(m.url || ''); $('siteGetAllText').textContent = oneFile ? 'הורד את הקובץ לכאן' : 'הורד את כל הקבצים כאן'; $('siteGetAll').title = oneFile ? 'מוריד את הקובץ הפתוח אל הקורס והתיקייה שנבחרו' : 'מוריד את כל הקבצים שבתיקייה או בדף הפתוח (Moodle או CS24) אל הקורס והתיקייה שנבחרו'; } $('siteUrl').textContent = m.url || ''; $('siteBack').disabled = !m.canBack; $('siteForward').disabled = !m.canForward; break;
     case 'timetable': S.timetable = m.data; renderTimetable(); break;
     case 'prepStatus':
       S.prep = m.busy ? m : null; renderBanners();

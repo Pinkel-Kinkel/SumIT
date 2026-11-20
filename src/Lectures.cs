@@ -330,6 +330,16 @@ partial class HitStudent
                 Toast("מוריד את כל הקבצים בתיקייה אל: " + where, false);
                 saved = await Cs24DownloadFolder(u.AbsoluteUri, dir);
             }
+            else if (IsMoodleUrl(u.AbsoluteUri) && u.AbsolutePath.IndexOf("/pluginfile.php/", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                // A single file open in the viewer (for example a homework PDF): that file goes into the chosen folder.
+                string file;
+                using (var http = await MoodleHttp()) file = await DownloadFile(http, u.AbsoluteUri, dir, true);
+                if (file == null) { Toast("לא הצלחתי להוריד את הקובץ הזה", true); return; }
+                Toast("הקובץ " + Path.GetFileName(file) + " ירד אל: " + where, false);
+                if (siteDownloadCourse != null) SendCourseLocal(siteDownloadCourse);
+                return;
+            }
             else if (IsMoodleUrl(u.AbsoluteUri))
             {
                 Toast("מוריד את כל הקבצים בדף אל: " + where, false);
