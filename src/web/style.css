@@ -1468,3 +1468,46 @@ html[data-theme=dark] .lec-st.todo { color: var(--gold); }
 .splash .logo:has(> .sumit-logo) { width: 200px; height: 200px; border-radius: 22%; box-shadow: none; }
 .splash .logo .sumit-logo { filter: drop-shadow(0 18px 40px rgba(31,100,216,.35)); }
 .splash .logo .sumit-logo { width: 200px; height: 200px; }
+
+/* The rail's top: the menu button, then the picture with the name under it. */
+nav.side #collapseSidebar { margin-bottom: 14px; }
+nav.side .brand { flex-direction: column; gap: 6px; padding: 0 0 12px; width: 80px; }
+nav.side .brand .logo { width: 46px; height: 46px; }
+nav.side .brand .logo svg { width: 46px; height: 46px; }
+nav.side .brand > div { display: block; text-align: center; max-width: 80px; }
+nav.side .brand b { font-size: 11.5px; font-weight: 700; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+nav.side .brand small { display: none; }
+nav.side .edit-pen { top: -4px; inset-inline-end: -6px; }
+
+/* Big titles in a weight the Hebrew face really has (800 was drawn as a fake bold). */
+#view-home .hero h1, .course-hero h1, :is(#view-tasks, #view-settings, #view-courses, #view-recordings) .page > .head h1 {
+  font-family: "Segoe UI Variable Display", "Segoe UI", sans-serif; font-weight: 700; letter-spacing: 0; }
+.course-grad, #view-home .hero .hero-focus { font-weight: 700; }
+
+/* My courses: bigger cards. */
+#courses.grid, #homeCourses.grid { grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 20px; }
+:is(#courses, #homeCourses) .course-card .band { height: 128px; }
+:is(#courses, #homeCourses) .course-card .band .letter { font-size: 40px; bottom: 14px; inset-inline-start: 20px; }
+:is(#courses, #homeCourses) .course-card .body { padding: 18px 20px 18px; gap: 8px; }
+:is(#courses, #homeCourses) .course-card .name { font-size: 18px; font-weight: 700; }
+:is(#courses, #homeCourses) .course-card .muted { font-size: 13.5px !important; }
+:is(#courses, #homeCourses) .course-card .chip { font-size: 12.5px; padding: 4px 11px; }
+
+/* Lecture cards: the number tile and the top edge in the color of the state, the topic as the title. */
+.lec-grid .lecture { background: linear-gradient(180deg, color-mix(in srgb, var(--edge-c, var(--accent)) 7%, var(--surface)), var(--surface) 55%); box-shadow: inset 0 4px 0 var(--edge, transparent), var(--shadow-sm); }
+.lec-grid .lecture[data-state=ok] { --edge-c: var(--ok); }
+.lec-grid .lecture[data-state=todo] { --edge-c: var(--gold); }
+.lec-grid .lecture[data-state=run] { --edge-c: var(--accent-2); }
+.lec-grid .lecture[data-state=wait] { --edge-c: var(--muted); --edge: color-mix(in srgb, var(--muted) 40%, transparent); }
+.lec-grid .lecture-head .num { color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+.lec-grid .lecture[data-state=ok] .num { background: linear-gradient(135deg, #10b981, #34d399); color: #06281c; }
+.lec-grid .lecture[data-state=todo] .num { background: var(--gold); color: var(--gold-ink); }
+.lec-grid .lecture[data-state=wait] .num { background: var(--surface-3); color: var(--muted); }
+.lec-grid .lecture-title { font-size: 16.5px; line-height: 1.35; min-height: 2.7em; }
+.lec-grid .lec-line { font-size: 12.5px; }
+.lec-grid .lec-st.ok { display: none; }
+.lec-grid .lec-go button.quick-summary { background: color-mix(in srgb, var(--ok) 14%, transparent); color: var(--ok); border-color: color-mix(in srgb, var(--ok) 35%, transparent); }
+.lec-grid .lec-go button.quick-summary:hover { background: color-mix(in srgb, var(--ok) 22%, transparent); }
+nav.side .brand { margin-top: 10px; }
+nav.side .brand { height: auto; min-height: 0; margin-bottom: 10px; flex: none; }
+.course-now .flag { font-size: 12.5px !important; line-height: 1.4; }

@@ -662,9 +662,35 @@ return out;";
         return new
         {
             dir = dir, exists = Directory.Exists(dir), files = files, videos = recordingFiles.Count, transcripts = transcripts, recordings = recordingFiles,
-            sharedSummaries = SharedSummaries(course,num), studyPage = File.Exists(page) ? page : null, exercises = exercises, pointers = pointers, materialFiles = materialFiles,
+            sharedSummaries = SharedSummaries(course,num), studyPage = File.Exists(page) ? page : null, topic = SummaryTopic(page), exercises = exercises, pointers = pointers, materialFiles = materialFiles,
             lecturePdf = File.Exists(LecturePdfPath(course, num)) ? LecturePdfPath(course, num) : null
         };
+    }
+
+    // The topic of a lecture, from the main heading of its summary (kept per file and time, so it is read once).
+    readonly Dictionary<string, KeyValuePair<DateTime, string>> topicCache = new Dictionary<string, KeyValuePair<DateTime, string>>(StringComparer.OrdinalIgnoreCase);
+    string SummaryTopic(string page)
+    {
+        try
+        {
+            if (!File.Exists(page)) return null;
+            DateTime stamp = File.GetLastWriteTimeUtc(page);
+            KeyValuePair<DateTime, string> hit;
+            if (topicCache.TryGetValue(page, out hit) && hit.Key == stamp) return hit.Value;
+            string html;
+            using (var r = new StreamReader(page, System.Text.Encoding.UTF8))
+            {
+                var buf = new char[300000];
+                html = new string(buf, 0, r.ReadBlock(buf, 0, buf.Length));
+            }
+            var m = System.Text.RegularExpressions.Regex.Match(html, @"<h1[^>]*>([\s\S]*?)</h1>", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            string topic = m.Success ? System.Net.WebUtility.HtmlDecode(System.Text.RegularExpressions.Regex.Replace(m.Groups[1].Value, "<[^>]+>", " ")) : "";
+            topic = System.Text.RegularExpressions.Regex.Replace(topic, @"\s+", " ").Trim();
+            if (topic.Length > 120) topic = topic.Substring(0, 117) + "...";
+            topicCache[page] = new KeyValuePair<DateTime, string>(stamp, topic.Length > 0 ? topic : null);
+            return topicCache[page].Value;
+        }
+        catch { return null; }
     }
 
     object CourseLocal(string course)

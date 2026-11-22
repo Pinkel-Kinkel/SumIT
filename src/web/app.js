@@ -686,6 +686,7 @@ function renderHome() {
     const cur = S.courses.filter(c => c.current);
     if (!cur.length) hc.append(h('<div class="empty" style="grid-column:1/-1">אין קורסים פעילים כרגע.</div>'));
     cur.forEach((c, i) => hc.append(courseCard(c, i)));
+    if (hc.classList.contains('stagger')) setTimeout(() => hc.classList.remove('stagger'), 1200);
   }
 }
 $('heroArt').innerHTML = ART.mascot('wave');
@@ -841,7 +842,7 @@ const modLabel = { resource: 'קובץ', file: 'קובץ', assign: 'מטלה', z
 function openCourse(c) {
   rememberCourseUi();
   const saved=runtimeFor(c.name);
-  S.course = c; S.localSig = null; document.body.classList.toggle('manual-course', !!c.manual); S.sections = []; S.open = new Set(saved.open || []); S.local = c.local || null; S.notability = null;
+  S.course = c; S.localSig = null; S.staggered = null; document.body.classList.toggle('manual-course', !!c.manual); S.sections = []; S.open = new Set(saved.open || []); S.local = c.local || null; S.notability = null;
   $('courseName').textContent = c.name;
   $('courseBand').innerHTML = ART.band(c.id);
   $('lecturer').value = ''; $('lecturer').placeholder = 'מי המרצה?'; $('lecturer').hidden = false; $('lecturerPick').hidden = true;
@@ -1238,7 +1239,8 @@ function renderLectures() {
   const secs = S.sections;
   // The bar that creates the next lecture sits under the last one.
   if (!secs.length) { box.append(newLectureBar()); box.append(h(`<div class="empty">${ART.empty().replace('<svg', '<svg class="art"')}<b>התחל מהרצאה 1</b>צור הרצאה ובחר את המצגות, שיעורי הבית ודפי המחברת שלה. חומר מגרסאות קודמות נשאר בתיקיית הקורס ואפשר לייבא אותו מכפתורי הוספת הקבצים.</div>`)); return; }
-  const grid = h('<div class="lec-grid stagger"></div>');
+  const first = S.staggered !== S.course.name; S.staggered = S.course.name;
+  const grid = h(`<div class="lec-grid${first ? ' stagger' : ''}"></div>`);
   secs.forEach((s, i) => { const el = lectureEl(s); el.style.setProperty('--i', i); grid.append(el); });
   box.append(grid, newLectureBar());
 }
@@ -1268,7 +1270,10 @@ function fillLecture(el, s) {
   const recs = L.recordings || [];
   el.classList.toggle('ready', !!(L.lecturePdf || L.studyPage));
   el.querySelector('.num').textContent = s.num === 0 ? '★' : s.num;
-  el.querySelector('.lecture-title').textContent = s.num === 0 ? 'כללי · ' + s.title : s.title;
+  // The card is named by its topic: the lecture's own name, or the heading of its summary when the name is only "הרצאה N".
+  const generic = !s.title || /^\s*הרצאה\s*(מספר\s*)?\d+\s*$/.test(s.title);
+  const topic = s.num > 0 && generic && L.topic ? L.topic : '';
+  el.querySelector('.lecture-title').textContent = s.num === 0 ? 'כללי · ' + s.title : topic || s.title;
   const chips = [];
   if (hasMaterial) chips.push('<span class="chip ok">מצגות ✓</span>');
   if (hasHomework) chips.push('<span class="chip ok">שיעורי בית ✓</span>');
@@ -1278,7 +1283,7 @@ function fillLecture(el, s) {
   else if (L.studyPage) chips.push('<span class="chip ok">סיכום מוכן ✓</span>');
   el.querySelector('.chips').innerHTML = chips.join('');
   // The closed card shows one line (the date and what is here) and one button; the chips stay for the open lecture.
-  el.querySelector('.lec-line').textContent = [s.date, [hasMaterial && 'מצגות', hasHomework && 'שיעורי בית', recs.length && 'הקלטה'].filter(Boolean).join(', ') || (L.files ? (L.files === 1 ? 'קובץ אחד' : L.files + ' קבצים') : '')].filter(Boolean).join(' · ') || (s.num === 0 ? 'חומר כללי של הקורס' : 'עוד אין חומר');
+  el.querySelector('.lec-line').textContent = [topic ? 'הרצאה ' + s.num : '', s.date, [hasMaterial && 'מצגות', hasHomework && 'שיעורי בית', recs.length && 'הקלטה'].filter(Boolean).join(', ') || (L.files ? (L.files === 1 ? 'קובץ אחד' : L.files + ' קבצים') : '')].filter(Boolean).join(' · ') || (s.num === 0 ? 'חומר כללי של הקורס' : 'עוד אין חומר');
   const go = el.querySelector('.lec-go'); go.innerHTML = '';
   const quickPage=L.studyPage||(L.sharedSummaries||[])[0]?.path;
   if(quickPage){const quick=h('<button class="soft small quick-summary">פתח סיכום</button>');quick.onclick=e=>{e.stopPropagation();openViewer(quickPage,'הרצאה '+s.num+' · סיכום',L.lecturePdf||'',s.num);};go.append(quick);}

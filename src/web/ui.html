@@ -81,7 +81,6 @@
         </div>
         <div class="home-track" id="homeTrack">
           <section class="home-pane" data-pane="0" aria-label="מה מחכה לי">
-          <div class="stats" id="stats"></div>
           <div class="card">
             <div class="card-head"><span class="ic zoom" data-ic="calendar"></span><h2>מה מחכה לי</h2><span class="chip" id="deadlineCount"></span></div>
             <div id="deadlines"></div>
@@ -301,10 +300,10 @@
             <button id="moodleConnect">התחבר</button>
           </div>
           <div class="setting">
-            <div class="grow"><b>המוסד</b><small>HIT או הטכניון. הבחירה קובעת את ה-Moodle, את שם התיקייה (HIT או Technion) ואילו אתרים מוצגים.</small></div>
+            <div class="grow"><b>מוסד לימודי</b><small>HIT או הטכניון. הכתובת של ה-Moodle, שם התיקייה והאתרים מתאימים את עצמם למוסד שבחרת.</small></div>
             <select id="institute" style="width:auto"><option value="hit">HIT</option><option value="technion">הטכניון</option></select>
           </div>
-          <div class="setting">
+          <div class="setting" hidden>
             <div class="grow"><b>כתובת ה-Moodle</b><small>נקבעת לפי המוסד. אם ה-Moodle שלך בכתובת אחרת, אפשר להקליד אותה כאן ואז ללחוץ "התחבר".</small></div>
             <input id="moodleUrl" dir="ltr" style="width:230px" placeholder="md.hit.ac.il" spellcheck="false">
             <button id="moodleUrlSave">שמור</button>
@@ -313,15 +312,15 @@
             <div class="grow"><b>תיקיית הקורסים</b><small>לכל קורס תיקייה, ובתוכה תיקייה לכל שיעור, מבחנים ומחברת.</small><span class="path" id="studyRoot">…</span></div>
             <button id="changeStudy">שנה</button><button id="openStudy" class="ghost">פתח</button>
           </div>
-          <div class="setting">
+          <div class="setting" hidden>
             <div class="grow"><b>תיקייה משותפת עם חברים</b><small>תיקיית OneDrive שמסונכרנת במחשב ומשותפת בין החברים. מי שכותב סיכומים מפרסם אותם לשם, וחבר שיש לו את אותו קורס מקבל הודעה ומוריד אותם.</small><span class="path" id="syncFolderPath">לא נבחרה</span></div>
             <button id="syncFind">חפש את התיקייה</button><button id="syncPick" class="ghost">בחר ידנית</button>
           </div>
-          <div class="setting">
+          <div class="setting" hidden>
             <div class="grow"><b>קישור שקיבלת מחבר</b><small>הדבק את הקישור של התיקייה המשותפת ב-OneDrive. הוא ייפתח, ושם לוחצים "הוסף קיצור דרך אל הקבצים שלי". אחרי שהתיקייה מופיעה ב-OneDrive במחשב, לוחצים "חפש את התיקייה".</small></div>
             <input id="syncLink" dir="ltr" style="width:230px" placeholder="https://..." spellcheck="false"><button id="syncLinkGo">פתח</button>
           </div>
-          <div class="setting">
+          <div class="setting" hidden>
             <div class="grow"><b>לפרסם את הסיכומים שלי</b><small>כל סיכום שמסתיים נשמר גם בתיקייה המשותפת, ו-OneDrive מעלה אותו. החברים מקבלים הודעה שיש סיכומים חדשים.</small></div>
             <button id="syncPublishAll" class="soft small">פרסם עכשיו</button>
             <label class="toggle"><input type="checkbox" id="optAutoPublish"><span class="switch"></span></label>

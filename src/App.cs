@@ -15,7 +15,7 @@ using Microsoft.Web.WebView2.WinForms;
 
 partial class HitStudent : Form
 {
-    public const string Version = "1.0.62";
+    public const string Version = "1.0.63";
     const string Repo = "Pinkel-Kinkel/SumIT";
     // Updates are only accepted from these repositories (the project was renamed from hit-recordings).
     static readonly string[] RepoNames = { "Pinkel-Kinkel/SumIT" };
@@ -240,7 +240,8 @@ partial class HitStudent : Form
             // A Zoom recording page: the page offers to download it into the lecture the student is working on.
             if (IsZoomUrl(sc.Source)) Send(new { type = "zoomRecording", url = sc.Source });
         };
-        sc.NavigationStarting += delegate { Send(new { type = "siteLoading", loading = true }); };
+        // The portal signs in through the same HIT sign-in pages: on the way there the student is never sent back to Moodle.
+        sc.NavigationStarting += (s, e) => { if (IsPortalPage(e.Uri)) siteLastMoodle = null; Send(new { type = "siteLoading", loading = true }); };
         sc.NavigationCompleted += delegate { Send(new { type = "siteLoading", loading = false }); };
 
         InstallSkill();

@@ -404,10 +404,6 @@ partial class HitStudent
         }
     }
 
-    // After a summary is finished: the shared folder gets it too, if the student chose that.
-    void AutoPublishSummary(string course)
-    {
-        if (!Bool(settings, "autoPublishSync") || SyncFolder.Length == 0 || !Directory.Exists(SyncFolder)) return;
-        var t = PublishToFolder(course, true);
-    }
+    // Publishing finished summaries to the shared folder was removed from the settings, so nothing is published anymore.
+    void AutoPublishSummary(string course) { }
 }
