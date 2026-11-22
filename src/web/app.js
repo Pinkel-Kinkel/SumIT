@@ -617,6 +617,9 @@ function weekGrid(classes) {
     el.querySelector('b').textContent = c.course;
     el.querySelector('small').textContent = [c.start + '-' + c.end, c.kind, c.room].filter(Boolean).join(' · ');
     el.title = [c.course, c.kind, c.lecturer, c.room, c.start + '-' + c.end].filter(Boolean).join('\n');
+    // A click opens the course in the app (when the class belongs to one of the student's courses).
+    const course = courseFor(c.course);
+    if (course) { el.classList.add('go'); el.tabIndex = 0; el.setAttribute('role', 'button'); el.onclick = () => openCourse(course); el.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCourse(course); } }; }
     g.append(el);
   });
   return wrap;
@@ -726,6 +729,15 @@ setInterval(() => { if (S.view === 'home') tickHeroNext(); }, 1000);
 function daysFromToday(date) { return Math.round((new Date(String(date).slice(0, 10) + 'T12:00:00') - new Date(new Date().toDateString() + ' 12:00')) / 86400000); }
 function inDaysText(d) { return d === 0 ? 'היום' : d === 1 ? 'מחר' : `בעוד ${d} ימים`; }
 // Two course names are the same course when one contains the other (the exam board often shortens them).
+// The student's course a class in the timetable belongs to: the same name, or else the one sharing the most words with it.
+function courseFor(name) {
+  const list = S.courses || [];
+  const hit = list.find(c => sameCourse(c.name, name)); if (hit) return hit;
+  const words = (x) => String(x || '').replace(/[-–"'׳״()]/g, ' ').split(/\s+/).filter(w => w.length > 1 && !/^(תרגול|הרצאה|מעבדה|בזום|זום)$/.test(w));
+  const want = words(name); let best = null, score = 0;
+  for (const c of list) { const have = words(c.name); const n = want.filter(w => have.includes(w)).length; if (n > score) { best = c; score = n; } }
+  return want.length && score >= Math.min(2, want.length) ? best : null;
+}
 function sameCourse(a, b) { const n = (x) => String(x || '').replace(/[\s"'׳״\-–]/g, ''); a = n(a); b = n(b); return !!a && !!b && (a.includes(b) || b.includes(a)); }
 // The home panes: the tabs, the arrows and a sideways swipe move between them; the track is as tall as the pane on
 // screen, and the pane is remembered for the next time.
