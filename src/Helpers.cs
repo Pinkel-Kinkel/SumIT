@@ -417,6 +417,7 @@ for p in sys.argv[1:]:
         var tt = new Dictionary<string, object>();
         try { if (File.Exists(TimetableJson)) tt = json.Deserialize<Dictionary<string, object>>(File.ReadAllText(TimetableJson, Encoding.UTF8)) ?? tt; } catch { }
         var classes = data.ContainsKey("classes") ? data["classes"] as ArrayList : null;
+        if (classes != null) classes = new ArrayList(classes.Cast<object>().Where(o => { var c = o as Dictionary<string, object>; return c != null && Str(c, "day").Length > 0 && Str(c, "start").Length > 0; }).ToList());
         if (classes != null && classes.Count > 0) { tt["classes"] = classes; found = true; }     // a week's timetable replaces the old one
         var exams = data.ContainsKey("exams") ? data["exams"] as ArrayList : null;
         if (exams != null && exams.Count > 0)

@@ -291,6 +291,49 @@ partial class HitStudent
         catch (Exception ex) { Toast("לא הצלחתי לשמור כ-PDF: " + ex.Message, true); }
     }
 
+    const string PortalGridScript = @"(function(){
+var DAYS=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+var docs=[document];document.querySelectorAll('iframe').forEach(function(f){try{if(f.contentDocument)docs.push(f.contentDocument)}catch(e){}});
+var out=[];
+docs.forEach(function(doc){
+  var leaves=[].slice.call(doc.querySelectorAll('body *')).filter(function(e){return !e.children.length&&e.getClientRects().length});
+  var txt=function(e){return (e.textContent||'').replace(/\s+/g,' ').trim()};
+  var rect=function(e){return e.getBoundingClientRect()};
+  var rows={};
+  leaves.forEach(function(e){var t=txt(e);if(DAYS.indexOf(t)<0)return;var r=rect(e);var k=Math.round(r.top/4);rows[k]=rows[k]||{};if(!rows[k][t])rows[k][t]=(r.left+r.right)/2});
+  var heads={};Object.keys(rows).forEach(function(k){if(Object.keys(rows[k]).length>Object.keys(heads).length)heads=rows[k]});
+  var names=Object.keys(heads);if(names.length<5)return;
+  var xs=names.map(function(n){return heads[n]}).sort(function(a,b){return a-b});
+  var colw=1e9;for(var i=1;i<xs.length;i++)colw=Math.min(colw,xs[i]-xs[i-1]);
+  var cols={};
+  leaves.forEach(function(e){var t=txt(e);if(!/^\d{1,2}:\d{2}$/.test(t))return;var r=rect(e);var k=Math.round(r.left/6);(cols[k]=cols[k]||[]).push({y:(r.top+r.bottom)/2,m:+t.split(':')[0]*60+ +t.split(':')[1]})});
+  var hours=[];Object.keys(cols).forEach(function(k){if(cols[k].length>hours.length)hours=cols[k]});
+  if(hours.length<4)return;
+  var n=hours.length,my=0,mm=0;hours.forEach(function(h){my+=h.y/n;mm+=h.m/n});
+  var sxy=0,sxx=0;hours.forEach(function(h){sxy+=(h.y-my)*(h.m-mm);sxx+=(h.y-my)*(h.y-my)});
+  if(!sxx)return;var b=sxy/sxx;var at=function(y){return mm+b*(y-my)};
+  var code=/\d{5,6}-\d{1,2}/g;
+  var boxes=[];
+  leaves.forEach(function(e){
+    if(!/^\d{5,6}-\d{1,2}$/.test(txt(e)))return;
+    var box=e;
+    while(box.parentElement&&box.parentElement!==doc.body){var p=box.parentElement;var c=(p.textContent||'').match(code);if(!c||c.length>1||rect(p).width>1.4*colw)break;box=p}
+    if(boxes.indexOf(box)<0)boxes.push(box);
+  });
+  var items=boxes.map(function(bx){var r=rect(bx);var cx=(r.left+r.right)/2;var day=names.reduce(function(a,k){return Math.abs(heads[k]-cx)<Math.abs(heads[a]-cx)?k:a},names[0]);
+    return {day:day,s:at(r.top),e:at(r.bottom),text:(bx.innerText||bx.textContent||'').split(/\n+/).map(function(s){return s.trim()}).filter(Boolean).join(' | ')}});
+  if(!items.length)return;
+  // The hour labels sit either on the line where their hour starts or in the middle of its row: whichever puts the classes on whole and half hours.
+  var off=0,near=function(m){var d=((m%30)+30)%30;return Math.min(d,30-d)};
+  var a0=0,a15=0;items.forEach(function(it){a0+=near(it.s)+near(it.e);a15+=near(it.s+15)+near(it.e+15)});
+  if(a15<a0)off=15;
+  var hm=function(m){m=Math.round((m+off)/15)*15;return ('0'+Math.floor(m/60)).slice(-2)+':'+('0'+m%60).slice(-2)};
+  items.sort(function(x,y){return DAYS.indexOf(x.day)-DAYS.indexOf(y.day)||x.s-y.s});
+  items.forEach(function(it){var l='יום '+it.day+' '+hm(it.s)+'-'+hm(it.e)+': '+it.text;if(out.indexOf(l)<0)out.push(l)});
+});
+return out.length?'השיעורים לפי מיקומם במערכת (יום ושעות כפי שמופיעים ביומן):\n'+out.join('\n')+'\n':'';
+})()";
+
     // "Update timetable" from the portal: the page on screen is saved by the app itself (text, picture and PDF), then everything saved is read.
     // The student only opens "מבנה יומן" / "לוח בחינות" and presses the button once on each.
     async void ImportFromPortal()
@@ -304,8 +347,13 @@ partial class HitStudent
                 string dir = Path.Combine(AppRoot, TimetableFolder); Directory.CreateDirectory(dir);
                 string text = "";
                 try { text = json.Deserialize<string>(await c.ExecuteScriptAsync("(function(){var t=document.body?document.body.innerText:'';document.querySelectorAll('iframe').forEach(function(f){try{t+='\\n'+f.contentDocument.body.innerText}catch(e){}});return t})()")) ?? ""; } catch { }
+                // The week view keeps each class's day and hours only in where it is drawn, so they are read from the page itself.
+                string grid = "";
+                try { grid = json.Deserialize<string>(await c.ExecuteScriptAsync(PortalGridScript)) ?? ""; } catch { }
+                text = grid + text;
                 string title = c.DocumentTitle ?? "";
-                string kind = System.Text.RegularExpressions.Regex.IsMatch(text + " " + title, "(לוח בחינות|בחינות|מועד א)") ? "לוח בחינות" : System.Text.RegularExpressions.Regex.IsMatch(text + " " + title, "(יומן|מערכת שעות|מערכת)") ? "מבנה יומן" : SafeName(string.IsNullOrWhiteSpace(title) ? "דף מהפורטל" : title);
+                // The portal's menu names every page ("לוח בחינות", "מערכת שעות"), so the kind comes from what the page shows.
+                string kind = grid.Length > 0 ? "מערכת שעות" : System.Text.RegularExpressions.Regex.IsMatch(text, "מועד\\s*[אבג]") ? "לוח בחינות" : SafeName(string.IsNullOrWhiteSpace(title) ? "דף מהפורטל" : title);
                 if (text.Trim().Length > 80) File.WriteAllText(Path.Combine(dir, kind + ".txt"), text, new System.Text.UTF8Encoding(true));
                 try { var ps = env.CreatePrintSettings(); ps.ShouldPrintBackgrounds = true; ps.ShouldPrintHeaderAndFooter = false; await c.PrintToPdfAsync(Path.Combine(dir, kind + ".pdf"), ps); } catch { }
                 try { using (var fs = File.Create(Path.Combine(dir, kind + ".png"))) await c.CapturePreviewAsync(CoreWebView2CapturePreviewImageFormat.Png, fs); } catch { }

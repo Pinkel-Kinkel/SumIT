@@ -294,7 +294,7 @@ partial class HitStudent
             if (HelperOrder().Count > 0)
             {
                 string text = await ExtractTexts(TimetableFiles().Where(f => !f.EndsWith(".png", StringComparison.OrdinalIgnoreCase) && !f.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) && !f.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)));
-                if (text.Trim().Length > 200 && await HelperReadSchedule(Trunc(text, 90000)) && (TimetableHasClasses() || !TimetableFiles().Any(f => Path.GetFileName(f).Replace('+', ' ').Contains("מערכת שעות"))))
+                if (text.Trim().Length > 200 && await HelperReadSchedule(Trunc(text, 90000)) && (TimetableHasClasses() || !TimetableFiles().Any(f => { string n = Path.GetFileName(f).Replace('+', ' '); return n.Contains("מערכת שעות") || n.Contains("מבנה יומן"); })))
                 {
                     Send(new { type = "timetableStatus", busy = false, text = "", error = false });
                     SendAcademic(); SendTimetable();
@@ -322,7 +322,7 @@ partial class HitStudent
 
     bool TimetableHasClasses()
     {
-        try { var tt = json.Deserialize<Dictionary<string, object>>(File.ReadAllText(TimetableJson, Encoding.UTF8)); var l = tt.ContainsKey("classes") ? tt["classes"] as ArrayList : null; return l != null && l.Count > 0; } catch { }
+        try { var tt = json.Deserialize<Dictionary<string, object>>(File.ReadAllText(TimetableJson, Encoding.UTF8)); var l = tt.ContainsKey("classes") ? tt["classes"] as ArrayList : null; return l != null && l.Cast<object>().Any(o => { var c = o as Dictionary<string, object>; return c != null && Str(c, "day").Length > 0 && Str(c, "start").Length > 0; }); } catch { }
         return false;
     }
 

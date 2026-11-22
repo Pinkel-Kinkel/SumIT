@@ -72,7 +72,7 @@ const assert = require('assert/strict');
   show('home');renderTimetable();
   S.update={version:'99.0',canAuto:true};renderBanners();
  });
- assert.equal(await page.locator('.week-table tbody tr').count(),2);
+ assert.equal(await page.locator('#timetable .wk-class').count(),2);
  assert.equal(await page.locator('#examBoard .deadline').count(),8);
  await page.getByRole('button',{name:'לא עכשיו',exact:true}).click();
  assert.equal(await page.evaluate(()=>sent.some(m=>m.type==='installUpdate')),false);

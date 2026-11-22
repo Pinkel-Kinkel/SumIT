@@ -1600,3 +1600,12 @@ nav.side .brand > div { max-width: 100px; }
 nav.side .brand b { font-size: 12.5px; }
 nav.side .brand .logo, nav.side .brand .logo svg { width: 52px; height: 52px; }
 nav.side .nav-item svg { width: 23px; height: 23px; }
+
+/* The turning rings around the home logo must not widen the page (a scrollbar that came and went made the window shake). */
+#main { overflow-x: hidden; }
+/* The week table takes the wide column and both rows; what is due and the exams stack beside it with no gap. */
+.home-board { grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr); grid-template-rows: auto 1fr; }
+.home-board > .home-tt { grid-row: span 2; }
+.home-board .week-grid { min-width: 470px; }
+@media (max-width: 1100px) { .home-board { grid-template-columns: 1fr; grid-template-rows: none; } .home-board > .home-tt { grid-row: auto; } }
+#ttStatus:empty { display: none; }

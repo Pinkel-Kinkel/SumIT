@@ -572,12 +572,7 @@ function renderTimetable() {
     box.append(e);
     return;
   }
-  const today = DAYS[new Date().getDay()];
-  const todays = (tt.classes || []).filter(c => c.day === today).sort((a, b) => (a.start || '').localeCompare(b.start || ''));
   const exams = (tt.exams || []).filter(x => x.date && new Date(x.date) >= new Date(new Date().toDateString())).sort((a, b) => a.date.localeCompare(b.date));
-  const day = h(`<div><h3 style="margin-bottom:8px">היום · יום ${today}</h3></div>`);
-  if (!todays.length) day.append(h('<div class="muted">אין שיעורים היום.</div>'));
-  todays.forEach(c => { const r = h(`<div class="deadline"><div class="cal"><b style="font-size:13px;margin-top:10px">${esc(c.start)}</b><small>${esc(c.end)}</small></div><div class="info"><div class="name" dir="auto"></div><div class="course" dir="auto"></div></div></div>`); r.querySelector('.name').textContent = c.course; r.querySelector('.course').textContent = [c.kind, c.room, c.lecturer].filter(Boolean).join(' · '); day.append(r); });
   const ex = h('<div></div>'); const eb = $('examBoard'); eb.innerHTML = ''; eb.append(ex);
   if (!exams.length) ex.append(h('<div class="muted">אין מבחנים קרובים במערכת.</div>'));
   exams.forEach(x => { const d = new Date(x.date); const r = h(`<div class="deadline${(d - new Date()) < 14 * 86400000 ? ' soon' : ''}"><div class="cal"><b>${d.getDate()}</b><small>${esc(monFmt.format(d))}</small></div><div class="info"><div class="name" dir="auto"></div><div class="course"></div></div><span class="chip">מועד ${esc(x.moed || '')}</span></div>`); r.querySelector('.name').textContent = x.course; r.querySelector('.course').textContent = [x.time, x.room].filter(Boolean).join(' · '); ex.append(r); });
@@ -587,10 +582,11 @@ function renderTimetable() {
     [d, [c.start,c.end].filter(Boolean).join('–'),c.course,c.kind,c.room,c.lecturer].forEach((v,i) => { const cell = document.createElement('td'); cell.textContent = v || ''; cell.dir = i === 1 ? 'ltr' : 'auto'; row.append(cell); });
     weekly.querySelector('tbody').append(row);
   }));
-  box.append(day);
+  // Only the week as a table; the plain list when the classes have no hours to place them by.
   const wg = weekGrid(tt.classes || []);
   if (wg) box.append(wg);
-  const list = h('<details class="week-list"><summary>הצג כרשימה</summary></details>'); list.append(weekly); box.append(list);
+  else if ((tt.classes || []).length) box.append(weekly);
+  else box.append(h('<div class="muted" style="padding:8px">עוד אין שיעורים במערכת. פתח בפורטל את מערכת השעות ולחץ "עדכן מערכת".</div>'));
   renderNextUp(); renderStats();
 }
 // The week as a table: days across, hours down, every class in its own colour.
