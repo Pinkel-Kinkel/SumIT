@@ -294,7 +294,7 @@ partial class HitStudent
             if (HelperOrder().Count > 0)
             {
                 string text = await ExtractTexts(TimetableFiles().Where(f => !f.EndsWith(".png", StringComparison.OrdinalIgnoreCase) && !f.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) && !f.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)));
-                if (text.Trim().Length > 200 && await HelperReadSchedule(Trunc(text, 90000)))
+                if (text.Trim().Length > 200 && await HelperReadSchedule(Trunc(text, 90000)) && (TimetableHasClasses() || !TimetableFiles().Any(f => Path.GetFileName(f).Replace('+', ' ').Contains("מערכת שעות"))))
                 {
                     Send(new { type = "timetableStatus", busy = false, text = "", error = false });
                     SendAcademic(); SendTimetable();
@@ -318,6 +318,12 @@ partial class HitStudent
             if (!result.Error) Toast("המערכת והמבחנים עודכנו", false);
         }
         catch (Exception ex) { Send(new { type = "timetableStatus", busy = false, text = "לא הצלחתי לקרוא את המערכת: " + ex.Message, error = true }); }
+    }
+
+    bool TimetableHasClasses()
+    {
+        try { var tt = json.Deserialize<Dictionary<string, object>>(File.ReadAllText(TimetableJson, Encoding.UTF8)); var l = tt.ContainsKey("classes") ? tt["classes"] as ArrayList : null; return l != null && l.Count > 0; } catch { }
+        return false;
     }
 
     bool TimetableHasData()
