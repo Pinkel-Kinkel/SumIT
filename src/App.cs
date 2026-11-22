@@ -15,7 +15,7 @@ using Microsoft.Web.WebView2.WinForms;
 
 partial class HitStudent : Form
 {
-    public const string Version = "1.0.63";
+    public const string Version = "1.0.64";
     const string Repo = "Pinkel-Kinkel/SumIT";
     // Updates are only accepted from these repositories (the project was renamed from hit-recordings).
     static readonly string[] RepoNames = { "Pinkel-Kinkel/SumIT" };
@@ -37,7 +37,7 @@ partial class HitStudent : Form
     static readonly Dictionary<string, string> Sites = new Dictionary<string, string>
     {
         { "moodle", "https://md.hit.ac.il/my/" },
-        { "portal", "https://webrashim.hit.ac.il/Michlol3SP/" },
+        { "portal", "https://webrashim.hit.ac.il/" },   // the root signs in first when needed; Michlol3SP/ alone shows an error without a session
         { "cs24", "https://cs24.co.il/drive?d=e47d12" },
         { "outlook", "https://outlook.office365.com/mail/" },
         { "onedrive", "https://hitacil-my.sharepoint.com/_layouts/15/onedrive.aspx" },
@@ -637,6 +637,7 @@ partial class HitStudent : Form
             case "showSite": ShowSite(m); break;
             case "placeSite": PlaceSite(m); break;
             case "hideSite": sitePanel.Visible = false; break;
+            case "revealSite": if (sitePanel.Width > 10) sitePanel.Visible = true; break;   // after a dialog over the site closed
             case "siteNavigate": { string go = Str(m, "url"); if (IsMoodleUrl(go) && site != null && site.CoreWebView2 != null && (site.Source == null || site.Source.ToString() != go)) site.CoreWebView2.Navigate(go); break; }
             case "siteAction": SiteAction(Str(m, "action")); break;
             case "setDownloadTarget":

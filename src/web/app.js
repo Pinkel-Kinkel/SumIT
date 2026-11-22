@@ -648,8 +648,7 @@ function semesterOf(c) {
 function renderHome() {
   renderStats(); renderNextUp();
   const name = firstName(S.userName || S.settings.userName);
-  $('today').textContent = dayFmt.format(new Date());
-  $('greeting').textContent = greeting() + (name ? `, ${name}` : '');
+  $('today').textContent = dayFmt.format(new Date()) + ' · ' + greeting() + (name ? `, ${name}` : '');
   const ev = homeEvents().filter(e => e.manual || !e.overdue || Date.now() / 1000 - e.when < 3 * 86400);
   const week = ev.filter(e => e.when && !e.overdue && e.when * 1000 - Date.now() < 7 * 86400000);
   $('heroLine').textContent = S.events == null && !ev.length ? (S.moodle === 'login' ? 'התחבר ל-Moodle כדי לראות מה מחכה לך.' : 'טוען את מה שמחכה לך השבוע...')
@@ -661,8 +660,9 @@ function renderHome() {
   const exams = ((S.timetable && S.timetable.exams) || []).filter(x => x.date && x.course).map(x => ({ x, d: daysFromToday(x.date) })).filter(e => e.d >= 0 && e.d <= 30).sort((a, b) => a.d - b.d);
   const focus = exams.length ? `המבחן ב${exams[0].x.course} ${inDaysText(exams[0].d)}`
     : week.length ? (() => { const n = week.slice().sort((a, b) => a.when - b.when)[0]; return `${n.name} · ${relDay(n.when)}`; })() : '';
-  $('heroFocus').hidden = !focus;
-  $('heroFocus').textContent = focus;
+  // The big title is the thing that matters most; without one, a calm line instead of a greeting.
+  $('greeting').textContent = focus || (S.events == null && !ev.length ? 'מה מחכה לך השבוע' : week.length ? 'השבוע שלך' : 'השבוע פנוי ממטלות');
+  $('heroFocus').hidden = true;
 
   const box = $('deadlines'); box.innerHTML = '';
   if (S.events == null && !ev.length) {
@@ -689,7 +689,7 @@ function renderHome() {
     if (hc.classList.contains('stagger')) setTimeout(() => hc.classList.remove('stagger'), 1200);
   }
 }
-$('heroArt').innerHTML = ART.mascot('wave');
+$('heroArt').innerHTML = ART.logo('hero-logo');
 // Whole days from today to a date (YYYY-MM-DD); negative for a date that passed.
 function daysFromToday(date) { return Math.round((new Date(String(date).slice(0, 10) + 'T12:00:00') - new Date(new Date().toDateString() + ' 12:00')) / 86400000); }
 function inDaysText(d) { return d === 0 ? 'היום' : d === 1 ? 'מחר' : `בעוד ${d} ימים`; }
@@ -702,25 +702,20 @@ function sameCourse(a, b) { const n = (x) => String(x || '').replace(/[\s"'׳״\
   const panes = [...track.querySelectorAll('.home-pane')], tabs = [...document.querySelectorAll('#homeTabs [data-pane]')];
   let cur = 0;
   try { cur = Math.min(panes.length - 1, Math.max(0, +localStorage.getItem('homePane') || 0)); } catch { }
-  const fit = () => { if (panes[cur]) track.style.height = panes[cur].offsetHeight + 'px'; };
-  const mark = (i) => {
+  const go = (i) => {
+    i = Math.min(panes.length - 1, Math.max(0, i));
+    // The next pane comes in from the left (the reading direction), an earlier one from the right.
+    track.style.setProperty('--pane-dx', i > cur ? '-28px' : i < cur ? '28px' : '0px');
     cur = i;
+    panes.forEach((p, k) => { p.hidden = k !== i; p.classList.toggle('pane-in', k === i); });
     tabs.forEach(t => t.setAttribute('aria-selected', String(+t.dataset.pane === i)));
     $('homePrev').disabled = i === 0; $('homeNext').disabled = i === panes.length - 1;
-    panes.forEach((p, k) => p.inert = k !== i);
-    fit();
     try { localStorage.setItem('homePane', String(i)); } catch { }
   };
-  const go = (i, smooth = true) => { i = Math.min(panes.length - 1, Math.max(0, i)); track.scrollTo({ left: -i * track.clientWidth, behavior: smooth ? 'smooth' : 'auto' }); mark(i); };
   tabs.forEach(t => t.onclick = () => go(+t.dataset.pane));
   $('homePrev').onclick = () => go(cur - 1);
   $('homeNext').onclick = () => go(cur + 1);
-  let t = 0;
-  track.addEventListener('scroll', () => { clearTimeout(t); t = setTimeout(() => { if (!track.clientWidth) return; const i = Math.min(panes.length - 1, Math.round(Math.abs(track.scrollLeft) / track.clientWidth)); if (i !== cur) mark(i); }, 90); });
-  new ResizeObserver(fit).observe(track);
-  panes.forEach(p => new ResizeObserver(() => { if (panes[cur] === p) fit(); }).observe(p));
-  window.addEventListener('resize', () => go(cur, false));
-  requestAnimationFrame(() => go(cur, false));
+  go(cur);
 })();
 $('heroCourses').innerHTML = IC.book + 'לקורסים שלי';
 $('heroCourses').onclick = () => show('courses');
@@ -1196,9 +1191,9 @@ function renderCourseHeader() {
   const exam = ((S.timetable && S.timetable.exams) || []).filter(x => x.date && x.course && S.course && sameCourse(x.course, S.course.name))
     .map(x => daysFromToday(x.date)).filter(d => d >= 0).sort((a, b) => a - b)[0];
   const lecturesText = (k, n) => `${k} מתוך ${n} הרצאות מסוכמות`;
-  $('courseGrad').textContent = exam != null ? (exam === 0 ? 'המבחן היום' : exam === 1 ? 'המבחן מחר' : `המבחן בעוד ${exam} ימים`)
-    : lectures.length ? (ready ? lecturesText(ready, lectures.length) : (lectures.length === 1 ? 'הרצאה אחת' : lectures.length + ' הרצאות') + ' בקורס') : '';
-  const meter = $('courseMeter'); meter.hidden = !lectures.length || exam == null;
+  $('courseGrad').textContent = exam != null ? (exam === 0 ? 'המבחן היום' : exam === 1 ? 'המבחן מחר' : `המבחן בעוד ${exam} ימים`) : '';
+  $('courseGrad').hidden = exam == null;
+  const meter = $('courseMeter'); meter.hidden = true;
   meter.querySelector('i').style.width = (lectures.length ? Math.round(ready / lectures.length * 100) : 0) + '%';
   meter.querySelector('small').textContent = lecturesText(ready, lectures.length);
   const badge = $('courseBadge'); badge.hidden = !(L.exams > 0);
@@ -1453,36 +1448,44 @@ function renderInfo() {
     $('addSyl').onclick = () => send({ type: 'addFiles', course: S.course.name, folder: 'מידע על הקורס' });
     return;
   }
-  if(L.infoText)p.append(h(`<details class="card" ${!L.info?"open":""} style="margin-bottom:14px"><summary>מסמך המידע המלא שנשמר בקורס</summary><div>${md(L.infoText)}</div></details>`));
-  const assistants=Array.isArray(info.assistants)?info.assistants:[];
-  if(assistants.length)p.append(h(`<div class="card"><h2>מתרגלים</h2><p>${esc(assistants.map(a=>typeof a==='string'?a:a.name||'').filter(Boolean).join(' · '))}</p></div>`));
-  const known=Object.entries(info).some(([k,v])=>k!=='lecturer'&&(typeof v==='boolean'||typeof v==='string'&&v.trim()||Array.isArray(v)&&v.length));
-  if(!known)p.append(h('<div class="card"><b>המידע שחולץ חלקי</b><p>לא נמצאו פרטים מספיקים במקורות שנקראו. אפשר להוסיף סילבוס מלא וללחוץ נתח מחדש.</p></div>'));
+  const assistants = (Array.isArray(info.assistants) ? info.assistants : []).map(a => typeof a === 'string' ? a : a.name || '').filter(Boolean);
+  const known = Object.entries(info).some(([k, v]) => k !== 'lecturer' && (typeof v === 'boolean' || typeof v === 'string' && v.trim() || Array.isArray(v) && v.length));
+  // The first sentence of a long answer, for the quick tiles at the top.
+  const short = (t, n = 60) => { t = String(t || '').trim(); const m = t.match(/^[^.!?\n]{4,}[.!?]/); t = m ? m[0] : t; return t.length > n ? t.slice(0, n - 1).replace(/\s+\S*$/, '') + '…' : t; };
   const hw = info.homeworkRequired === true ? ['bad', 'חובה'] : info.homeworkRequired === false ? ['ok', 'לא חובה'] : ['', 'לא צוין'];
+  const att = !info.attendance ? ['', 'לא צוין'] : /לא\s*צוינה|לא\s*חוב|אינה\s*חוב|לא\s*נדרשת|רשות/.test(info.attendance) ? ['ok', 'לא חובה'] : /חובה|נדרשת/.test(info.attendance) ? ['bad', 'חובה'] : ['', short(info.attendance, 24)];
   const colors = ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#0ea5e9', '#8b5cf6', '#ef4444'];
   const grading = (info.grading || []).filter(g => g && g.component);
-  const total = grading.reduce((a, g) => a + (+g.weight || 0), 0) || 1;
-  const wrap = h('<div class="stagger"></div>');
-  wrap.append(h(`<div class="info-grid">
-    <div class="card stat" style="--i:0"><span class="si ic zoom" data-ic="user"></span><div><small>מרצה</small><b dir="auto">${esc(info.lecturer || $('lecturer').value || 'לא צוין')}</b>${info.officeHours ? `<small dir="auto">שעות קבלה: ${esc(info.officeHours)}</small>` : ''}</div></div>
-    <div class="card stat" style="--i:1"><span class="si ic assign" data-ic="exam"></span><div><small>שיעורי בית</small><b><span class="chip ${hw[0]}">${hw[1]}</span></b>${info.homeworkNote ? `<small dir="auto">${esc(info.homeworkNote)}</small>` : ''}</div></div>
-    <div class="card stat" style="--i:2"><span class="si ic file" data-ic="calendar"></span><div><small>מבנה המבחן</small><b dir="auto" style="font-size:13.5px">${esc(info.examFormat || 'לא צוין')}</b>${info.materialsAllowed ? `<small dir="auto">חומר עזר: ${esc(info.materialsAllowed)}</small>` : ''}</div></div>
-    ${info.attendance ? `<div class="card stat" style="--i:3"><span class="si ic other" data-ic="check"></span><div><small>נוכחות</small><b dir="auto" style="font-size:13.5px">${esc(info.attendance)}</b></div></div>` : ''}
+  const examWeight = grading.length === 1 ? 'מבחן ' + (grading[0].weight || 100) + '%' : '';
+  const wrap = h('<div class="info2 stagger"></div>');
+  if (!known) wrap.append(h('<div class="card"><b>המידע שחולץ חלקי</b><p>לא נמצאו פרטים מספיקים במקורות שנקראו. אפשר להוסיף סילבוס מלא וללחוץ "נתח מחדש".</p></div>'));
+  const tile = (i, ic, cls, label, value, chip) => `<div class="info-tile" style="--i:${i}"><span class="si ic ${cls}" data-ic="${ic}"></span><small>${label}</small>${chip ? `<span class="chip ${chip}">${esc(value)}</span>` : `<b dir="auto">${esc(value)}</b>`}</div>`;
+  wrap.append(h(`<div class="info-tiles">
+    ${tile(0, 'user', 'zoom', 'מרצה', info.lecturer || $('lecturer').value || 'לא צוין')}
+    ${tile(1, 'exam', 'assign', 'שיעורי בית', hw[1], hw[0] || ' ')}
+    ${tile(2, 'calendar', 'file', 'הציון', examWeight || (grading.length ? grading.length + ' רכיבים' : 'לא צוין'))}
+    ${tile(3, 'check', 'other', 'נוכחות', att[1], att[0] || ' ')}
   </div>`));
-  if (grading.length) {
-    const c = h(`<div class="card" style="margin-top:14px;--i:4"><h2>הרכב הציון</h2><div class="grade-bar">${grading.map((g, i) => `<span style="flex-grow:${+g.weight || 0};background:${colors[i % colors.length]}"></span>`).join('')}</div>
-      <div class="legend">${grading.map((g, i) => `<div><i style="background:${colors[i % colors.length]}"></i><span dir="auto">${esc(g.component)}</span><b>${esc(g.weight)}%</b></div>`).join('')}</div></div>`);
-    wrap.append(c);
-  }
+  const cols = h('<div class="info-cols"></div>');
+  if (info.examFormat || info.materialsAllowed) cols.append(h(`<div class="card info-card" style="--i:4"><h2><span data-ic="exam"></span>המבחן</h2>
+    ${info.examFormat ? `<p dir="auto">${esc(info.examFormat)}</p>` : ''}
+    ${info.materialsAllowed ? `<div class="info-note"><b>חומר עזר</b><p dir="auto">${esc(info.materialsAllowed)}</p></div>` : ''}</div>`));
+  if (grading.length) cols.append(h(`<div class="card info-card" style="--i:5"><h2><span data-ic="calendar"></span>הרכב הציון</h2><div class="grade-bar">${grading.map((g, i) => `<span style="flex-grow:${+g.weight || 0};background:${colors[i % colors.length]}"></span>`).join('')}</div>
+    <div class="legend">${grading.map((g, i) => `<div><i style="background:${colors[i % colors.length]}"></i><span dir="auto">${esc(g.component)}</span><b>${esc(g.weight)}%</b></div>`).join('')}</div></div>`));
+  const facts = [['שעות קבלה', info.officeHours], ['מתרגלים', assistants.join(' · ')], ['שיעורי בית', info.homeworkNote], ['נוכחות', info.attendance]].filter(f => f[1]);
+  if (facts.length) cols.append(h(`<div class="card info-card" style="--i:6"><h2><span data-ic="info"></span>כדאי לדעת</h2><dl class="info-facts">${facts.map(f => `<div><dt>${f[0]}</dt><dd dir="auto">${esc(f[1])}</dd></div>`).join('')}</dl></div>`));
   const dates = (Array.isArray(info.importantDates)?info.importantDates:[]).filter(d=>d&&d.date&&d.what).concat(S.sections.filter(s => s.due).map(s => ({date:s.due,what:'הגשת שיעורי בית · הרצאה ' + s.num})).concat((S.timetable && S.timetable.exams || []).filter(e => e.course && S.course.name.includes(e.course)).map(e => ({date:e.date,what:'מבחן · מועד ' + (e.moed || '')}))));
-  if (dates.length) wrap.append(h(`<div class="card" style="margin-top:14px;--i:5"><h2>תאריכים מהסילבוס, מהמערכת ומההרצאות</h2><div class="dates-list" style="margin-top:8px">${dates.map(d => `<div><b class="ltr">${esc(d.date || '')}</b><span dir="auto">${esc(d.what)}</span></div>`).join('')}</div></div>`));
+  if (dates.length) cols.append(h(`<div class="card info-card" style="--i:7"><h2><span data-ic="clock"></span>תאריכים חשובים</h2><div class="dates-list">${dates.map(d => `<div><b class="ltr">${esc(d.date || '')}</b><span dir="auto">${esc(d.what)}</span></div>`).join('')}</div></div>`));
+  wrap.append(cols);
   const tips = (info.tips || []).filter(Boolean);
-  if (tips.length) wrap.append(h(`<div class="card" style="margin-top:14px;--i:6"><h2>טיפים לקורס</h2><ul class="tips">${tips.map(t => `<li dir="auto">${esc(t)}</li>`).join('')}</ul></div>`));
-  const row = h('<div class="row wrap" style="margin-top:14px"></div>');
+  if (tips.length) wrap.append(h(`<div class="card info-card" style="--i:8"><h2><span data-ic="sparkles"></span>טיפים לקורס</h2><ul class="info-tips">${tips.map(t => `<li dir="auto"><span data-ic="check"></span><span>${esc(t)}</span></li>`).join('')}</ul></div>`));
+  if (L.infoText) wrap.append(h(`<details class="card info-doc"><summary>המסמך המלא שנשמר בקורס</summary><div>${md(L.infoText)}</div></details>`));
+  const row = h('<div class="row wrap info-actions"></div>');
   const sy = h(`<button class="soft"><span data-ic="download"></span>הורד סילבוס מה-Moodle מחדש</button>`); sy.disabled=!!busy; sy.onclick = () => downloadMoodle('syllabus'); sy.hidden = isManual(); row.append(sy);
   const r = h(`<button class="ghost"><span data-ic="refresh"></span>נתח מחדש</button>`); r.disabled = busy; r.onclick = () => { S.infoBusy = true; send({ type: 'analyzeCourse', course: S.course.name }); renderInfo(); }; row.append(r);
   wrap.append(row);
   p.append(wrap);
+  icons(p);
 }
 
 function renderExams() {
@@ -1732,6 +1735,18 @@ function placeSite(navigate) {
   else send(Object.assign({ type: 'placeSite' }, m));
 }
 new ResizeObserver(() => placeSite(false)).observe($('siteHost'));
+(function siteUnderDialogs() {
+  let covered = false, queued = false;
+  const check = () => {
+    queued = false;
+    const on = S.view === 'sites' && !!document.querySelector('dialog[open], .overlay:not([hidden])');
+    if (on === covered) return;
+    covered = on;
+    if (on) send({ type: 'hideSite' }); else { send({ type: 'revealSite' }); placeSite(false); }
+  };
+  new MutationObserver(() => { if (!queued) { queued = true; requestAnimationFrame(check); } })
+    .observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['open', 'hidden'] });
+})();
 window.addEventListener('resize', () => placeSite(false));
 document.querySelectorAll('#siteTabs button').forEach(b => b.onclick = () => openSite(b.dataset.site));
 $('siteBack').onclick = () => send({ type: 'siteAction', action: 'back' });

@@ -1511,3 +1511,51 @@ nav.side .edit-pen { top: -4px; inset-inline-end: -6px; }
 nav.side .brand { margin-top: 10px; }
 nav.side .brand { height: auto; min-height: 0; margin-bottom: 10px; flex: none; }
 .course-now .flag { font-size: 12.5px !important; line-height: 1.4; }
+
+/* Home top: the SumIT logo in a glowing ring, the date and greeting on the small line, and the big title says what matters. */
+#view-home .hero .illus { background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--accent-2) 28%, transparent), transparent 70%); box-shadow: none; }
+#view-home .hero .illus .hero-logo { width: 78%; height: 78%; filter: drop-shadow(0 24px 50px color-mix(in srgb, var(--accent) 45%, transparent)); animation: logoFloat 6s ease-in-out infinite; }
+@keyframes logoFloat { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-8px) rotate(1deg); } }
+#view-home .hero .date { font-size: 14.5px; }
+#view-home .hero h1 { font-size: clamp(30px, 3.4vw, 46px); line-height: 1.15; max-width: 720px;
+  background: linear-gradient(90deg, #fff, #dbeafe 55%, var(--gold)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+html[data-theme=light] #view-home .hero h1 { background: linear-gradient(90deg, #fff, #dbeafe 55%, var(--gold)); -webkit-background-clip: text; background-clip: text; }
+@media (prefers-reduced-motion: reduce) { #view-home .hero .illus .hero-logo { animation: none; } }
+
+/* Home panes: one at a time, sliding in from its side. */
+.home-track { display: block; overflow: visible; height: auto !important; }
+.home-pane.pane-in { animation: paneIn .38s var(--ease) both; }
+
+/* No sideways jump between screens: room for the scrollbar is kept, and screens only slide up or down. */
+#main { scrollbar-gutter: stable; }
+@keyframes viewUp { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
+@keyframes viewDown { from { opacity: 0; transform: translateY(-22px); } to { opacity: 1; transform: none; } }
+
+/* Course info: four short answers on top, then cards with the details in plain text. */
+.info2 { display: flex; flex-direction: column; gap: 16px; }
+.info-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.info-tile { display: grid; grid-template-columns: auto 1fr; grid-template-areas: "ic label" "ic value"; align-items: center; gap: 2px 14px; padding: 16px 18px; border-radius: 20px; background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+.info-tile .si { grid-area: ic; width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; }
+.info-tile small { grid-area: label; color: var(--muted); font-size: 12.5px; }
+.info-tile b, .info-tile .chip { grid-area: value; justify-self: start; }
+.info-tile b { font-size: 16px; font-weight: 700; line-height: 1.3; }
+.info-tile .chip { font-size: 13px; padding: 4px 12px; font-weight: 700; }
+.info-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+.info-card { border-radius: 22px; padding: 20px 22px; }
+.info-card h2 { display: flex; align-items: center; gap: 9px; font-size: 17px; margin: 0 0 12px; }
+.info-card h2 svg { width: 19px; height: 19px; color: var(--accent); }
+.info-card p { margin: 0; line-height: 1.75; font-size: 14.5px; color: var(--text); }
+.info-note { margin-top: 14px; padding: 12px 14px; border-radius: 14px; background: color-mix(in srgb, var(--gold) 10%, transparent); border: 1px solid color-mix(in srgb, var(--gold) 28%, transparent); }
+.info-note b { display: block; font-size: 13px; margin-bottom: 4px; color: var(--gold); }
+.info-note p { font-size: 13.5px; line-height: 1.6; }
+.info-facts { margin: 0; display: flex; flex-direction: column; }
+.info-facts > div { display: grid; grid-template-columns: 110px 1fr; gap: 12px; padding: 10px 0; border-top: 1px solid var(--border); }
+.info-facts > div:first-child { border-top: 0; padding-top: 0; }
+.info-facts dt { color: var(--muted); font-size: 13px; font-weight: 600; }
+.info-facts dd { margin: 0; font-size: 14px; line-height: 1.6; }
+.info-tips { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 22px; }
+.info-tips li { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 1.6; }
+.info-tips li svg { width: 17px; height: 17px; flex: none; margin-top: 3px; color: var(--ok); }
+.info-doc summary { cursor: pointer; font-weight: 600; color: var(--muted); }
+.info-actions { margin-top: 0; }
+@media (max-width: 1100px) { .info-tiles { grid-template-columns: repeat(2, 1fr); } .info-cols, .info-tips { grid-template-columns: 1fr; } }
