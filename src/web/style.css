@@ -1589,3 +1589,14 @@ html[data-theme=light] #view-home .hero h1 { background: linear-gradient(90deg, 
 #view-home .hero .illus::after { inset: -6%; border: 1px solid color-mix(in srgb, var(--gold) 22%, transparent); border-top-color: var(--gold); animation-duration: 9s; }
 @keyframes ringTurn { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { #view-home .hero h1, #view-home .hero h1 em, .hero-next, .hero-next .hn-dot, #view-home .hero .illus::before, #view-home .hero .illus::after { animation: none; } }
+
+/* A wider rail: the name and the labels fit on their line. */
+nav.side { width: 116px; padding-inline: 10px; }
+nav.side .nav-item, nav.side .theme-toggle, nav.side .status-pill { width: 94px; }
+nav.side .nav-item .nav-text { max-width: 90px; font-size: 11.5px; }
+nav.side .theme-toggle .nav-text { font-size: 11px; }
+nav.side .brand { width: 100px; }
+nav.side .brand > div { max-width: 100px; }
+nav.side .brand b { font-size: 12.5px; }
+nav.side .brand .logo, nav.side .brand .logo svg { width: 52px; height: 52px; }
+nav.side .nav-item svg { width: 23px; height: 23px; }

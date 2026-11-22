@@ -15,7 +15,7 @@ using Microsoft.Web.WebView2.WinForms;
 
 partial class HitStudent : Form
 {
-    public const string Version = "1.0.66";
+    public const string Version = "1.0.67";
     const string Repo = "Pinkel-Kinkel/SumIT";
     // Updates are only accepted from these repositories (the project was renamed from hit-recordings).
     static readonly string[] RepoNames = { "Pinkel-Kinkel/SumIT" };
@@ -37,7 +37,7 @@ partial class HitStudent : Form
     static readonly Dictionary<string, string> Sites = new Dictionary<string, string>
     {
         { "moodle", "https://md.hit.ac.il/my/" },
-        { "portal", "https://webrashim.hit.ac.il/Portals/student" },   // the student portal; Michlol3SP/ alone shows an error without a session
+        { "portal", "https://portal.hit.ac.il/" },   // the student station opens only from here (it gets its sign-in from this page)
         { "cs24", "https://cs24.co.il/drive?d=e47d12" },
         { "outlook", "https://outlook.office365.com/mail/" },
         { "onedrive", "https://hitacil-my.sharepoint.com/_layouts/15/onedrive.aspx" },
@@ -242,7 +242,7 @@ partial class HitStudent : Form
         };
         // The portal signs in through the same HIT sign-in pages: on the way there the student is never sent back to Moodle.
         sc.NavigationStarting += (s, e) => { if (IsPortalPage(e.Uri)) siteLastMoodle = null; Send(new { type = "siteLoading", loading = true }); };
-        sc.NavigationCompleted += delegate { Send(new { type = "siteLoading", loading = false }); };
+        sc.NavigationCompleted += delegate { Send(new { type = "siteLoading", loading = false }); JumpToStudentStation(); };
 
         InstallSkill();
         if (demo) return;
@@ -906,10 +906,42 @@ partial class HitStudent : Form
         string host = new Uri(url).Host;
         string deep = Str(m, "url");
         if (key == "moodle" && IsMoodleUrl(deep)) site.CoreWebView2.Navigate(deep);   // e.g. a deadline from the home page
-        // The portal's sign-in page (Michlol3SP) stays on its error without a session, so the portal is opened again from its start.
-        else if (current.IndexOf(host, StringComparison.OrdinalIgnoreCase) < 0 || (key == "portal" && current.IndexOf("/Michlol3SP", StringComparison.OrdinalIgnoreCase) >= 0)) site.CoreWebView2.Navigate(url);
+        // The portal: opened from portal.hit.ac.il unless the student station is already open and working (not on its sign-in error).
+        else if (key == "portal" && !Technion)
+        {
+            bool working = current.IndexOf("webrashim.hit.ac.il", StringComparison.OrdinalIgnoreCase) >= 0 && current.IndexOf("/Michlol3SP", StringComparison.OrdinalIgnoreCase) < 0;
+            if (!working) { portalJumpUntil = DateTime.Now.AddMinutes(2); site.CoreWebView2.Navigate(url); }
+        }
+        else if (current.IndexOf(host, StringComparison.OrdinalIgnoreCase) < 0) site.CoreWebView2.Navigate(url);
         sitePanel.Visible = true;
         sitePanel.BringToFront();
+    }
+
+    // The student station (webrashim) refuses a visit that does not come from portal.hit.ac.il, so the portal page is opened
+    // and, once the student is signed in there, its "עמדת מידע לסטודנט" tile is pressed for him. Only right after he asked
+    // for the portal, and for two minutes at most.
+    DateTime portalJumpUntil = DateTime.MinValue;
+    async void JumpToStudentStation()
+    {
+        if (DateTime.Now > portalJumpUntil || site == null || site.CoreWebView2 == null) return;
+        Uri u;
+        if (!Uri.TryCreate(site.Source == null ? "" : site.Source.ToString(), UriKind.Absolute, out u) || !u.Host.Equals("portal.hit.ac.il", StringComparison.OrdinalIgnoreCase)) return;
+        for (int i = 0; i < 10 && DateTime.Now < portalJumpUntil; i++)
+        {
+            string r = "";
+            try
+            {
+                r = await site.CoreWebView2.ExecuteScriptAsync(@"(function(){
+                    var els=[].slice.call(document.querySelectorAll('a,button,[role=button],[onclick]'));
+                    var hit=els.find(function(e){return /עמדת\s*מידע/.test(e.textContent||'')&&e.offsetParent;});
+                    if(!hit){var t=[].slice.call(document.querySelectorAll('*')).find(function(e){return e.children.length===0&&/עמדת\s*מידע/.test(e.textContent||'')&&e.offsetParent;});hit=t&&(t.closest('a,button,[role=button],[onclick]')||t);}
+                    if(!hit)return 'none';
+                    hit.click();return 'ok';})()");
+            }
+            catch { return; }
+            if (r.Contains("ok")) { portalJumpUntil = DateTime.MinValue; return; }
+            await Task.Delay(700);   // the tiles are drawn a moment after the page loads
+        }
     }
 
     void PlaceSite(Dictionary<string, object> m)
