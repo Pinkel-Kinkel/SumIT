@@ -62,6 +62,7 @@
             <div class="date" id="today"></div>
             <h1 id="greeting">שלום!</h1>
             <p class="hero-focus" id="heroFocus" hidden></p>
+            <div class="hero-next" id="heroNext" hidden></div>
             <p id="heroLine">טוען את מה שמחכה לך השבוע...</p>
             <div class="row wrap">
               <button class="white" id="heroCourses"></button>
@@ -70,43 +71,29 @@
           </div>
           <div class="illus" id="heroArt"></div>
         </div>
-        <!-- The rest of the home page in panes, side by side; the tabs and the arrows move between them. -->
-        <div class="home-nav">
-          <div class="home-tabs" id="homeTabs" role="tablist">
-            <button role="tab" data-pane="0" aria-selected="true"><span data-ic="calendar"></span>מה מחכה לי</button>
-            <button role="tab" data-pane="1"><span data-ic="clock"></span>המערכת והמבחנים</button>
-            <button role="tab" data-pane="2"><span data-ic="book"></span>הקורסים</button>
-          </div>
-          <button class="home-arrow" id="homePrev" dir="ltr" aria-label="הקודם">›</button><button class="home-arrow" id="homeNext" dir="ltr" aria-label="הבא">‹</button>
-        </div>
-        <div class="home-track" id="homeTrack">
-          <section class="home-pane" data-pane="0" aria-label="מה מחכה לי">
-          <div class="card">
+        <!-- The week at a glance: what is due next to the timetable, the exams and the next class under them, then the courses. -->
+        <div class="home-board stagger">
+          <div class="card home-deadlines" style="--i:0">
             <div class="card-head"><span class="ic zoom" data-ic="calendar"></span><h2>מה מחכה לי</h2><span class="chip" id="deadlineCount"></span></div>
             <div id="deadlines"></div>
           </div>
-          <div class="card">
-            <div class="card-head"><span class="ic assign" data-ic="clock"></span><h2>הבא בתור</h2></div>
-            <div id="nextUp"></div>
-          </div>
-          </section>
-          <section class="home-pane" data-pane="1" aria-label="המערכת והמבחנים">
-          <div class="card">
+          <div class="card home-tt" style="--i:1">
             <div class="card-head"><span class="ic zoom" data-ic="clock"></span><h2>המערכת שלי</h2><span class="chip" id="ttStatus"></span><button class="small ghost" id="ttDelete">מחק מערכת</button><button class="small primary" id="ttImport"><span data-ic="refresh"></span>עדכן מערכת</button></div>
             <div id="timetable"></div>
           </div>
-          <div class="card exam-board">
+          <div class="card exam-board" style="--i:2">
             <div class="card-head"><span class="ic assign" data-ic="exam"></span><h2>מבחנים קרובים</h2></div>
             <div id="examBoard"></div>
           </div>
-          </section>
-          <section class="home-pane" data-pane="2" aria-label="הקורסים">
-          <div class="card">
+          <div class="card home-next" style="--i:3">
+            <div class="card-head"><span class="ic assign" data-ic="clock"></span><h2>הבא בתור</h2></div>
+            <div id="nextUp"></div>
+          </div>
+          <div class="card home-courses" style="--i:4">
             <div class="card-head"><span class="ic file" data-ic="book"></span><h2>הקורסים של הסמסטר</h2><button class="small ghost" id="allCourses">לכל הקורסים</button></div>
             <div class="grid stagger" id="homeCourses"></div>
           </div>
           <div class="home-quick"><div class="shortcuts" id="quick"></div></div>
-          </section>
         </div>
       </div>
     </section>

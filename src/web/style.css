@@ -1559,3 +1559,33 @@ html[data-theme=light] #view-home .hero h1 { background: linear-gradient(90deg, 
 .info-doc summary { cursor: pointer; font-weight: 600; color: var(--muted); }
 .info-actions { margin-top: 0; }
 @media (max-width: 1100px) { .info-tiles { grid-template-columns: repeat(2, 1fr); } .info-cols, .info-tips { grid-template-columns: 1fr; } }
+
+/* Home: the week at a glance. What is due next to the timetable, the exams and the next class under them, then the courses. */
+.home-board { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); gap: 16px; margin-top: 18px; align-items: start; }
+.home-board > .card { padding: 20px 22px; border-radius: 22px; min-width: 0; }
+.home-board > .home-courses, .home-board > .home-quick { grid-column: 1 / -1; }
+.home-board > .home-tt #timetable { overflow-x: auto; }
+@media (max-width: 1100px) { .home-board { grid-template-columns: 1fr; } }
+
+/* Home title: one plain sentence, the important word in gold; under it the next deadline with a live countdown. */
+#view-home .hero h1 { background: none; color: #fff; -webkit-background-clip: border-box; background-clip: border-box; }
+#view-home .hero h1 em { font-style: normal; color: var(--gold); display: inline-block; animation: heroWord .7s var(--ease) both .15s; }
+@keyframes heroWord { from { opacity: 0; transform: translateY(12px) scale(.96); } to { opacity: 1; transform: none; } }
+#view-home .hero h1 { animation: heroIn .6s var(--ease) both; }
+@keyframes heroIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.hero-next { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 14px; padding: 10px 16px 10px 14px; border-radius: 999px; cursor: pointer;
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); color: #dbe7ff; font-size: 14.5px; animation: heroIn .6s var(--ease) both .3s; transition: background .2s, border-color .2s; }
+.hero-next:hover { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.24); }
+.hero-next[hidden] { display: none; }
+.hero-next .hn-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 0 color-mix(in srgb, var(--gold) 60%, transparent); animation: hnPulse 1.8s ease-out infinite; }
+@keyframes hnPulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--gold) 55%, transparent); } 100% { box-shadow: 0 0 0 12px transparent; } }
+.hero-next .hn-label { color: #a9bde0; font-size: 13px; }
+.hero-next b { color: #fff; font-weight: 700; }
+.hero-next .hn-course { color: #a9bde0; }
+.hero-next .hn-when { padding: 3px 10px; border-radius: 999px; background: rgba(255,255,255,.08); font-variant-numeric: tabular-nums; font-weight: 700; direction: rtl; }
+.hero-next .hn-when.soon { background: color-mix(in srgb, var(--gold) 20%, transparent); color: var(--gold); }
+/* The logo floats, with two rings turning around it. */
+#view-home .hero .illus::before, #view-home .hero .illus::after { content: ""; position: absolute; inset: 4%; border-radius: 50%; border: 1.5px dashed color-mix(in srgb, var(--accent-2) 35%, transparent); animation: ringTurn 28s linear infinite; pointer-events: none; }
+#view-home .hero .illus::after { inset: -6%; border: 1px solid color-mix(in srgb, var(--gold) 22%, transparent); border-top-color: var(--gold); animation-duration: 9s; }
+@keyframes ringTurn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { #view-home .hero h1, #view-home .hero h1 em, .hero-next, .hero-next .hn-dot, #view-home .hero .illus::before, #view-home .hero .illus::after { animation: none; } }

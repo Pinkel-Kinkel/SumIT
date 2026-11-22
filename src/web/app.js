@@ -660,9 +660,25 @@ function renderHome() {
   const exams = ((S.timetable && S.timetable.exams) || []).filter(x => x.date && x.course).map(x => ({ x, d: daysFromToday(x.date) })).filter(e => e.d >= 0 && e.d <= 30).sort((a, b) => a.d - b.d);
   const focus = exams.length ? `המבחן ב${exams[0].x.course} ${inDaysText(exams[0].d)}`
     : week.length ? (() => { const n = week.slice().sort((a, b) => a.when - b.when)[0]; return `${n.name} · ${relDay(n.when)}`; })() : '';
-  // The big title is the thing that matters most; without one, a calm line instead of a greeting.
-  $('greeting').textContent = focus || (S.events == null && !ev.length ? 'מה מחכה לך השבוע' : week.length ? 'השבוע שלך' : 'השבוע פנוי ממטלות');
+  // The big title is one plain sentence about the week (an exam in the next two weeks comes first); under it, the next
+  // deadline with a live countdown. The greeting stays on the small line with the date.
+  const examSoon = exams.find(e => e.d <= 14);
+  const nextEv = week.slice().sort((a, b) => a.when - b.when)[0];
+  const n = week.length;
+  $('greeting').innerHTML = examSoon ? `המבחן ב${esc(examSoon.x.course)} <em>${inDaysText(examSoon.d)}</em>`
+    : n ? (n === 1 ? 'משימה <em>אחת</em> השבוע' : `<em class="hero-count" data-n="${n}">${n}</em> משימות השבוע`)
+    : S.events == null && !ev.length ? 'מה מחכה לך השבוע' : 'השבוע <em>פנוי</em> ממטלות';
+  countUp($('greeting').querySelector('.hero-count'));
   $('heroFocus').hidden = true;
+  const hn = $('heroNext');
+  hn.hidden = !nextEv; $('heroLine').hidden = !!nextEv;
+  if (nextEv) {
+    hn.innerHTML = `<span class="hn-dot" aria-hidden="true"></span><span class="hn-label">הבא בתור</span><b dir="auto"></b><span class="hn-course" dir="auto"></span><span class="hn-when" data-when="${nextEv.when}"></span>`;
+    hn.querySelector('b').textContent = nextEv.name;
+    hn.querySelector('.hn-course').textContent = nextEv.course || '';
+    hn.onclick = () => nextEv.manual ? show('tasks') : openSite('moodle', nextEv.url);
+    tickHeroNext();
+  }
 
   const box = $('deadlines'); box.innerHTML = '';
   if (S.events == null && !ev.length) {
@@ -690,6 +706,26 @@ function renderHome() {
   }
 }
 $('heroArt').innerHTML = ART.logo('hero-logo');
+// The number in the home title counts up when it changes.
+function countUp(el) {
+  if (!el) return;
+  const to = +el.dataset.n, from = S.heroCount == null ? 0 : S.heroCount; S.heroCount = to;
+  if (from === to || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const t0 = performance.now(), dur = 700;
+  const step = (t) => { const k = Math.min(1, (t - t0) / dur); el.textContent = Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+// The time left to the next deadline, every second while it is less than two days away.
+function tickHeroNext() {
+  const el = document.querySelector('#heroNext .hn-when'); if (!el) return;
+  const when = +el.dataset.when * 1000, left = when - Date.now();
+  if (left > 0 && left < 48 * 3600000) {
+    const hh = Math.floor(left / 3600000), mm = Math.floor(left / 60000) % 60, ss = Math.floor(left / 1000) % 60;
+    el.textContent = 'נשארו ' + [hh, mm, ss].map(x => String(x).padStart(2, '0')).join(':');
+    el.classList.add('soon');
+  } else { el.textContent = relDay(when / 1000); el.classList.remove('soon'); }
+}
+setInterval(() => { if (S.view === 'home') tickHeroNext(); }, 1000);
 // Whole days from today to a date (YYYY-MM-DD); negative for a date that passed.
 function daysFromToday(date) { return Math.round((new Date(String(date).slice(0, 10) + 'T12:00:00') - new Date(new Date().toDateString() + ' 12:00')) / 86400000); }
 function inDaysText(d) { return d === 0 ? 'היום' : d === 1 ? 'מחר' : `בעוד ${d} ימים`; }
@@ -2149,7 +2185,7 @@ function onMessage(m) {
       break;
     }
     case 'summaryChatProvider': $('summaryChatStatus').textContent=m.text; break;
-    case 'summarySelectionReady': case 'summaryChatResult': summaryChatEvent(m); break;
+    case 'summarySelectionReady': case 'summaryChatResult': case 'summaryChatPartial': summaryChatEvent(m); break;
     case 'flashcardsProgress': case 'flashcardsResult': flashcardsEvent(m); break;
     case 'summaryShareProgress': case 'summaryShareResult': summaryShareStatus(m); break;
     case 'toast': toast(m.text, { error: m.error }); break;

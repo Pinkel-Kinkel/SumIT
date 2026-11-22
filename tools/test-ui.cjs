@@ -143,7 +143,6 @@ const assert = require('assert/strict');
  assert.equal(await page.locator('#view-home').getByText('מבחנים ב-CS24').count(),0);
  assert.equal(await page.locator('#stats').getByText('סיכום מוכן').count(),0);
  // The weekly timetable comes first, the exams are a card of their own below it.
- await page.locator('#homeTabs [data-pane="1"]').click();
  assert.equal(await page.evaluate(()=>document.getElementById('timetable').getBoundingClientRect().top<document.getElementById('examBoard').getBoundingClientRect().top),true);
  // My tasks: added on the home page, shown on the tasks page, checked off, kept through the app's settings.
  await page.locator('.nav-item[data-view=tasks]').click();
