@@ -15,7 +15,7 @@ using Microsoft.Web.WebView2.WinForms;
 
 partial class HitStudent : Form
 {
-    public const string Version = "1.0.65";
+    public const string Version = "1.0.66";
     const string Repo = "Pinkel-Kinkel/SumIT";
     // Updates are only accepted from these repositories (the project was renamed from hit-recordings).
     static readonly string[] RepoNames = { "Pinkel-Kinkel/SumIT" };
@@ -37,7 +37,7 @@ partial class HitStudent : Form
     static readonly Dictionary<string, string> Sites = new Dictionary<string, string>
     {
         { "moodle", "https://md.hit.ac.il/my/" },
-        { "portal", "https://webrashim.hit.ac.il/" },   // the root signs in first when needed; Michlol3SP/ alone shows an error without a session
+        { "portal", "https://webrashim.hit.ac.il/Portals/student" },   // the student portal; Michlol3SP/ alone shows an error without a session
         { "cs24", "https://cs24.co.il/drive?d=e47d12" },
         { "outlook", "https://outlook.office365.com/mail/" },
         { "onedrive", "https://hitacil-my.sharepoint.com/_layouts/15/onedrive.aspx" },
@@ -906,7 +906,8 @@ partial class HitStudent : Form
         string host = new Uri(url).Host;
         string deep = Str(m, "url");
         if (key == "moodle" && IsMoodleUrl(deep)) site.CoreWebView2.Navigate(deep);   // e.g. a deadline from the home page
-        else if (current.IndexOf(host, StringComparison.OrdinalIgnoreCase) < 0) site.CoreWebView2.Navigate(url);
+        // The portal's sign-in page (Michlol3SP) stays on its error without a session, so the portal is opened again from its start.
+        else if (current.IndexOf(host, StringComparison.OrdinalIgnoreCase) < 0 || (key == "portal" && current.IndexOf("/Michlol3SP", StringComparison.OrdinalIgnoreCase) >= 0)) site.CoreWebView2.Navigate(url);
         sitePanel.Visible = true;
         sitePanel.BringToFront();
     }
