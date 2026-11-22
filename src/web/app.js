@@ -617,9 +617,11 @@ function weekGrid(classes) {
     el.querySelector('b').textContent = c.course;
     el.querySelector('small').textContent = [c.start + '-' + c.end, c.kind, c.room].filter(Boolean).join(' · ');
     el.title = [c.course, c.kind, c.lecturer, c.room, c.start + '-' + c.end].filter(Boolean).join('\n');
-    // A click opens the course in the app (when the class belongs to one of the student's courses).
-    const course = courseFor(c.course);
-    if (course) { el.classList.add('go'); el.tabIndex = 0; el.setAttribute('role', 'button'); el.onclick = () => openCourse(course); el.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCourse(course); } }; }
+    // A click opens the class's course in the app. The course is looked up on the click: the timetable can be drawn
+    // before the courses have arrived.
+    const go = () => { const course = courseFor(c.course); if (course) openCourse(course); else { toast('לא מצאתי את הקורס "' + c.course + '" ברשימת הקורסים שלך'); show('courses'); } };
+    el.classList.add('go'); el.tabIndex = 0; el.setAttribute('role', 'button');
+    el.onclick = go; el.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } };
     g.append(el);
   });
   return wrap;
