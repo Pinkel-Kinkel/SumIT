@@ -30,10 +30,31 @@ partial class HitStudent
         return new Dictionary<string, object>();
     }
 
+    // This install's own id, so the one who publishes is never offered his own summaries back as a friend's.
+    string MySyncId
+    {
+        get
+        {
+            if (Str(settings, "syncId").Length == 0) { settings["syncId"] = Guid.NewGuid().ToString("N"); SaveSettings(); }
+            return Str(settings, "syncId");
+        }
+    }
+
+    string MyPublisherName { get { return Str(settings, "displayName").Length > 0 ? Str(settings, "displayName") : Str(settings, "userName"); } }
+
+    bool PublishedByMe(Dictionary<string, object> index)
+    {
+        string id = Str(index, "publisherId");
+        if (id.Length > 0) return id == MySyncId;
+        string who = Str(index, "publisher").Trim();   // an index written before the id existed
+        return who.Length > 0 && who == MyPublisherName.Trim();
+    }
+
     void WriteSyncIndex(string folder, Dictionary<string, object> index)
     {
         index["format"] = "sumit-sync"; index["version"] = 1;
-        index["publisher"] = Str(settings, "displayName").Length > 0 ? Str(settings, "displayName") : Str(settings, "userName");
+        index["publisher"] = MyPublisherName;
+        index["publisherId"] = MySyncId;
         index["updated"] = DateTime.UtcNow.ToString("o");
         string tmp = Path.Combine(folder, SyncIndexName + ".tmp"), file = Path.Combine(folder, SyncIndexName);
         File.WriteAllText(tmp, json.Serialize(index), Encoding.UTF8);
@@ -71,6 +92,9 @@ partial class HitStudent
     int PublishCourseTo(string folder, string course, Dictionary<string, object> index)
     {
         var courses = Dict(index, "courses") ?? new Dictionary<string, object>(); index["courses"] = courses;
+        course = course.Trim();
+        // An older entry of the same course whose name had extra spaces would be offered again and again.
+        foreach (string stale in courses.Keys.Where(k => k != course && k.Trim() == course).ToList()) courses.Remove(stale);
         var entry = Dict(courses, course) ?? new Dictionary<string, object>(); courses[course] = entry;
         entry["lecturer"] = Str(LoadMeta(course), "lecturer");
         var lects = Dict(entry, "lectures") ?? new Dictionary<string, object>(); entry["lectures"] = lects;
@@ -132,12 +156,14 @@ partial class HitStudent
     List<Dictionary<string, object>> SyncOffers(string folder)
     {
         var offers = new List<Dictionary<string, object>>();
-        var courses = Dict(ReadSyncIndex(folder), "courses");
-        if (courses == null) return offers;
+        var index = ReadSyncIndex(folder);
+        var courses = Dict(index, "courses");
+        if (courses == null || PublishedByMe(index)) return offers;
+        var seenNames = new HashSet<string>();
         foreach (var kv in courses)
         {
-            string name = kv.Key;
-            if (!Directory.Exists(CourseDir(name))) continue;
+            string name = kv.Key.Trim();
+            if (!seenNames.Add(name) || !Directory.Exists(CourseDir(name))) continue;
             var lects = Dict(kv.Value as Dictionary<string, object>, "lectures"); if (lects == null) continue;
             var done = Dict(LoadMeta(name), "syncImported") ?? new Dictionary<string, object>();
             int count = lects.Count(l => Str(l.Value as Dictionary<string, object>, "stamp") != Str(done, l.Key));
@@ -174,7 +200,7 @@ partial class HitStudent
             int got = 0;
             foreach (var kv in courses.ToList())
             {
-                string name = kv.Key;
+                string name = kv.Key.Trim();
                 if (onlyCourse != null && name != onlyCourse) continue;
                 if (!Directory.Exists(CourseDir(name)))
                 {
@@ -370,6 +396,7 @@ partial class HitStudent
             case "syncPublish": var p1 = PublishToFolder(Str(m, "course").Length > 0 ? Str(m, "course") : null, false); break;
             case "syncImport":
                 if (SyncFolder.Length == 0 || !Directory.Exists(SyncFolder)) { Toast("בחר קודם תיקייה משותפת בהגדרות", true); break; }
+                if (PublishedByMe(ReadSyncIndex(SyncFolder))) { Toast("הסיכומים בתיקייה המשותפת הם שלך, אין מה להוריד", false); SendSyncState(); break; }
                 var p2 = ImportFromFolder(SyncFolder, Str(m, "course").Length > 0 ? Str(m, "course") : null, false);
                 break;
             case "exportCourseZip": ExportCourseZip(Str(m, "course")); break;

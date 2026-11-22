@@ -417,6 +417,8 @@ if ($env:FAKE_NAME -eq 'codex' -and $m.Success) {
             int syncWritten = app.PublishCourseTo(sharedFolder, syncCourse, syncIndex); app.WriteSyncIndex(sharedFolder, syncIndex);
             check("publishing puts each finished summary in the shared folder and does not offer it back to the publisher", syncWritten == 1 && File.Exists(Path.Combine(sharedFolder, "sumit-sync.json")) && app.SyncOffers(sharedFolder).Count == 0 && app.PublishCourseTo(sharedFolder, syncCourse, syncIndex) == 0);
             var syncMeta = app.LoadMeta(syncCourse); syncMeta.Remove("syncImported"); app.SaveMeta(syncCourse, syncMeta);
+            check("the publisher is never offered his own summaries as a friend's, even after his records are lost", app.SyncOffers(sharedFolder).Count == 0);
+            app.settings["syncId"] = "another-student"; // from here on the same folder is seen by a friend
             bool offered = app.SyncOffers(sharedFolder).Count == 1;
             Run(async () => { await app.ImportFromFolder(sharedFolder, null, false); return 0; });
             check("a friend is told about new summaries and downloads them next to his own", offered && ((System.Collections.IEnumerable)app.SharedSummaries(syncCourse, 1)).Cast<object>().Any() && app.SyncOffers(sharedFolder).Count == 0);
