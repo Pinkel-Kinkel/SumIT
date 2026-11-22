@@ -30,11 +30,17 @@
     <button class="nav-item" data-view="tasks"><span class="ni" data-ic="check"></span><span class="nav-text">המטלות שלי</span><span class="count" id="taskCount" hidden>0</span></button>
     <button class="nav-item" data-view="recordings" id="navDownloads" hidden><span class="ni" data-ic="download"></span><span class="nav-text">הורדות</span><span class="count" id="jobCount" hidden>0</span></button>
     <div class="nav-label nav-text">אתרים</div>
-    <button class="nav-item" data-site-link="moodle"><span class="ni" data-ic="globe"></span><span class="nav-text">Moodle</span></button>
-    <button class="nav-item" data-site-link="portal"><span class="ni" data-ic="user"></span><span class="nav-text">פורטל מידע אישי</span></button>
-    <button class="nav-item" data-site-link="cs24"><span class="ni" data-ic="exam"></span><span class="nav-text">CS24</span></button>
-    <button class="nav-item" data-site-link="outlook"><span class="ni" data-ic="mail"></span><span class="nav-text">Outlook</span></button>
-    <button class="nav-item" data-site-link="onedrive"><span class="ni" data-ic="cloud"></span><span class="nav-text">OneDrive</span></button>
+    <!-- The sites under one rail button; the list opens in the rail, under it. -->
+    <div class="nav-sites" id="navSites">
+      <button class="nav-item" id="navSitesBtn" aria-haspopup="menu" aria-expanded="false" title="Moodle, הפורטל והאתרים"><span class="ni" data-ic="link"></span><span class="nav-text">אתרים</span></button>
+      <div class="nav-sites-menu" id="navSitesMenu" role="menu" hidden>
+        <button class="nav-item" data-site-link="moodle"><span class="ni" data-ic="globe"></span><span class="nav-text">Moodle</span></button>
+        <button class="nav-item" data-site-link="portal"><span class="ni" data-ic="user"></span><span class="nav-text">פורטל מידע אישי</span></button>
+        <button class="nav-item" data-site-link="cs24"><span class="ni" data-ic="exam"></span><span class="nav-text">CS24</span></button>
+        <button class="nav-item" data-site-link="outlook"><span class="ni" data-ic="mail"></span><span class="nav-text">Outlook</span></button>
+        <button class="nav-item" data-site-link="onedrive"><span class="ni" data-ic="cloud"></span><span class="nav-text">OneDrive</span></button>
+      </div>
+    </div>
     <button class="nav-item" data-notes hidden><span class="ni" data-ic="note"></span><span class="nav-text">המחברות והסיכומים שלי</span></button>
     <div class="nav-user" id="navUser" hidden><img id="navAvatar" alt=""><span class="nav-text" id="navUserName"></span></div>
     <div class="nav-label nav-text"></div>
@@ -55,6 +61,7 @@
           <div class="text">
             <div class="date" id="today"></div>
             <h1 id="greeting">שלום!</h1>
+            <p class="hero-focus" id="heroFocus" hidden></p>
             <p id="heroLine">טוען את מה שמחכה לך השבוע...</p>
             <div class="row wrap">
               <button class="white" id="heroCourses"></button>
@@ -63,8 +70,18 @@
           </div>
           <div class="illus" id="heroArt"></div>
         </div>
-        <div class="stats" id="stats"></div>
-        <div class="home-grid">
+        <!-- The rest of the home page in panes, side by side; the tabs and the arrows move between them. -->
+        <div class="home-nav">
+          <div class="home-tabs" id="homeTabs" role="tablist">
+            <button role="tab" data-pane="0" aria-selected="true"><span data-ic="calendar"></span>מה מחכה לי</button>
+            <button role="tab" data-pane="1"><span data-ic="clock"></span>המערכת והמבחנים</button>
+            <button role="tab" data-pane="2"><span data-ic="book"></span>הקורסים</button>
+          </div>
+          <button class="home-arrow" id="homePrev" dir="ltr" aria-label="הקודם">›</button><button class="home-arrow" id="homeNext" dir="ltr" aria-label="הבא">‹</button>
+        </div>
+        <div class="home-track" id="homeTrack">
+          <section class="home-pane" data-pane="0" aria-label="מה מחכה לי">
+          <div class="stats" id="stats"></div>
           <div class="card">
             <div class="card-head"><span class="ic zoom" data-ic="calendar"></span><h2>מה מחכה לי</h2><span class="chip" id="deadlineCount"></span></div>
             <div id="deadlines"></div>
@@ -73,19 +90,24 @@
             <div class="card-head"><span class="ic assign" data-ic="clock"></span><h2>הבא בתור</h2></div>
             <div id="nextUp"></div>
           </div>
-          <div class="full"><div class="shortcuts" id="quick"></div></div>
-          <div class="card full">
+          </section>
+          <section class="home-pane" data-pane="1" aria-label="המערכת והמבחנים">
+          <div class="card">
             <div class="card-head"><span class="ic zoom" data-ic="clock"></span><h2>המערכת שלי</h2><span class="chip" id="ttStatus"></span><button class="small ghost" id="ttDelete">מחק מערכת</button><button class="small primary" id="ttImport"><span data-ic="refresh"></span>עדכן מערכת</button></div>
             <div id="timetable"></div>
           </div>
-          <div class="card full exam-board">
+          <div class="card exam-board">
             <div class="card-head"><span class="ic assign" data-ic="exam"></span><h2>מבחנים קרובים</h2></div>
             <div id="examBoard"></div>
           </div>
-          <div class="card full">
+          </section>
+          <section class="home-pane" data-pane="2" aria-label="הקורסים">
+          <div class="card">
             <div class="card-head"><span class="ic file" data-ic="book"></span><h2>הקורסים של הסמסטר</h2><button class="small ghost" id="allCourses">לכל הקורסים</button></div>
             <div class="grid stagger" id="homeCourses"></div>
           </div>
+          <div class="home-quick"><div class="shortcuts" id="quick"></div></div>
+          </section>
         </div>
       </div>
     </section>
@@ -116,31 +138,42 @@
     <section class="view" id="view-course">
       <div class="page wide">
         <div class="course-hero" id="courseHero">
-          <svg class="bg" id="courseBand"></svg>
-          <button class="small back" id="backToCourses"><span data-ic="back"></span>הקורסים</button>
-          <h1 id="courseName" dir="auto"></h1>
-          <div class="sub">
-            <span class="lecturer"><span data-ic="user"></span>מרצה:<input id="lecturer" dir="auto" placeholder="מי המרצה?" autocomplete="off"><select id="lecturerPick" aria-label="בחירת מרצה מרשימת הקורס" hidden></select></span>
-            <span class="chip" id="courseCount"></span>
-            <span class="chip" id="courseReady"></span>
+          <div class="course-glow" id="courseGlow" aria-hidden="true"><svg class="bg" id="courseBand"></svg></div>
+          <div class="course-deco" id="courseDeco" aria-hidden="true"></div>
+          <button class="hero-badge course-badge" id="courseBadge" hidden></button>
+          <div class="course-copy">
+            <button class="small back" id="backToCourses"><span data-ic="back"></span>הקורסים</button>
+            <h1 id="courseName" dir="auto"></h1>
+            <p class="course-grad" id="courseGrad"></p>
+            <div class="course-meter" id="courseMeter" hidden><div class="bar"><i></i></div><small></small></div>
+            <div class="sub">
+              <span class="lecturer" title="המרצה של הקורס"><span data-ic="user"></span><input id="lecturer" dir="auto" placeholder="מי המרצה?" autocomplete="off" aria-label="המרצה"><select id="lecturerPick" aria-label="בחירת מרצה מרשימת הקורס" hidden></select></span>
+              <span class="sep">·</span><span id="courseCount"></span>
+            </div>
+            <div class="course-actions">
+              <button class="hero-gold" id="learnAll"><span data-ic="brain"></span>למד את כל הקורס</button>
+              <button class="hero-ghost" id="syncAll"><span data-ic="download"></span>עדכן מה-Moodle</button>
+              <button class="hero-ghost" id="examPrepBtn" hidden><span data-ic="exam"></span>אימון למבחן</button>
+              <button class="hero-ghost" id="toggleChat" hidden><span data-ic="chat"></span>צ'אט</button>
+              <button class="hero-gold" id="openCourseFolder"><span data-ic="folder"></span>תיקיית הקורס</button>
+              <button class="hero-ghost" id="reloadCourse"><span data-ic="refresh"></span>רענן</button>
+              <div class="course-more">
+                <button class="hero-round" id="courseMoreBtn" aria-haspopup="menu" aria-expanded="false" title="עוד">⋯</button>
+                <div class="course-more-menu" id="courseMoreMenu" role="menu" hidden>
+                  <button role="menuitem" id="changeBg"><span data-ic="sparkles"></span>רקע לקורס</button>
+                </div>
+              </div>
+            </div>
           </div>
-          <button class="small bg-btn" id="changeBg" title="שנה את הרקע של הקורס"><span data-ic="sparkles"></span>רקע</button>
         </div>
-        <div class="course-actions">
-          <button class="primary" id="learnAll"><span data-ic="brain"></span>למד את כל הקורס</button>
-          <button class="soft" id="syncAll"><span data-ic="download"></span>עדכן מה-Moodle</button>
-          <button class="soft" id="examPrepBtn" hidden><span data-ic="exam"></span>אימון למבחן</button>
-          <button id="openCourseFolder"><span data-ic="folder"></span>תיקיית הקורס</button>
-          <button id="reloadCourse" class="ghost"><span data-ic="refresh"></span>רענן</button>
-          <button id="toggleChat" class="ghost" hidden><span data-ic="chat"></span>צ'אט</button>
-        </div>
+        <div class="course-now" id="courseNow" hidden></div>
         <div class="tabs" id="courseTabs">
-          <button data-tab="setup">איך מתחילים<span class="badge" id="tabSetup"></span></button>
-          <button class="active" data-tab="lessons">הרצאות<span class="badge" id="tabLessons"></span></button>
-          <button data-tab="recs" hidden>הקלטות</button>
-          <button data-tab="info">מידע על הקורס</button>
-          <button data-tab="exams">הכנה למבחן<span class="badge" id="tabExams"></span></button>
-          <button data-tab="notes" hidden>המחברות והסיכומים שלי<span class="badge" id="tabNotes"></span></button>
+          <button data-tab="setup"><span data-ic="forward"></span>איך מתחילים<span class="badge" id="tabSetup"></span></button>
+          <button class="active" data-tab="lessons"><span data-ic="book"></span>הרצאות<span class="badge" id="tabLessons"></span></button>
+          <button data-tab="recs" hidden><span data-ic="play"></span>הקלטות</button>
+          <button data-tab="info"><span data-ic="info"></span>מידע על הקורס</button>
+          <button data-tab="exams"><span data-ic="exam"></span>הכנה למבחן<span class="badge" id="tabExams"></span></button>
+          <button data-tab="notes" hidden><span data-ic="note"></span>המחברות והסיכומים שלי<span class="badge" id="tabNotes"></span></button>
         </div>
         <div class="status-bar" id="courseStatus" hidden></div>
         <div class="course-body" id="courseBody">

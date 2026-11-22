@@ -114,6 +114,7 @@ const assert = require('assert/strict');
  assert.deepEqual(await page.evaluate(()=>{const m=sent.at(-1);return [m.name,m.value];}),['helperPref','claude']);
  // The background picker opens fully inside the window (it used to be cut off by the course banner).
  await page.evaluate(()=>{show('course');});
+ await page.locator('#courseMoreBtn').click();
  await page.locator('#changeBg').click();
  const popRect=await page.evaluate(()=>{const r=document.querySelector('.bg-pop').getBoundingClientRect();return [Math.round(r.top),Math.round(r.bottom),Math.round(r.left),Math.round(r.right),innerHeight,innerWidth];});
  assert.ok(popRect[1]<=popRect[4]&&popRect[0]>=0&&popRect[1]-popRect[0]>120&&popRect[3]<=popRect[5],'popover rect '+popRect.join(','));

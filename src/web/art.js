@@ -49,6 +49,40 @@ const IC = {
 };
 
 const ART = {
+  // The SumIT logo: the cube with "S", Σ, the cap, the page with the pen and "IT", in the app's navy, blues and gold.
+  logo: (cls = '') => {
+    const id = 'logo' + (ART._li = (ART._li || 0) + 1);
+    return `<svg class="sumit-logo ${cls}" viewBox="0 0 512 512" role="img" aria-label="SumIT">
+      <defs>
+        <linearGradient id="${id}-tile" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#123a7a"/><stop offset=".55" stop-color="#0f2a5c"/><stop offset="1" stop-color="#0b1d3d"/></linearGradient>
+        <linearGradient id="${id}-left" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#2f8fe8"/><stop offset="1" stop-color="#1f64d8"/></linearGradient>
+        <linearGradient id="${id}-right" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#38c6f4"/><stop offset="1" stop-color="#1ea0e6"/></linearGradient>
+        <linearGradient id="${id}-top" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f4f8ff"/><stop offset="1" stop-color="#cfe2ff"/></linearGradient>
+      </defs>
+      <rect x="16" y="16" width="480" height="480" rx="112" fill="url(#${id}-tile)"/>
+      <g stroke="#0b1d3d" stroke-width="9" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M258 84 L100 156 L256 230 L414 150 Z" fill="url(#${id}-top)"/>
+        <path d="M100 156 L256 230 L256 430 L108 360 Z" fill="url(#${id}-left)"/>
+        <path d="M256 230 L414 150 L404 352 L256 430 Z" fill="url(#${id}-right)"/>
+        <path d="M262 236 C 330 280, 352 340, 318 392 C 302 414, 282 424, 262 430 Z" fill="#7dd3fc" stroke-width="7"/>
+      </g>
+      <text x="180" y="356" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-weight="900" font-size="168" fill="#fff" stroke="#0b1d3d" stroke-width="6" paint-order="stroke">S</text>
+      <text x="196" y="180" text-anchor="middle" font-family="Cambria Math, Segoe UI, serif" font-weight="700" font-size="62" fill="#0b1d3d" transform="rotate(-6 196 160)">Σ</text>
+      <g transform="translate(300 122) rotate(-10)">
+        <path d="M-58 0 L0 -26 L58 0 L0 26 Z" fill="#f7c52d" stroke="#0b1d3d" stroke-width="6" stroke-linejoin="round"/>
+        <path d="M-32 12 V34 Q0 50 32 34 V12 L0 26 Z" fill="#f7c52d" stroke="#0b1d3d" stroke-width="6" stroke-linejoin="round"/>
+        <path d="M-50 4 V36" stroke="#0b1d3d" stroke-width="5" stroke-linecap="round"/>
+        <circle cx="-50" cy="40" r="6" fill="#0b1d3d"/>
+      </g>
+      <g transform="translate(332 252) rotate(-8)">
+        <path d="M-34 -46 H18 L34 -30 V46 H-34 Z" fill="#fff" stroke="#0b1d3d" stroke-width="6" stroke-linejoin="round"/>
+        <path d="M18 -46 V-30 H34" fill="none" stroke="#0b1d3d" stroke-width="5" stroke-linejoin="round"/>
+        <path d="M-22 -18 H14 M-22 -2 H18 M-22 14 H4" stroke="#1f64d8" stroke-width="6" stroke-linecap="round"/>
+        <path d="M44 -38 L56 -28 L14 32 L2 36 L4 22 Z" fill="#f7c52d" stroke="#0b1d3d" stroke-width="5" stroke-linejoin="round"/>
+      </g>
+      <text x="362" y="372" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-weight="900" font-size="58" fill="#fff" stroke="#0b1d3d" stroke-width="5" paint-order="stroke" transform="rotate(-24 362 352)">IT</text>
+    </svg>`;
+  },
   // Keep the supplied artwork intact. SVG masks isolate its arm for animation;
   // every instance uses one consistent ID prefix for all masks and references.
   mascot: (cls = '') => ART._mascotSvg(cls, 'brand' + (ART._mi = (ART._mi || 0) + 1)),

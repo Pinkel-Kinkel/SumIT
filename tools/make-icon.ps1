@@ -1,7 +1,7 @@
-# Convert the user-supplied Photoshop artwork into a multi-resolution Windows icon.
+# Convert the SumIT logo (assets\logo.png, rendered from ART.logo in art.js) into a multi-resolution Windows icon.
 param([string]$Out = (Join-Path $PSScriptRoot '..\assets\app.ico'))
 Add-Type -AssemblyName System.Drawing
-$source = [System.Drawing.Image]::FromFile((Join-Path $PSScriptRoot '..\assets\brand-original.png'))
+$source = [System.Drawing.Image]::FromFile((Join-Path $PSScriptRoot '..\assets\logo.png'))
 function Draw-Icon([int]$size) {
     $bmp = New-Object System.Drawing.Bitmap $size, $size
     $g = [System.Drawing.Graphics]::FromImage($bmp)
@@ -9,11 +9,7 @@ function Draw-Icon([int]$size) {
     $g.PixelOffsetMode = 'HighQuality'
     $g.SmoothingMode = 'AntiAlias'
     $g.Clear([System.Drawing.Color]::Transparent)
-    $circle = New-Object System.Drawing.Drawing2D.GraphicsPath
-    $circle.AddEllipse([single]0, [single]0, [single]$size, [single]$size)
-    $g.SetClip($circle)
     $g.DrawImage($source, 0, 0, $size, $size)
-    $circle.Dispose()
     $g.Dispose()
     return $bmp
 }

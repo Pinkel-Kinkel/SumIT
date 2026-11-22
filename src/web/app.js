@@ -220,12 +220,23 @@ function confetti() {
 }
 
 // ---------- Navigation ----------
+// Screens move in the direction of the change: down the side menu the new screen comes from below, up the menu from
+// above, into a course it slides in like a page forward, and back the other way.
+const VIEW_ORDER = ['home', 'courses', 'course', 'tasks', 'recordings', 'sites', 'settings'];
+function viewDirection(from, to) {
+  if (!from || from === to) return 'same';
+  if (from === 'courses' && to === 'course') return 'fwd';
+  if (from === 'course' && to === 'courses') return 'back';
+  return VIEW_ORDER.indexOf(to) > VIEW_ORDER.indexOf(from) ? 'up' : 'down';
+}
 function show(view) {
   if (S.view === 'sites' && view !== 'sites') send({ type: 'hideSite' });
+  $('main').dataset.enter = viewDirection(S.view, view);
   S.view = view;
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + view));
   const nav = view === 'course' ? 'courses' : view;
   document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.view === nav || (view === 'sites' && n.dataset.siteLink === S.site)));
+  moveNavGlow();
   $('main').scrollTop = 0;
   if (view === 'sites') {
     $('siteBarMain').hidden = !!S.viewer; $('viewerBar').hidden = !S.viewer;
@@ -248,6 +259,43 @@ document.querySelectorAll('.nav-item[data-site-link]').forEach(n => n.onclick = 
   setSaveTarget(S.course && site !== 'portal' ? S.course.name : '', S.course && site !== 'portal' ? 'מידע על הקורס' : '');
   openSite(site);
 });
+// The highlight of the side menu glides to the chosen item: one layer under the items, moved to the active one; it
+// follows the menu when items show or hide, the window resizes or the menu folds.
+function moveNavGlow(instant) {
+  const nav = document.querySelector('nav.side'); if (!nav) return;
+  let g = document.getElementById('navGlow');
+  if (!g) { g = document.createElement('div'); g.id = 'navGlow'; g.className = 'nav-glow'; g.setAttribute('aria-hidden', 'true'); nav.prepend(g); nav.classList.add('has-glow'); instant = true; }
+  const a = [...nav.querySelectorAll('.nav-item.active')].find(x => x.offsetParent);
+  if (!a) { g.style.opacity = '0'; return; }
+  // Measured from where the layer really starts (in RTL the menu's scrollbar sits on its left), not from the menu's box.
+  const r = a.getBoundingClientRect(), n = nav.getBoundingClientRect(), cs = getComputedStyle(nav);
+  const bl = parseFloat(cs.borderLeftWidth) || 0, br = parseFloat(cs.borderRightWidth) || 0;
+  const bar = nav.offsetWidth - nav.clientWidth - bl - br;
+  const x0 = n.left + bl + (cs.direction === 'rtl' ? bar : 0) - nav.scrollLeft, y0 = n.top + (parseFloat(cs.borderTopWidth) || 0) - nav.scrollTop;
+  if (instant) g.style.transition = 'none';
+  g.style.width = r.width + 'px'; g.style.height = r.height + 'px';
+  g.style.transform = `translate(${r.left - x0}px, ${r.top - y0}px)`;
+  g.style.opacity = '1';
+  if (instant) { void g.offsetWidth; g.style.transition = ''; }
+}
+(function navGlowFollow() {
+  const nav = document.querySelector('nav.side'); if (!nav) return;
+  let t = 0; const later = () => { clearTimeout(t); t = setTimeout(() => moveNavGlow(true), 30); };
+  new MutationObserver(later).observe(nav, { subtree: true, attributes: true, attributeFilter: ['hidden'], childList: true });
+  addEventListener('resize', later);
+  nav.addEventListener('transitionend', (e) => { if (e.target === nav) moveNavGlow(true); });
+  requestAnimationFrame(() => moveNavGlow(true));
+})();
+// The sites (Moodle, the portal, CS24, Outlook, OneDrive) under one button in the rail; the list opens under it and
+// closes after a choice, on Escape or on a click elsewhere.
+(function navSites() {
+  const btn = $('navSitesBtn'), menu = $('navSitesMenu'); if (!btn || !menu) return;
+  const close = () => { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
+  btn.onclick = (e) => { e.stopPropagation(); menu.hidden = !menu.hidden; btn.setAttribute('aria-expanded', String(!menu.hidden)); };
+  menu.addEventListener('click', (e) => { if (e.target.closest('.nav-item')) close(); });
+  document.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target)) close(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !menu.hidden) { close(); btn.focus(); } });
+})();
 // "My notebook": the Notability app on this PC if it's installed, otherwise Notability on the web inside the app.
 document.querySelector('.nav-item[data-notes]').onclick = () => { if (S.course) setTab('notes'); else toast('פתח קורס והוסף דפי מחברת להרצאה המתאימה. אפשר לייצא PDF מכל אפליקציית כתיבה.'); };
 $('brand').onclick = () => show('home');
@@ -608,6 +656,13 @@ function renderHome() {
     : week.length ? `יש לך ${week.length} ${week.length === 1 ? 'משימה' : 'משימות'} בשבוע הקרוב. אפשר להתחיל ממה שהכי דחוף.`
     : 'אין מטלות בשבוע הקרוב. זמן מצוין לחזור על החומר.';
   $('deadlineCount').textContent = ev.length + ' מטלות';
+  // One line under the greeting with the thing that matters most: the next exam within a month, or the nearest
+  // deadline of the week.
+  const exams = ((S.timetable && S.timetable.exams) || []).filter(x => x.date && x.course).map(x => ({ x, d: daysFromToday(x.date) })).filter(e => e.d >= 0 && e.d <= 30).sort((a, b) => a.d - b.d);
+  const focus = exams.length ? `המבחן ב${exams[0].x.course} ${inDaysText(exams[0].d)}`
+    : week.length ? (() => { const n = week.slice().sort((a, b) => a.when - b.when)[0]; return `${n.name} · ${relDay(n.when)}`; })() : '';
+  $('heroFocus').hidden = !focus;
+  $('heroFocus').textContent = focus;
 
   const box = $('deadlines'); box.innerHTML = '';
   if (S.events == null && !ev.length) {
@@ -634,6 +689,38 @@ function renderHome() {
   }
 }
 $('heroArt').innerHTML = ART.mascot('wave');
+// Whole days from today to a date (YYYY-MM-DD); negative for a date that passed.
+function daysFromToday(date) { return Math.round((new Date(String(date).slice(0, 10) + 'T12:00:00') - new Date(new Date().toDateString() + ' 12:00')) / 86400000); }
+function inDaysText(d) { return d === 0 ? 'היום' : d === 1 ? 'מחר' : `בעוד ${d} ימים`; }
+// Two course names are the same course when one contains the other (the exam board often shortens them).
+function sameCourse(a, b) { const n = (x) => String(x || '').replace(/[\s"'׳״\-–]/g, ''); a = n(a); b = n(b); return !!a && !!b && (a.includes(b) || b.includes(a)); }
+// The home panes: the tabs, the arrows and a sideways swipe move between them; the track is as tall as the pane on
+// screen, and the pane is remembered for the next time.
+(function homePanes() {
+  const track = $('homeTrack'); if (!track) return;
+  const panes = [...track.querySelectorAll('.home-pane')], tabs = [...document.querySelectorAll('#homeTabs [data-pane]')];
+  let cur = 0;
+  try { cur = Math.min(panes.length - 1, Math.max(0, +localStorage.getItem('homePane') || 0)); } catch { }
+  const fit = () => { if (panes[cur]) track.style.height = panes[cur].offsetHeight + 'px'; };
+  const mark = (i) => {
+    cur = i;
+    tabs.forEach(t => t.setAttribute('aria-selected', String(+t.dataset.pane === i)));
+    $('homePrev').disabled = i === 0; $('homeNext').disabled = i === panes.length - 1;
+    panes.forEach((p, k) => p.inert = k !== i);
+    fit();
+    try { localStorage.setItem('homePane', String(i)); } catch { }
+  };
+  const go = (i, smooth = true) => { i = Math.min(panes.length - 1, Math.max(0, i)); track.scrollTo({ left: -i * track.clientWidth, behavior: smooth ? 'smooth' : 'auto' }); mark(i); };
+  tabs.forEach(t => t.onclick = () => go(+t.dataset.pane));
+  $('homePrev').onclick = () => go(cur - 1);
+  $('homeNext').onclick = () => go(cur + 1);
+  let t = 0;
+  track.addEventListener('scroll', () => { clearTimeout(t); t = setTimeout(() => { if (!track.clientWidth) return; const i = Math.min(panes.length - 1, Math.round(Math.abs(track.scrollLeft) / track.clientWidth)); if (i !== cur) mark(i); }, 90); });
+  new ResizeObserver(fit).observe(track);
+  panes.forEach(p => new ResizeObserver(() => { if (panes[cur] === p) fit(); }).observe(p));
+  window.addEventListener('resize', () => go(cur, false));
+  requestAnimationFrame(() => go(cur, false));
+})();
 $('heroCourses').innerHTML = IC.book + 'לקורסים שלי';
 $('heroCourses').onclick = () => show('courses');
 $('heroPaste').innerHTML = IC.plus + 'הוסף מטלה';
@@ -758,7 +845,7 @@ function openCourse(c) {
   $('courseName').textContent = c.name;
   $('courseBand').innerHTML = ART.band(c.id);
   $('lecturer').value = ''; $('lecturer').placeholder = 'מי המרצה?'; $('lecturer').hidden = false; $('lecturerPick').hidden = true;
-  $('courseCount').textContent = 'טוען...'; $('courseReady').hidden = true;
+  $('courseCount').textContent = 'טוען...'; $('courseGrad').textContent = ''; $('courseMeter').hidden = true; $('courseNow').hidden = true; $('courseBadge').hidden = true;
   $('courseStatus').hidden = true;
   $('lectures').innerHTML = '';
   for (let i = 0; i < 6; i++) $('lectures').append(h('<div class="skeleton" style="height:70px;border-radius:16px;margin-bottom:10px"></div>'));
@@ -814,6 +901,10 @@ $('lecturer').onchange = () => S.course && send({ type: 'setLecturer', course: S
 
 document.querySelectorAll('#courseTabs button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
 function setTab(tab) {
+  // A tab further along comes in from the left (the reading direction), an earlier one from the right.
+  const order = [...document.querySelectorAll('#courseTabs button')].map(b => b.dataset.tab);
+  const from = order.indexOf(S.tab), to = order.indexOf(tab);
+  $('courseBody').style.setProperty('--pane-dx', from < 0 || to === from ? '0px' : to > from ? '-28px' : '28px');
   S.tab = tab;
   document.querySelectorAll('#courseTabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === 'pane-' + tab));
@@ -1096,9 +1187,37 @@ function renderCourseHeader() {
   $('tabLessons').textContent = n;
   $('tabExams').textContent = L.exams || 0;
   $('tabNotes').textContent = L.notes || 0;
-  $('courseReady').hidden = !(L.lecturePdfs || L.studyPages);
-  $('courseReady').textContent = (L.studyPages || L.lecturePdfs) ? ((L.studyPages || L.lecturePdfs) === 1 ? 'סיכום אחד מוכן' : (L.studyPages || L.lecturePdfs) + ' סיכומים מוכנים') : '';
-  applyBg($('courseHero'), L.background);
+  applyBg($('courseGlow'), L.background);
+  // One line in a gradient with what matters most (the exam, or how much is summarized), a thin bar of the lectures
+  // that have a summary, and a badge with the past exams.
+  const lectures = S.sections.filter(s => s.num > 0);
+  const ready = lectures.filter(s => (s.local || {}).lecturePdf || (s.local || {}).studyPage).length;
+  const exam = ((S.timetable && S.timetable.exams) || []).filter(x => x.date && x.course && S.course && sameCourse(x.course, S.course.name))
+    .map(x => daysFromToday(x.date)).filter(d => d >= 0).sort((a, b) => a - b)[0];
+  const lecturesText = (k, n) => `${k} מתוך ${n} הרצאות מסוכמות`;
+  $('courseGrad').textContent = exam != null ? (exam === 0 ? 'המבחן היום' : exam === 1 ? 'המבחן מחר' : `המבחן בעוד ${exam} ימים`)
+    : lectures.length ? (ready ? lecturesText(ready, lectures.length) : (lectures.length === 1 ? 'הרצאה אחת' : lectures.length + ' הרצאות') + ' בקורס') : '';
+  const meter = $('courseMeter'); meter.hidden = !lectures.length || exam == null;
+  meter.querySelector('i').style.width = (lectures.length ? Math.round(ready / lectures.length * 100) : 0) + '%';
+  meter.querySelector('small').textContent = lecturesText(ready, lectures.length);
+  const badge = $('courseBadge'); badge.hidden = !(L.exams > 0);
+  if (L.exams > 0) { badge.innerHTML = `<span class="hb-ic" data-ic="exam"></span><span><b>${L.exams === 1 ? 'מבחן קודם' : L.exams + ' מבחנים קודמים'}</b><small>להכנה למבחן</small></span>`; icons(badge); }
+  renderCourseNow();
+}
+$('courseDeco').innerHTML = '<div class="halo"></div>' + ART.folders();
+$('courseBadge').onclick = () => setTab('exams');
+// "The most important thing now" in the course: the first lecture whose material is here and has no summary yet, with
+// the button that makes it. Nothing to do, nothing shown.
+function renderCourseNow() {
+  const box = $('courseNow'); if (!box || !S.course) return;
+  const s = S.sections.find(x => { const L = x.local || {}; return x.num > 0 && !(L.lecturePdf || L.studyPage) && !x.aiBusy && !x.busy && (L.files || L.transcripts); });
+  box.hidden = !s; if (!s) { box.innerHTML = ''; return; }
+  box.innerHTML = '<span class="flag">הכי חשוב עכשיו</span><div class="n"></div><div class="grow"><h3 dir="auto"></h3><p></p></div><button class="primary"><span data-ic="sparkles"></span>צור סיכום PDF</button>';
+  icons(box);
+  box.querySelector('.n').textContent = s.num;
+  box.querySelector('h3').textContent = 'הרצאה ' + s.num + ' · ' + s.title;
+  box.querySelector('p').textContent = 'החומר כבר כאן, חסר רק הסיכום.' + (s.due ? ' הגשת שיעורי בית: ' + s.due + '.' : '');
+  box.querySelector('button').onclick = () => requestLectureSummary(S.course, s);
 }
 
 // A summary that is being made: kept on the app's side, so it is still there when the student comes back to the course.
@@ -1119,14 +1238,14 @@ function renderLectures() {
   const secs = S.sections;
   // The bar that creates the next lecture sits under the last one.
   if (!secs.length) { box.append(newLectureBar()); box.append(h(`<div class="empty">${ART.empty().replace('<svg', '<svg class="art"')}<b>התחל מהרצאה 1</b>צור הרצאה ובחר את המצגות, שיעורי הבית ודפי המחברת שלה. חומר מגרסאות קודמות נשאר בתיקיית הקורס ואפשר לייבא אותו מכפתורי הוספת הקבצים.</div>`)); return; }
-  secs.forEach((s, i) => { const el = lectureEl(s); el.style.setProperty('--i', i); box.append(el); });
-  box.append(newLectureBar());
-  box.classList.add('stagger');
+  const grid = h('<div class="lec-grid stagger"></div>');
+  secs.forEach((s, i) => { const el = lectureEl(s); el.style.setProperty('--i', i); grid.append(el); });
+  box.append(grid, newLectureBar());
 }
 
 function lectureEl(s) {
   const el = h(`<div class="lecture" data-num="${s.num}">
-    <div class="lecture-head"><div class="num"></div><div class="lecture-main"><div class="lecture-title" dir="auto"></div><div class="chips"></div></div><span class="chevron" data-ic="forward" style="transform:rotate(-90deg)"></span></div>
+    <div class="lecture-head"><div class="num"></div><span class="lec-st"></span><span class="chevron" data-ic="forward" style="transform:rotate(-90deg)"></span><div class="lecture-main"><div class="lecture-title" dir="auto"></div><div class="lec-line" dir="auto"></div><div class="chips"></div></div><div class="lec-go"></div></div>
     <div class="lecture-body"><div><div class="lecture-inner"><div class="top-actions"></div><ul class="items"></ul><div class="actions"></div><div class="notebook-hint"></div><div class="status"></div><div class="ai-log"></div></div></div></div></div>`);
   el.querySelector('.chevron').style.transform = '';
   el.querySelector('.chevron').innerHTML = svgI('<path d="m6 9 6 6 6-6"/>');
@@ -1158,9 +1277,12 @@ function fillLecture(el, s) {
   if (L.lecturePdf) chips.push('<span class="chip ok">סיכום PDF מוכן ✓</span>');
   else if (L.studyPage) chips.push('<span class="chip ok">סיכום מוכן ✓</span>');
   el.querySelector('.chips').innerHTML = chips.join('');
-  el.querySelector('.quick-summary')?.remove();
+  // The closed card shows one line (the date and what is here) and one button; the chips stay for the open lecture.
+  el.querySelector('.lec-line').textContent = [s.date, [hasMaterial && 'מצגות', hasHomework && 'שיעורי בית', recs.length && 'הקלטה'].filter(Boolean).join(', ') || (L.files ? (L.files === 1 ? 'קובץ אחד' : L.files + ' קבצים') : '')].filter(Boolean).join(' · ') || (s.num === 0 ? 'חומר כללי של הקורס' : 'עוד אין חומר');
+  const go = el.querySelector('.lec-go'); go.innerHTML = '';
   const quickPage=L.studyPage||(L.sharedSummaries||[])[0]?.path;
-  if(quickPage){const quick=h('<button class="primary small quick-summary">פתח סיכום</button>');quick.onclick=e=>{e.stopPropagation();openViewer(quickPage,'הרצאה '+s.num+' · סיכום',L.lecturePdf||'',s.num);};el.querySelector('.lecture-head').insertBefore(quick,el.querySelector('.chevron'));}
+  if(quickPage){const quick=h('<button class="soft small quick-summary">פתח סיכום</button>');quick.onclick=e=>{e.stopPropagation();openViewer(quickPage,'הרצאה '+s.num+' · סיכום',L.lecturePdf||'',s.num);};go.append(quick);}
+  else if (s.num > 0 && (L.files || L.transcripts) && !s.busy && !s.aiBusy) { const make = h('<button class="primary small">צור סיכום PDF</button>'); make.onclick = e => { e.stopPropagation(); requestLectureSummary(course, s); }; go.append(make); }
 
   // "Finished reading" tick, kept per course and lecture in this browser profile.
   el.querySelector('.read-mark')?.remove();
@@ -1228,6 +1350,7 @@ function fillLecture(el, s) {
 // The status line of a lecture; while a summary is being made it shows a bar with a percentage and a rough time left.
 function paintStatus(el, s) {
   const L = s.local || {};
+  paintCard(el, s);
   const job = lessonJob(s.num);
   const st = el.querySelector('.status'); if (!st) return;
   const working = s.busy || s.aiBusy;
@@ -1251,6 +1374,16 @@ function paintStatus(el, s) {
     } else if (hp) hp.remove();
   }
   st.innerHTML = (working ? '<span class="spinner"></span>' : (job && job.state !== 'failed' ? '<span class="spinner"></span>' : '')) + `<span dir="auto">${esc(text)}</span>` + bar;
+}
+// The state of a lecture card: a chip (ready, missing, being written, soon) and a colored edge.
+function paintCard(el, s) {
+  const L = s.local || {};
+  const working = s.busy || s.aiBusy;
+  const st = working ? ['run', s.pct != null ? 'נכתב סיכום · ' + s.pct + '%' : 'עובד על זה…'] : (L.lecturePdf || L.studyPage) ? ['ok', 'סיכום מוכן']
+    : s.num === 0 ? ['', ''] : (L.files || L.transcripts) ? ['todo', 'חסר סיכום'] : ['wait', 'בקרוב'];
+  el.dataset.state = st[0];
+  const chip = el.querySelector('.lec-st'); if (chip) { chip.className = 'lec-st ' + st[0]; chip.textContent = st[1]; chip.hidden = !st[1]; }
+  renderCourseNow();
 }
 function section(num) { return S.sections.find(s => s.num === num); }
 function refreshSection(num) {
@@ -1654,7 +1787,7 @@ $('changeBg').onclick = (e) => {
   pop.querySelector('[data-img]').onclick = () => { send({ type: 'setCourseBackground', course: S.course.name, mode: 'image' }); pop.remove(); };
   pop.querySelector('[data-reset]').onclick = () => { send({ type: 'setCourseBackground', course: S.course.name, mode: 'reset' }); pop.remove(); };
   document.body.append(pop);
-  const br = $('changeBg').getBoundingClientRect();
+  const br = $('courseMoreBtn').getBoundingClientRect();
   Object.assign(pop.style, { position: 'fixed', insetInlineEnd: 'auto', insetBlockStart: 'auto', zIndex: 60 });
   // Always fully inside the window: below the button when there is room, otherwise above it.
   const ph = pop.offsetHeight, pw = pop.offsetWidth;
@@ -1662,6 +1795,15 @@ $('changeBg').onclick = (e) => {
   pop.style.left = Math.max(8, Math.min(br.left, innerWidth - pw - 8)) + 'px';
   setTimeout(() => document.addEventListener('click', function close(ev) { if (!pop.contains(ev.target)) { pop.remove(); document.removeEventListener('click', close); } }), 0);
 };
+// The less used course actions sit under one "⋯" button.
+(function courseMore() {
+  const btn = $('courseMoreBtn'), menu = $('courseMoreMenu'); if (!btn || !menu) return;
+  const close = () => { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
+  btn.onclick = (e) => { e.stopPropagation(); menu.hidden = !menu.hidden; btn.setAttribute('aria-expanded', String(!menu.hidden)); };
+  menu.addEventListener('click', (e) => { if (e.target.closest('button')) close(); }, true);
+  document.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target) && e.target !== btn) close(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !menu.hidden) { close(); btn.focus(); } });
+})();
 $('pickProfile').onclick = () => send({ type: 'pickProfileImage' });
 $('clearProfile').onclick = () => send({ type: 'clearProfileImage' });
 function shownName(st) { return ((st && st.displayName) || S.userName || (st && st.userName) || '').trim(); }
@@ -1671,7 +1813,7 @@ function renderProfile(st) {
   const name = shownName(st);
   $('brandName').textContent = name || 'SumIT';
   $('brandSub').textContent = st.bio || (name ? 'SumIT' : 'כל הלימודים במקום אחד');
-  $('navLogo').innerHTML = img ? `<img src="${img}" alt="" class="brand-photo">` : ART.mascot();
+  $('navLogo').innerHTML = img ? `<img src="${img}" alt="" class="brand-photo">` : ART.logo();
   if (document.activeElement !== $('profName')) $('profName').value = st.displayName || '';
   if (document.activeElement !== $('profBio')) $('profBio').value = st.bio || '';
 }
@@ -2014,7 +2156,7 @@ function onMessage(m) {
     }
     case 'academicCalendar': S.academic = m.data; if (S.view === 'course') renderLectures(); break;
     case 'siteNav': followSummaryNavigation(m.url); { const onPortal = (instTechnion() ? /cheesefork\.cf/i : /webrashim\.hit\.ac\.il/i).test(m.url || ''); if (document.getElementById('portalHint').hidden === onPortal) { $('portalHint').hidden = !onPortal; requestAnimationFrame(() => placeSite(true)); } } { const oneFile = /\/pluginfile\.php\//i.test(m.url || ''); $('siteGetAllText').textContent = oneFile ? 'הורד את הקובץ לכאן' : 'הורד את כל הקבצים כאן'; $('siteGetAll').title = oneFile ? 'מוריד את הקובץ הפתוח אל הקורס והתיקייה שנבחרו' : 'מוריד את כל הקבצים שבתיקייה או בדף הפתוח (Moodle או CS24) אל הקורס והתיקייה שנבחרו'; } $('siteUrl').textContent = m.url || ''; $('siteBack').disabled = !m.canBack; $('siteForward').disabled = !m.canForward; break;
-    case 'timetable': S.timetable = m.data; renderTimetable(); break;
+    case 'timetable': S.timetable = m.data; renderTimetable(); if (S.view === 'home') renderHome(); if (S.view === 'course' && S.course) renderCourseHeader(); break;
     case 'prepStatus':
       S.prep = m.busy ? m : null; renderBanners();
       if (!m.busy && m.total) toast(`הקורסים שבחרת מוכנים במחשב (${m.total})`);
@@ -2064,7 +2206,7 @@ function start() {
   if (!host) return;
   host.addEventListener('message', e => onMessage(e.data));
   icons();
-  $('splashLogo').innerHTML = ART.mascot(); $('navLogo').innerHTML = ART.mascot();
+  $('splashLogo').innerHTML = ART.logo(); $('navLogo').innerHTML = ART.logo();
 
   renderHome(); renderTimetable(); refreshJobs(); renderStatus();
   send({ type: 'ready' });
