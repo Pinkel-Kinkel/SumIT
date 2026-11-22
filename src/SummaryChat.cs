@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -133,7 +133,7 @@ partial class HitStudent
         string args = "-p --output-format stream-json --verbose --include-partial-messages --strict-mcp-config --disable-slash-commands"
             + " --model " + Q(string.IsNullOrEmpty(model) ? "sonnet" : model) + " --effort medium"
             + " --tools " + Q(readImages ? "Read" : "");
-        var text = new StringBuilder();
+        var text = new System.Text.StringBuilder();
         var clock = System.Diagnostics.Stopwatch.StartNew();
         long lastSent = 0;
         return RunStream("summary-chat|" + Guid.NewGuid().ToString("N"), claude, args, dir, prompt, null, line =>
