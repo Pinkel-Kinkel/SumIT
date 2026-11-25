@@ -152,6 +152,7 @@
             </div>
           </div>
         </div>
+        <div class="course-offer" id="courseOffer" hidden></div>
         <div class="course-now" id="courseNow" hidden></div>
         <div class="tabs" id="courseTabs">
           <button data-tab="setup"><span data-ic="forward"></span>איך מתחילים<span class="badge" id="tabSetup"></span></button>
@@ -268,87 +269,115 @@
       </div>
     </section>
 
-    <!-- Settings -->
+    <!-- Settings: a short menu on the side, and one card per subject. -->
     <section class="view" id="view-settings">
-      <div class="page" style="max-width:880px">
-        <div class="head"><button id="sendDeveloperLogs" class="primary">שלח דוח למפתח</button><button id="exportDiagnostics">ייצוא דוח תקלות (Logs)</button><div class="grow"><h1>הגדרות</h1><p>החיבורים, התיקיות והמחברת.</p></div></div>
-        <section class="card pad-lg">
-          <div class="card-head"><h2>המנוע החכם</h2><span class="chip" id="aiChip"></span></div>
-          <div class="provider-cards" id="providers"></div>
-          <div class="setting" style="margin-top:14px">
-            <div class="grow"><b>חלוקת עבודה בין ה-AI</b><small>Claude בונה את הסיכומים (העבודה הכבדה). Gemini ו-ChatGPT עונים בצ'אט וקוראים דפים וסילבוס, וכך חוסכים את המכסה של Claude. אם אחד נגמר, השני ממשיך.</small></div>
-            <select id="helperPref" style="width:auto"><option value="auto">אוטומטי</option><option value="gemini">Gemini קודם</option><option value="openai">ChatGPT קודם</option><option value="claude">רק Claude</option></select>
+      <div class="page set-page">
+        <div class="set-head"><h1>הגדרות</h1><p>מה מחובר, איפה הקבצים נשמרים, ועם מי משתפים.</p></div>
+        <div class="set-layout">
+          <nav class="set-nav" id="setNav" aria-label="חלקי ההגדרות">
+            <a href="#set-ai" class="active"><span data-ic="sparkles"></span>AI</a>
+            <a href="#set-study"><span data-ic="book"></span>לימודים</a>
+            <a href="#set-share"><span data-ic="cloud"></span>שיתוף עם חברים</a>
+            <a href="#set-app"><span data-ic="settings"></span>האפליקציה</a>
+          </nav>
+          <div class="set-body">
+            <section class="card set-card" id="set-ai">
+              <div class="set-title"><div class="grow"><h2>AI</h2><p>Claude כותב את הסיכומים. Gemini ו-ChatGPT לא חובה: הם עונים בצ'אט וחוסכים מהמכסה של Claude.</p></div><span class="chip" id="aiChip"></span></div>
+              <div class="provider-cards set-providers" id="providers"></div>
+              <div class="setting">
+                <div class="grow"><b>מי עונה קודם בצ'אט</b><small>אם אחד נגמר, השני ממשיך לבד.</small></div>
+                <select id="helperPref" style="width:auto"><option value="auto">אוטומטי</option><option value="gemini">Gemini קודם</option><option value="openai">ChatGPT קודם</option><option value="claude">רק Claude</option></select>
+              </div>
+              <div class="setting" hidden>
+                <div class="grow"><b>מעבר אוטומטי כשנגמרת המכסה</b><small>כשהמנוע הראשי נגמר, השני ממשיך לבד.</small></div>
+                <label class="toggle"><input type="checkbox" id="optFallback"><span class="switch"></span></label>
+              </div>
+            </section>
+
+            <section class="card set-card" id="set-study">
+              <div class="set-title"><div class="grow"><h2>לימודים</h2><p>המוסד, ה-Moodle והתיקייה של הקורסים.</p></div></div>
+              <div class="setting">
+                <div class="grow"><b>מוסד לימודי</b><small>הכתובת של ה-Moodle והאתרים מתאימים את עצמם למוסד.</small></div>
+                <select id="institute" style="width:auto"><option value="hit">HIT</option><option value="technion">הטכניון</option></select>
+              </div>
+              <div class="setting">
+                <div class="grow"><b>Moodle</b><small>מתחברים פעם אחת. ההתחברות נשמרת רק במחשב שלך.</small></div>
+                <span class="chip" id="moodleChip"></span>
+                <button id="moodleConnect" class="small">התחבר</button>
+              </div>
+              <div class="setting" hidden>
+                <div class="grow"><b>כתובת ה-Moodle</b></div>
+                <input id="moodleUrl" dir="ltr" style="width:230px" placeholder="md.hit.ac.il" spellcheck="false">
+                <button id="moodleUrlSave">שמור</button>
+              </div>
+              <div class="setting">
+                <div class="grow"><b>תיקיית הקורסים</b><small>לכל קורס תיקייה, ובתוכה תיקייה לכל הרצאה.</small><span class="path" id="studyRoot">…</span></div>
+                <button id="openStudy" class="ghost small">פתח</button><button id="changeStudy" class="small">שנה</button>
+              </div>
+              <div class="setting" hidden>
+                <div class="grow"><b>Notability</b><span class="path" id="notabilityDir">לא נבחרה</span></div>
+                <button id="changeNotability">בחר תיקייה</button>
+              </div>
+            </section>
+
+            <section class="card set-card" id="set-share">
+              <div class="set-title"><div class="grow"><h2>שיתוף עם חברים</h2><p>הסיכומים שלך נשמרים בתיקייה ב-OneDrive, ורק מי שאתה מוסיף לתיקייה רואה אותם. חבר מדביק כאן את הקישור, ובכל קורס שיש לשניכם הוא בוחר אילו סיכומים לקחת.</p></div></div>
+              <div class="share-block">
+                <div class="share-sub"><b>הסיכומים שלי</b><small>בחר אילו קורסים לשתף. כל סיכום חדש בקורס כזה עולה לתיקייה לבד.</small></div>
+                <div class="setting">
+                  <div class="grow"><b>התיקייה שלי ב-OneDrive</b><span class="path" id="shareFolderPath">עוד לא נוצרה. היא תיווצר כשתשתף קורס ראשון.</span></div>
+                  <button class="ghost small" id="sharePick">בחר תיקייה אחרת</button><button class="soft small" id="shareOpen">פתח ובחר עם מי לשתף</button>
+                </div>
+                <div class="share-courses" id="shareCourses"></div>
+              </div>
+              <div class="share-block">
+                <div class="share-sub"><b>סיכומים של חברים</b><small>קיבלת קישור לתיקייה של חבר? הדבק אותו כאן. בדף שנפתח לוחצים "הוסף קיצור דרך אל הקבצים שלי", ואחרי שהתיקייה מופיעה ב-OneDrive במחשב לוחצים "חפש".</small></div>
+                <div class="share-link"><input id="syncLink" dir="ltr" placeholder="הדבק כאן את הקישור מהחבר (https://...)" spellcheck="false"><button class="primary small" id="syncLinkGo">פתח קישור</button><button class="small" id="syncFind">חפש</button><button class="ghost small" id="syncPick">בחר ידנית</button></div>
+                <div class="friend-list" id="friendList"></div>
+              </div>
+            </section>
+
+            <section class="card set-card" id="set-alerts" hidden>
+              <div class="set-title"><div class="grow"><h2>התראות והורדות</h2></div></div>
+              <div class="setting">
+                <div class="grow"><b>חומר חדש ב-Moodle</b><small>בודק כל כמה שעות אם המרצה העלה משהו, ושואל אם להוריד.</small></div>
+                <label class="toggle"><input type="checkbox" id="optSync"><span class="switch"></span></label>
+              </div>
+              <div class="setting">
+                <div class="grow"><b>גם הקלטות</b><small>הקלטות Zoom עם תמלול. בערך 300MB לשיעור.</small></div>
+                <label class="toggle"><input type="checkbox" id="optRec"><span class="switch"></span></label>
+              </div>
+            </section>
+
+            <section class="card set-card" id="set-app">
+              <div class="set-title"><div class="grow"><h2>האפליקציה</h2></div></div>
+              <div class="setting">
+                <div class="grow"><b>מראה</b></div>
+                <select id="themeSelect" style="width:auto"><option value="system">לפי Windows</option><option value="light">בהיר</option><option value="dark">כהה</option></select>
+              </div>
+              <div class="setting">
+                <div class="grow"><b>עדכונים אוטומטיים</b><small id="versionText"></small><small id="updateCheckText" class="muted"></small></div><button class="soft small" id="checkUpdate">בדוק עכשיו</button>
+                <label class="toggle"><input type="checkbox" id="optUpdate"><span class="switch"></span></label>
+              </div>
+              <div class="setting" id="refreshSummariesRow" hidden style="display:none">
+                <div class="grow"><b>סיכומים בפורמט הישן</b><small id="refreshSummariesText"></small></div>
+                <button class="primary small" id="refreshSummaries">בנה אותם מחדש</button>
+              </div>
+              <div class="setting" hidden style="display:none">
+                <div class="grow"><b>קובץ ה-PDF בצבעים כהים</b></div>
+                <label class="toggle"><input type="checkbox" id="optPdfDark"><span class="switch"></span></label>
+              </div>
+              <div class="setting">
+                <div class="grow"><b>מסך הפתיחה</b><small>להציג שוב את ההדרכה של הפעם הראשונה.</small></div>
+                <button class="ghost small" id="showWelcome">הצג</button>
+              </div>
+              <div class="setting">
+                <div class="grow"><b>משהו לא עובד?</b><small>שולח למפתח דוח עם מה שקרה (בלי הקבצים שלך).</small></div>
+                <button class="ghost small" id="exportDiagnostics">שמור דוח תקלות</button><button class="soft small" id="sendDeveloperLogs">שלח דוח למפתח</button>
+              </div>
+            </section>
           </div>
-        </section>
-        <section class="card pad-lg" style="margin-top:16px">
-          <div class="setting">
-            <div class="grow"><b>התחברות ל-Moodle</b><small>מתחברים פעם אחת עם המשתמש של המוסד. ההתחברות נשמרת רק במחשב שלך.</small></div>
-            <span class="chip" id="moodleChip"></span>
-            <button id="moodleConnect">התחבר</button>
-          </div>
-          <div class="setting">
-            <div class="grow"><b>מוסד לימודי</b><small>HIT או הטכניון. הכתובת של ה-Moodle, שם התיקייה והאתרים מתאימים את עצמם למוסד שבחרת.</small></div>
-            <select id="institute" style="width:auto"><option value="hit">HIT</option><option value="technion">הטכניון</option></select>
-          </div>
-          <div class="setting" hidden>
-            <div class="grow"><b>כתובת ה-Moodle</b><small>נקבעת לפי המוסד. אם ה-Moodle שלך בכתובת אחרת, אפשר להקליד אותה כאן ואז ללחוץ "התחבר".</small></div>
-            <input id="moodleUrl" dir="ltr" style="width:230px" placeholder="md.hit.ac.il" spellcheck="false">
-            <button id="moodleUrlSave">שמור</button>
-          </div>
-          <div class="setting">
-            <div class="grow"><b>תיקיית הקורסים</b><small>לכל קורס תיקייה, ובתוכה תיקייה לכל שיעור, מבחנים ומחברת.</small><span class="path" id="studyRoot">…</span></div>
-            <button id="changeStudy">שנה</button><button id="openStudy" class="ghost">פתח</button>
-          </div>
-          <div class="setting" hidden>
-            <div class="grow"><b>תיקייה משותפת עם חברים</b><small>תיקיית OneDrive שמסונכרנת במחשב ומשותפת בין החברים. מי שכותב סיכומים מפרסם אותם לשם, וחבר שיש לו את אותו קורס מקבל הודעה ומוריד אותם.</small><span class="path" id="syncFolderPath">לא נבחרה</span></div>
-            <button id="syncFind">חפש את התיקייה</button><button id="syncPick" class="ghost">בחר ידנית</button>
-          </div>
-          <div class="setting" hidden>
-            <div class="grow"><b>קישור שקיבלת מחבר</b><small>הדבק את הקישור של התיקייה המשותפת ב-OneDrive. הוא ייפתח, ושם לוחצים "הוסף קיצור דרך אל הקבצים שלי". אחרי שהתיקייה מופיעה ב-OneDrive במחשב, לוחצים "חפש את התיקייה".</small></div>
-            <input id="syncLink" dir="ltr" style="width:230px" placeholder="https://..." spellcheck="false"><button id="syncLinkGo">פתח</button>
-          </div>
-          <div class="setting" hidden>
-            <div class="grow"><b>לפרסם את הסיכומים שלי</b><small>כל סיכום שמסתיים נשמר גם בתיקייה המשותפת, ו-OneDrive מעלה אותו. החברים מקבלים הודעה שיש סיכומים חדשים.</small></div>
-            <button id="syncPublishAll" class="soft small">פרסם עכשיו</button>
-            <label class="toggle"><input type="checkbox" id="optAutoPublish"><span class="switch"></span></label>
-          </div>
-          <div class="setting" hidden>
-            <div class="grow"><b>Notability</b><small>ב-Notability: הגדרות › גיבוי אוטומטי › Google Drive / OneDrive / Dropbox, בפורמט PDF. אחר כך בוחרים כאן את תיקיית הגיבוי שמסונכרנת למחשב.</small><span class="path" id="notabilityDir">לא נבחרה</span></div>
-            <button id="changeNotability">בחר תיקייה</button>
-          </div>
-          <div class="setting">
-            <div class="grow"><b>מראה</b><small>בהיר, כהה, או לפי ההגדרה של Windows.</small></div>
-            <select id="themeSelect" style="width:auto"><option value="system">לפי Windows</option><option value="light">בהיר</option><option value="dark">כהה</option></select>
-          </div>
-          <div class="setting">
-            <div class="grow"><b>התראה על חומר חדש</b><small>כל כמה שעות בודק אם המרצה העלה משהו חדש ל-Moodle, ושואל אותך אם להוריד ולעדכן את הסיכום.</small></div>
-            <label class="toggle"><input type="checkbox" id="optSync"><span class="switch"></span></label>
-          </div>
-          <div class="setting">
-            <div class="grow"><b>גם הקלטות</b><small>להוריד אוטומטית הקלטות Zoom שמופיעות בקורס (עם תמלול). הן גדולות, בערך 300MB לשיעור.</small></div>
-            <label class="toggle"><input type="checkbox" id="optRec"><span class="switch"></span></label>
-          </div>
-          <div class="setting" hidden>
-            <div class="grow"><b>מעבר אוטומטי כשנגמרת המכסה</b><small>כש-Claude ו-Gemini מחוברים שניהם: כשנגמרת המכסה של המנוע הראשי, השני ממשיך לבד. את המנוע הראשי בוחרים בכרטיסים למעלה.</small></div>
-            <label class="toggle"><input type="checkbox" id="optFallback"><span class="switch"></span></label>
-          </div>
-          <div class="setting">
-            <div class="grow"><b>עדכונים אוטומטיים</b><small id="versionText"></small><small id="updateCheckText" class="muted"></small></div><button class="soft small" id="checkUpdate">בדוק עדכונים</button>
-            <label class="toggle"><input type="checkbox" id="optUpdate"><span class="switch"></span></label>
-          </div>
-          <div class="setting" id="refreshSummariesRow" hidden style="display:none">
-            <div class="grow"><b>סיכומים בפורמט הישן</b><small id="refreshSummariesText"></small></div>
-            <button class="primary small" id="refreshSummaries">בנה אותם מחדש</button>
-          </div>
-          <div class="setting" hidden style="display:none">
-            <div class="grow"><b>קובץ ה-PDF בצבעים כהים</b><small>כבוי: ה-PDF בהיר, נוח להדפסה ולקריאה. הדף האינטראקטיבי באפליקציה תמיד לפי מצב הצבעים שבחרת.</small></div>
-            <label class="toggle"><input type="checkbox" id="optPdfDark"><span class="switch"></span></label>
-          </div>
-          <div class="setting">
-            <div class="grow"><b>מסך הפתיחה</b><small>להציג שוב את ההדרכה של הפעם הראשונה.</small></div>
-            <button class="ghost" id="showWelcome">הצג</button>
-          </div>
-        </section>
+        </div>
       </div>
     </section>
   </main>

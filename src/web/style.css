@@ -1642,3 +1642,79 @@ html[data-theme=dark] #view-home .hero { background:
 @media (prefers-reduced-motion: reduce) { #view-home .hero .illus::after { animation: none; } }
 html[data-theme] #view-home .hero h1 { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: #fff; }
 html[data-theme] #view-home .hero { border-radius: 26px; }
+
+/* A lecture is green only once it is ticked as finished; a ready summary that was not read yet is blue. */
+.lec-grid .lecture[data-state=ready] { --edge-c: var(--accent); --edge: color-mix(in srgb, var(--accent) 60%, transparent); }
+.lec-st.ready { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+.lec-grid .lecture:not([data-state=ok]) .lec-go button.quick-summary { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+
+/* Settings: a short menu on the side and one card per subject. */
+.set-page { max-width: 1080px; }
+.set-head h1 { margin: 0; font-size: 34px; }
+.set-head p { margin: 6px 0 0; color: var(--muted); }
+.set-layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 24px; margin-top: 24px; align-items: start; }
+.set-nav { position: sticky; top: 18px; display: flex; flex-direction: column; gap: 4px; padding: 8px; border-radius: 18px; background: var(--surface); border: 1px solid var(--border); }
+.set-nav a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; color: var(--muted); font-weight: 600; font-size: 14px; text-decoration: none; transition: background .2s, color .2s; }
+.set-nav a svg { width: 18px; height: 18px; }
+.set-nav a:hover { background: var(--surface-2); color: var(--text); }
+.set-nav a.active { background: var(--accent-soft); color: var(--accent-text, var(--accent)); }
+.set-body { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.set-card { padding: 22px 24px; border-radius: 22px; scroll-margin-top: 18px; }
+.set-title { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
+.set-title h2 { margin: 0; font-size: 19px; }
+.set-title p { margin: 4px 0 0; color: var(--muted); font-size: 13.5px; line-height: 1.6; max-width: 640px; }
+.set-card .setting { padding: 14px 0; border-top: 1px solid var(--border); gap: 10px; }
+.set-card .setting:first-of-type { border-top: 0; }
+.set-card .set-title + .setting { border-top: 1px solid var(--border); }
+@media (max-width: 900px) { .set-layout { grid-template-columns: 1fr; } .set-nav { position: static; flex-direction: row; flex-wrap: wrap; } }
+
+/* AI: one compact row per service instead of big cards. */
+.set-providers { grid-template-columns: 1fr; gap: 8px; margin: 10px 0 6px; }
+.set-providers .provider { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "ph state act" "ph more more"; align-items: center; column-gap: 14px; padding: 12px 14px; border-width: 1px; border-radius: 14px; cursor: default; }
+.set-providers .provider:hover { transform: none; box-shadow: none; }
+.set-providers .provider.selected { box-shadow: none; border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+.set-providers .provider .ph { grid-area: ph; margin: 0; }
+.set-providers .provider .ph h3 { margin: 0; font-size: 15px; }
+.set-providers .provider > p { display: none; }
+.set-providers .provider .tag { position: static; grid-area: state; justify-self: start; display: none; }
+.set-providers .provider .state { grid-area: state; min-height: 0; }
+.set-providers .provider .state:empty::before { content: "לא מחובר · לא חובה"; color: var(--muted); font-weight: 500; }
+.set-providers .provider .act { grid-area: act; margin: 0; justify-content: flex-end; }
+.set-providers .provider .act .muted, .set-providers .provider .act .row, .set-providers .provider .act .link { display: none; }
+.set-providers .provider .adv, .set-providers .provider .test-line, .set-providers .provider .auth-code { grid-area: more; margin-top: 8px; }
+
+/* Sharing with friends. */
+.share-block { padding: 14px 0 6px; border-top: 1px solid var(--border); }
+.share-sub { margin-bottom: 4px; }
+.share-sub b { display: block; font-size: 15px; }
+.share-sub small { display: block; color: var(--muted); font-size: 13px; line-height: 1.6; margin-top: 2px; }
+.share-courses { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; margin-top: 4px; }
+.share-course { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface-2); cursor: pointer; font-weight: 600; font-size: 14px; }
+.share-course small { font-weight: 600; color: var(--ok); }
+.share-course.big { align-items: flex-start; padding: 14px 16px; }
+.share-course.big b { display: block; }
+.share-course.big small { display: block; color: var(--muted); font-weight: 500; margin-top: 4px; line-height: 1.6; }
+.share-link { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.share-link input { flex: 1; min-width: 220px; }
+.friend-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.friend { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface-2); }
+.friend-av { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2)); flex: none; }
+.friend b { display: block; font-size: 14px; }
+.friend .path { display: block; margin: 2px 0 0; font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* In a course: a friend's summaries are ready. */
+.course-offer { display: flex; align-items: center; gap: 14px; margin: 0 0 16px; padding: 14px 18px; border-radius: 18px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, var(--surface)), var(--surface)); border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border)); animation: heroIn .5s var(--ease) both; }
+.course-offer[hidden] { display: none; }
+.course-offer .offer-ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); flex: none; }
+.course-offer b { display: block; font-size: 15px; }
+.course-offer small { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
+.offer-pick .card, .share-dlg .card { width: min(520px, 94vw); max-height: 86vh; overflow: auto; }
+.offer-pick h2, .share-dlg h2 { margin-top: 0; }
+.offer-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.offer-list .check-row { padding: 10px 14px; cursor: pointer; }
+.offer-list .check-row + .check-row { margin-top: 0; }
+.offer-list input { width: 18px; height: 18px; }
+.num-pill { min-width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; font-weight: 800; font-size: 13px; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+.share-dlg .or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; margin: 14px 0; }
+.share-dlg .or::before, .share-dlg .or::after { content: ""; flex: 1; height: 1px; background: var(--border); }

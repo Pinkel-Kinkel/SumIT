@@ -125,6 +125,6 @@ partial class HitStudent
     }
     static bool IsOneDrivePage(string value)
     {
-        Uri uri;return Uri.TryCreate(value,UriKind.Absolute,out uri) && (uri.Host.Equals("onedrive.live.com",StringComparison.OrdinalIgnoreCase)||uri.Host.EndsWith(".sharepoint.com",StringComparison.OrdinalIgnoreCase));
+        Uri uri;return Uri.TryCreate(value,UriKind.Absolute,out uri) && (uri.Host.Equals("onedrive.live.com",StringComparison.OrdinalIgnoreCase)||uri.Host.Equals("1drv.ms",StringComparison.OrdinalIgnoreCase)||uri.Host.EndsWith(".sharepoint.com",StringComparison.OrdinalIgnoreCase));
     }
 }

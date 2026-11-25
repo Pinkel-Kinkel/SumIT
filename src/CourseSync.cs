@@ -8,14 +8,55 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-// Sharing summaries with friends through a shared folder that OneDrive keeps in sync:
-//  - the one who writes the summaries "publishes" them into the folder (one ZIP per lecture + an index file);
-//  - a friend who has the same course sees "N new summaries" and downloads them into that course, next to his own.
+// Sharing summaries with friends through folders that OneDrive keeps in sync:
+//  - the student picks which of his courses to share; every finished summary of such a course is written into his own
+//    folder in OneDrive (one ZIP per lecture + an index file), and he shares that folder in OneDrive with whom he wants;
+//  - a friend adds that folder to his OneDrive from the link, and in each course they both have he is asked whether to
+//    use the summaries, and picks which ones.
 // A whole course can also travel as one ZIP file (the same folder layout, zipped), also for courses that are not from Moodle.
 partial class HitStudent
 {
     const string SyncIndexName = "sumit-sync.json";
-    string SyncFolder { get { return Str(settings, "syncFolder"); } }
+    string SyncFolder { get { return Str(settings, "syncFolder"); } }   // the single shared folder of older versions
+    string MyShareFolder { get { return Str(settings, "shareFolder"); } }
+
+    List<string> SettingList(string key)
+    {
+        var l = settings.ContainsKey(key) ? settings[key] as ArrayList : null;
+        return l == null ? new List<string>() : l.Cast<object>().Select(o => Convert.ToString(o)).Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
+    }
+    void SetSettingList(string key, IEnumerable<string> list) { settings[key] = new ArrayList(list.Distinct(StringComparer.OrdinalIgnoreCase).ToList()); SaveSettings(); }
+
+    List<string> SharedCourses() { return SettingList("shareCourses"); }
+    bool IsShared(string course) { return SharedCourses().Any(c => c.Trim() == course.Trim()); }
+
+    // Friends' folders the student added; the old single folder counts as one when someone else published into it.
+    List<string> FriendFolders()
+    {
+        var list = SettingList("friendFolders");
+        string old = SyncFolder;
+        if (old.Length > 0 && Directory.Exists(old) && !PublishedByMe(ReadSyncIndex(old)) && !list.Contains(old, StringComparer.OrdinalIgnoreCase)) list.Add(old);
+        return list;
+    }
+
+    // The student's own folder, made in his OneDrive the first time a course is shared.
+    string EnsureShareFolder()
+    {
+        string f = MyShareFolder;
+        if (f.Length > 0 && Directory.Exists(f)) return f;
+        string old = SyncFolder;
+        if (old.Length > 0 && Directory.Exists(old) && PublishedByMe(ReadSyncIndex(old))) f = old;
+        else
+        {
+            string od = InstOneDrive();
+            if (od.Length == 0 || !Directory.Exists(od)) { try { od = Directory.GetDirectories(Home, "OneDrive*").FirstOrDefault() ?? ""; } catch { od = ""; } }
+            if (od.Length == 0) return null;
+            f = Path.Combine(od, "SumIT - הסיכומים שלי");
+        }
+        Directory.CreateDirectory(f);
+        settings["shareFolder"] = f; SaveSettings();
+        return f;
+    }
     DateTime lastSyncCheck = DateTime.MinValue;
     bool syncBusy;
 
@@ -129,11 +170,11 @@ partial class HitStudent
         foreach (string d in Directory.GetDirectories(StudyRoot)) { string n = Path.GetFileName(d); if (!n.StartsWith(".")) yield return n; }
     }
 
-    // course == null: every course that has a finished summary.
+    // course == null: every course the student shares.
     async Task PublishToFolder(string course, bool quiet)
     {
-        string folder = SyncFolder;
-        if (folder.Length == 0 || !Directory.Exists(folder)) { if (!quiet) Toast("בחר קודם תיקייה משותפת בהגדרות", true); return; }
+        string folder = EnsureShareFolder();
+        if (folder == null) { if (!quiet) Toast("לא מצאתי OneDrive במחשב. בחר תיקייה בהגדרות › שיתוף עם חברים", true); return; }
         if (syncBusy) return;
         syncBusy = true;
         try
@@ -142,42 +183,51 @@ partial class HitStudent
             {
                 var index = ReadSyncIndex(folder);
                 int total = 0;
-                foreach (string name in course != null ? new[] { course } : LocalCourseNames().ToArray()) total += PublishCourseTo(folder, name, index);
+                foreach (string name in course != null ? new[] { course } : SharedCourses().Where(n => Directory.Exists(CourseDir(n))).ToArray()) total += PublishCourseTo(folder, name, index);
                 WriteSyncIndex(folder, index);
                 return total;
             });
-            if (!quiet) Toast(written > 0 ? "פורסמו " + written + " סיכומים בתיקייה המשותפת. OneDrive יעלה אותם, והחברים יקבלו הודעה." : "הכל כבר מעודכן בתיקייה המשותפת", false);
+            if (!quiet) Toast(written > 0 ? "שותפו " + written + " סיכומים. OneDrive מעלה אותם, ומי שיש לו גישה לתיקייה יראה אותם בקורס." : "הכל כבר מעודכן בתיקייה המשותפת", false);
         }
         catch (Exception ex) { Toast("הפרסום נכשל: " + ex.Message, true); }
         finally { syncBusy = false; SendSyncState(); }
     }
 
-    // Summaries in the shared folder for courses this student has, that he has not downloaded yet.
+    // Summaries in a friend's folder for courses this student has, that he has neither taken nor turned down.
     List<Dictionary<string, object>> SyncOffers(string folder)
     {
         var offers = new List<Dictionary<string, object>>();
         var index = ReadSyncIndex(folder);
         var courses = Dict(index, "courses");
         if (courses == null || PublishedByMe(index)) return offers;
+        string publisher = Str(index, "publisher");
         var seenNames = new HashSet<string>();
         foreach (var kv in courses)
         {
             string name = kv.Key.Trim();
             if (!seenNames.Add(name) || !Directory.Exists(CourseDir(name))) continue;
             var lects = Dict(kv.Value as Dictionary<string, object>, "lectures"); if (lects == null) continue;
-            var done = Dict(LoadMeta(name), "syncImported") ?? new Dictionary<string, object>();
-            int count = lects.Count(l => Str(l.Value as Dictionary<string, object>, "stamp") != Str(done, l.Key));
-            if (count > 0) offers.Add(new Dictionary<string, object> { { "course", name }, { "count", count } });
+            var meta = LoadMeta(name);
+            var done = Dict(meta, "syncImported") ?? new Dictionary<string, object>();
+            var declined = Dict(meta, "syncDeclined") ?? new Dictionary<string, object>();
+            var list = new List<object>();
+            foreach (var l in lects)
+            {
+                var info = l.Value as Dictionary<string, object>; string stamp = Str(info, "stamp"); int num;
+                if (info == null || !int.TryParse(l.Key, out num) || stamp == Str(done, l.Key) || stamp == Str(declined, l.Key)) continue;
+                list.Add(new Dictionary<string, object> { { "num", num }, { "title", Str(info, "title") } });
+            }
+            if (list.Count > 0) offers.Add(new Dictionary<string, object> { { "course", name }, { "count", list.Count }, { "folder", folder }, { "publisher", publisher }, { "lectures", list.OrderBy(o => Int((Dictionary<string, object>)o, "num")).ToList() } });
         }
         return offers;
     }
 
     void SendSyncState()
     {
-        string folder = SyncFolder;
-        bool ok = folder.Length > 0 && Directory.Exists(folder);
-        var offers = ok ? SyncOffers(folder) : new List<Dictionary<string, object>>();
-        Send(new { type = "syncState", folder = folder, ok = ok, offers = offers, publisher = ok ? Str(ReadSyncIndex(folder), "publisher") : "" });
+        var friends = FriendFolders().Select(f => { bool ok = Directory.Exists(f); return new { path = f, ok = ok, publisher = ok ? Str(ReadSyncIndex(f), "publisher") : "" }; }).ToList();
+        var offers = new List<Dictionary<string, object>>();
+        foreach (var f in friends) if (f.ok) offers.AddRange(SyncOffers(f.path));
+        Send(new { type = "syncState", ok = friends.Any(f => f.ok), offers = offers, shareFolder = MyShareFolder, shareCourses = SharedCourses(), friends = friends });
     }
 
     // Called from the periodic status poll, but only every few minutes.
@@ -185,11 +235,11 @@ partial class HitStudent
     {
         if (DateTime.Now - lastSyncCheck < TimeSpan.FromMinutes(3)) return;
         lastSyncCheck = DateTime.Now;
-        if (SyncFolder.Length > 0) SendSyncState();
+        SendSyncState();
     }
 
     // Downloads (unpacks) the new summaries of one course, or of every course, into the course folders.
-    async Task ImportFromFolder(string folder, string onlyCourse, bool createMissing)
+    async Task ImportFromFolder(string folder, string onlyCourse, bool createMissing, HashSet<int> onlyNums = null)
     {
         try
         {
@@ -214,7 +264,7 @@ partial class HitStudent
                 foreach (var l in lects.OrderBy(x => Int(new Dictionary<string, object> { { "n", x.Key } }, "n")))
                 {
                     var info = l.Value as Dictionary<string, object>; int num = Int(new Dictionary<string, object> { { "n", l.Key } }, "n");
-                    if (info == null || num < 1 || num > 200 || Str(info, "stamp") == Str(seen, l.Key)) continue;
+                    if (info == null || num < 1 || num > 200 || Str(info, "stamp") == Str(seen, l.Key) || (onlyNums != null && !onlyNums.Contains(num))) continue;
                     string zip = Path.GetFullPath(Path.Combine(folder, Str(info, "file").Replace('/', Path.DirectorySeparatorChar)));
                     if (!IsInside(zip, folder) || !File.Exists(zip)) continue;   // not uploaded yet by OneDrive, or a bad path
                     string dest = Path.Combine(CourseDir(name), SumitDir, "shared", Guid.NewGuid().ToString("N"));
@@ -242,7 +292,7 @@ partial class HitStudent
                 }
                 SendCourseLocal(name);
             }
-            Toast(got > 0 ? "הורדתי " + got + " סיכומים של חברים. הם מופיעים בהרצאה, ליד הסיכום שלך." : "אין סיכומים חדשים להורדה", false);
+            Toast(got > 0 ? (got == 1 ? "הוספתי סיכום אחד של " : "הוספתי " + got + " סיכומים של ") + (publisher.Length > 0 ? publisher : "חבר") + ". הם מופיעים בהרצאות, ליד הסיכומים שלך." : "אין סיכומים חדשים להוספה", false);
             var after = LoadCoursesQuietly(); // the course list shows the new lectures
         }
         catch (Exception ex) { Toast("ההורדה מהתיקייה המשותפת נכשלה: " + ex.Message, true); }
@@ -333,35 +383,39 @@ partial class HitStudent
     // ---------- The folder itself ----------
 
     // The shared folder, once it was added to the friend's OneDrive ("Add shortcut to My files"): found by its index file.
-    string FindSharedFolder()
+    List<string> FindSharedFolders()
     {
-        var roots = new List<string>();
+        var roots = new List<string>(); var found = new List<string>();
         string od = InstOneDrive(); if (od.Length > 0) roots.Add(od);
         try { roots.AddRange(Directory.GetDirectories(Home, "OneDrive*")); } catch { }
-        foreach (string root in roots.Distinct(StringComparer.OrdinalIgnoreCase))
-        {
-            string found = SearchMarker(root, 0);
-            if (found != null) return found;
-        }
-        return null;
+        foreach (string root in roots.Distinct(StringComparer.OrdinalIgnoreCase)) SearchMarkers(root, 0, found);
+        return found.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
     }
 
-    static string SearchMarker(string dir, int depth)
+    static void SearchMarkers(string dir, int depth, List<string> found)
     {
         try
         {
-            if (File.Exists(Path.Combine(dir, SyncIndexName))) return dir;
-            if (depth >= 3) return null;
+            if (File.Exists(Path.Combine(dir, SyncIndexName))) { found.Add(dir); return; }
+            if (depth >= 3) return;
             foreach (string d in Directory.GetDirectories(dir))
             {
                 string n = Path.GetFileName(d);
                 if (n.StartsWith(".") || n.Equals("קורסים", StringComparison.OrdinalIgnoreCase)) continue;
-                string hit = SearchMarker(d, depth + 1);
-                if (hit != null) return hit;
+                SearchMarkers(d, depth + 1, found);
             }
         }
         catch { }
-        return null;
+    }
+
+    // A folder is a friend's when someone else published into it (and it is not the student's own folder).
+    bool AddFriendFolder(string path)
+    {
+        if (string.IsNullOrEmpty(path) || !Directory.Exists(path) || string.Equals(path, MyShareFolder, StringComparison.OrdinalIgnoreCase) || PublishedByMe(ReadSyncIndex(path))) return false;
+        var list = SettingList("friendFolders");
+        if (list.Contains(path, StringComparer.OrdinalIgnoreCase)) return false;
+        list.Add(path); SetSettingList("friendFolders", list);
+        return true;
     }
 
     void SyncMessage(string type, Dictionary<string, object> m)
@@ -369,20 +423,70 @@ partial class HitStudent
         switch (type)
         {
             case "syncState": SendSyncState(); break;
-            case "pickSyncFolder":
-                using (var dlg = new FolderBrowserDialog { Description = "בחר את התיקייה המשותפת (בתוך OneDrive)" })
+            case "pickSyncFolder":   // a friend's folder, picked by hand
+                using (var dlg = new FolderBrowserDialog { Description = "בחר את התיקייה של החבר (בתוך OneDrive)" })
                 {
-                    if (Directory.Exists(SyncFolder)) dlg.SelectedPath = SyncFolder;
+                    string od = InstOneDrive(); if (Directory.Exists(od)) dlg.SelectedPath = od;
                     if (dlg.ShowDialog(this) != DialogResult.OK) return;
-                    settings["syncFolder"] = dlg.SelectedPath; SaveSettings(); SendSettings(); SendSyncState();
+                    if (!File.Exists(Path.Combine(dlg.SelectedPath, SyncIndexName))) { Toast("בתיקייה הזו עוד אין סיכומים של SumIT. אם היא עוד מסתנכרנת, חכה רגע ונסה שוב.", true); break; }
+                    Toast(AddFriendFolder(dlg.SelectedPath) ? "התיקייה של החבר נוספה" : "התיקייה הזו כבר ברשימה, או שהיא שלך", false);
+                    SendSyncState();
                 }
                 break;
             case "findSyncFolder":
                 {
-                    string found = FindSharedFolder();
-                    if (found == null) { Toast("לא מצאתי את התיקייה ב-OneDrive. ודא שהוספת אותה ('הוסף קיצור דרך אל הקבצים שלי'), חכה שתסתנכרן, ונסה שוב. אפשר גם לבחור אותה ידנית.", true); break; }
-                    settings["syncFolder"] = found; SaveSettings(); SendSettings(); lastSyncCheck = DateTime.MinValue; SendSyncState();
-                    Toast("מצאתי את התיקייה המשותפת", false);
+                    int added = FindSharedFolders().Count(AddFriendFolder);
+                    lastSyncCheck = DateTime.MinValue; SendSyncState();
+                    if (added > 0) Toast(added == 1 ? "מצאתי תיקייה של חבר. בקורסים שיש לשניכם תשאל אם להשתמש בסיכומים." : "מצאתי " + added + " תיקיות של חברים", false);
+                    else Toast("לא מצאתי תיקייה חדשה ב-OneDrive. ודא שלחצת בקישור 'הוסף קיצור דרך אל הקבצים שלי', חכה שהיא תסתנכרן למחשב, ונסה שוב.", true);
+                }
+                break;
+            case "removeFriendFolder":
+                {
+                    string p = Str(m, "path");
+                    SetSettingList("friendFolders", SettingList("friendFolders").Where(x => !string.Equals(x, p, StringComparison.OrdinalIgnoreCase)));
+                    if (string.Equals(SyncFolder, p, StringComparison.OrdinalIgnoreCase)) { settings["syncFolder"] = ""; SaveSettings(); }
+                    SendSyncState();
+                }
+                break;
+            case "setCourseShare":
+                {
+                    string course = Str(m, "course").Trim(); bool on = Bool(m, "on");
+                    var list = SharedCourses().Where(c => c.Trim() != course).ToList();
+                    if (on) list.Add(course);
+                    SetSettingList("shareCourses", list);
+                    if (on) { var p = PublishToFolder(course, false); }
+                    else UnpublishCourse(course);
+                    SendSyncState();
+                }
+                break;
+            case "openShareFolder":
+                {
+                    string f = EnsureShareFolder();
+                    if (f == null) { Toast("לא מצאתי OneDrive במחשב. בחר תיקייה ידנית", true); break; }
+                    OpenLocal(f);
+                    Toast("בחלון שנפתח: קליק ימני על התיקייה שמעל, 'שיתוף' (OneDrive), והוסף את מי שמותר לו לראות. שלח לו את הקישור.", false);
+                }
+                break;
+            case "pickShareFolder":
+                using (var dlg = new FolderBrowserDialog { Description = "בחר תיקייה בתוך OneDrive לסיכומים שאתה משתף" })
+                {
+                    if (Directory.Exists(MyShareFolder)) dlg.SelectedPath = MyShareFolder;
+                    if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                    settings["shareFolder"] = dlg.SelectedPath; SaveSettings();
+                    if (SharedCourses().Count > 0) { var p = PublishToFolder(null, false); } else SendSyncState();
+                }
+                break;
+            case "syncDecline":
+                {
+                    string course = Str(m, "course"); string folder = Str(m, "folder");
+                    if (!FriendFolders().Contains(folder, StringComparer.OrdinalIgnoreCase)) break;
+                    var entry = Dict(Dict(ReadSyncIndex(folder), "courses") ?? new Dictionary<string, object>(), course);
+                    var lects = Dict(entry, "lectures"); if (lects == null) break;
+                    var meta = LoadMeta(course); var declined = Dict(meta, "syncDeclined") ?? new Dictionary<string, object>();
+                    foreach (var l in lects) declined[l.Key] = Str(l.Value as Dictionary<string, object>, "stamp");
+                    meta["syncDeclined"] = declined; SaveMeta(course, meta);
+                    SendSyncState();
                 }
                 break;
             case "openSyncLink":
@@ -390,20 +494,41 @@ partial class HitStudent
                     string url = Str(m, "url").Trim();
                     if (!IsOneDrivePage(url)) { Toast("זה לא נראה כמו קישור משותף של OneDrive", true); break; }
                     OpenExternal(url);
-                    Toast("הקישור נפתח בדפדפן. לחץ שם 'הוסף קיצור דרך אל הקבצים שלי', חכה שהתיקייה תופיע ב-OneDrive במחשב, ואז לחץ כאן 'חפש את התיקייה'.", false);
+                    Toast("הקישור נפתח בדפדפן. לחץ שם 'הוסף קיצור דרך אל הקבצים שלי', חכה שהתיקייה תופיע ב-OneDrive במחשב, ואז לחץ כאן 'חפש'.", false);
                 }
                 break;
             case "syncPublish": var p1 = PublishToFolder(Str(m, "course").Length > 0 ? Str(m, "course") : null, false); break;
             case "syncImport":
-                if (SyncFolder.Length == 0 || !Directory.Exists(SyncFolder)) { Toast("בחר קודם תיקייה משותפת בהגדרות", true); break; }
-                if (PublishedByMe(ReadSyncIndex(SyncFolder))) { Toast("הסיכומים בתיקייה המשותפת הם שלך, אין מה להוריד", false); SendSyncState(); break; }
-                var p2 = ImportFromFolder(SyncFolder, Str(m, "course").Length > 0 ? Str(m, "course") : null, false);
+                {
+                    string folder = Str(m, "folder");
+                    if (!FriendFolders().Contains(folder, StringComparer.OrdinalIgnoreCase) || !Directory.Exists(folder)) { Toast("התיקייה של החבר לא נמצאה במחשב", true); SendSyncState(); break; }
+                    HashSet<int> nums = null;
+                    var raw = m.ContainsKey("nums") ? m["nums"] as ArrayList : null;
+                    if (raw != null) nums = new HashSet<int>(raw.Cast<object>().Select(o => Convert.ToInt32(o)));
+                    var p2 = ImportFromFolder(folder, Str(m, "course").Length > 0 ? Str(m, "course") : null, false, nums);
+                }
                 break;
             case "exportCourseZip": ExportCourseZip(Str(m, "course")); break;
             case "importCourseZip": ImportCourseZip(null); break;
         }
     }
 
-    // Publishing finished summaries to the shared folder was removed from the settings, so nothing is published anymore.
-    void AutoPublishSummary(string course) { }
+    // A finished summary of a shared course goes to the student's folder by itself.
+    void AutoPublishSummary(string course) { if (IsShared(course)) { var t = PublishToFolder(course, true); } }
+
+    // A course the student stopped sharing leaves his folder.
+    void UnpublishCourse(string course)
+    {
+        string folder = MyShareFolder;
+        if (folder.Length == 0 || !Directory.Exists(folder)) return;
+        try
+        {
+            var index = ReadSyncIndex(folder); var courses = Dict(index, "courses");
+            if (courses != null) foreach (string k in courses.Keys.Where(k => k.Trim() == course.Trim()).ToList()) courses.Remove(k);
+            WriteSyncIndex(folder, index);
+            string dir = Path.Combine(folder, SafeName(course));
+            if (IsInside(dir, folder) && Directory.Exists(dir)) Directory.Delete(dir, true);
+        }
+        catch (Exception ex) { Toast("לא הצלחתי להסיר את הקורס מהתיקייה: " + ex.Message, true); }
+    }
 }

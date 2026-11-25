@@ -334,28 +334,109 @@ $('moodlePill').onclick = () => { if (S.moodle === 'ready') toast('Moodle מחו
 $('aiPill').onclick = () => { if (S.ai && S.ai.ready) toast(aiName() + ' מחובר ✓'); else openWizard(1); };
 $('moodleConnect').onclick = connectMoodle;
 // ---------- Shared summaries (a OneDrive folder that friends share) ----------
-S.sync = { offers: [] };
+S.sync = { offers: [], friends: [], shareCourses: [] };
 const syncTotal = () => (S.sync.offers || []).reduce((a, o) => a + (o.count || 0), 0);
 const syncOfferFor = (name) => (S.sync.offers || []).find(o => o.course === name);
+const isSharedCourse = (name) => (S.sync.shareCourses || []).some(n => n.trim() === String(name || '').trim());
 $('syncFind').onclick = () => send({ type: 'findSyncFolder' });
 $('syncPick').onclick = () => send({ type: 'pickSyncFolder' });
 $('syncLinkGo').onclick = () => { const v = $('syncLink').value.trim(); if (v) send({ type: 'openSyncLink', url: v }); };
-$('syncPublishAll').onclick = () => send({ type: 'syncPublish' });
-// "Share" on a course: a file to send, or the shared folder.
-function shareCourseDialog(c) {
-  const hasFolder = !!(S.settings && S.settings.syncFolder);
-  const ov = h(`<div style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:80;display:grid;place-items:center"><div class="card pad-lg" style="width:min(480px,92vw)"><h2 style="margin-top:0">שיתוף: <span dir="auto"></span></h2>
-    <p class="muted">אפשר לשלוח לחבר את כל הסיכומים של הקורס, גם אם הקורס לא מ-HIT.</p>
-    <div style="display:flex;flex-direction:column;gap:10px"><button class="primary" style="width:100%" data-zip>שמור כקובץ ZIP לשליחה (WhatsApp / OneDrive)</button><small class="muted" style="margin-top:-4px">החבר מוסיף אותו דרך "הוסף קורס" › "מקובץ של חבר".</small>
-    <button class="soft" style="width:100%" data-folder>${hasFolder ? 'פרסם בתיקייה המשותפת (החברים מקבלים הודעה)' : 'פרסם בתיקייה המשותפת (צריך קודם לבחור תיקייה בהגדרות)'}</button></div>
-    <div class="row" style="margin-top:14px;justify-content:flex-end"><button class="ghost" data-c>סגור</button></div></div></div>`);
-  ov.querySelector('h2 span').textContent = c.name;
+$('shareOpen').onclick = () => send({ type: 'openShareFolder' });
+$('sharePick').onclick = () => send({ type: 'pickShareFolder' });
+function setCourseShare(name, on) { S.sync.shareCourses = (S.sync.shareCourses || []).filter(n => n.trim() !== name.trim()).concat(on ? [name] : []); send({ type: 'setCourseShare', course: name, on }); renderShareSettings(); }
+// Settings › sharing: which of my courses go to my folder, and the friends' folders I added.
+function renderShareSettings() {
+  if (!$('shareCourses')) return;
+  $('shareFolderPath').textContent = S.sync.shareFolder || 'עוד לא נוצרה. היא תיווצר ב-OneDrive כשתשתף קורס ראשון.';
+  const box = $('shareCourses'); box.innerHTML = '';
+  const mine = (S.courses || []).filter(c => c.local && c.local.exists);
+  if (!mine.length) box.append(h('<div class="muted" style="padding:6px 2px">הקורסים יופיעו כאן אחרי שיורדו למחשב.</div>'));
+  mine.forEach(c => {
+    const row = h(`<label class="share-course"><span class="grow" dir="auto"></span><small class="muted"></small><span class="toggle"><input type="checkbox"><span class="switch"></span></span></label>`);
+    row.querySelector('.grow').textContent = c.name;
+    const on = isSharedCourse(c.name); row.querySelector('input').checked = on;
+    row.querySelector('small').textContent = on ? 'משותף' : '';
+    row.querySelector('input').onchange = (e) => setCourseShare(c.name, e.target.checked);
+    box.append(row);
+  });
+  const fl = $('friendList'); fl.innerHTML = '';
+  (S.sync.friends || []).forEach(f => {
+    const row = h(`<div class="friend"><span class="friend-av" aria-hidden="true"></span><div class="grow"><b dir="auto"></b><small class="path" dir="ltr"></small></div><span class="chip"></span><button class="ghost small" title="הסר את התיקייה מהרשימה">הסר</button></div>`);
+    const name = f.publisher || f.path.split(/[\\/]/).pop();
+    row.querySelector('.friend-av').textContent = (name || '?').trim().charAt(0);
+    row.querySelector('b').textContent = f.publisher ? 'הסיכומים של ' + f.publisher : name;
+    row.querySelector('.path').textContent = f.path;
+    const chip = row.querySelector('.chip'); chip.className = 'chip ' + (f.ok ? 'ok' : 'warn'); chip.textContent = f.ok ? 'מחובר' : 'לא נמצאה במחשב';
+    row.querySelector('button').onclick = () => { if (confirm('להסיר את התיקייה הזו מהרשימה? הסיכומים שכבר הוספת נשארים.')) send({ type: 'removeFriendFolder', path: f.path }); };
+    fl.append(row);
+  });
+  if (!(S.sync.friends || []).length) fl.append(h('<div class="muted" style="padding:6px 2px">עוד לא הוספת תיקייה של חבר.</div>'));
+}
+// In a course the student shares with a friend: the friend's ready summaries, and a choice whether to use them.
+function renderCourseOffer() {
+  const box = $('courseOffer'); if (!box) return;
+  const o = S.course ? syncOfferFor(S.course.name) : null;
+  S.offerLater = S.offerLater || new Set();
+  if (!o || S.offerLater.has(o.folder + '|' + o.course)) { box.hidden = true; box.innerHTML = ''; return; }
+  const who = o.publisher || 'חבר';
+  box.hidden = false;
+  box.innerHTML = `<span class="offer-ic" data-ic="cloud"></span><div class="grow"><b></b><small>${o.count === 1 ? 'סיכום אחד מוכן' : o.count + ' סיכומים מוכנים'} לקורס הזה. רוצה להשתמש בהם? הם יופיעו בהרצאות, ליד הסיכומים שלך.</small></div>
+    <button class="primary small" data-pick>כן, בחר סיכומים</button><button class="ghost small" data-no>לא, תודה</button><button class="icon ghost small" data-later title="אחר כך" aria-label="אחר כך">✕</button>`;
+  box.querySelector('b').textContent = who + ' שיתף איתך סיכומים';
+  icons(box);
+  box.querySelector('[data-pick]').onclick = () => pickOfferDialog(o);
+  box.querySelector('[data-no]').onclick = () => { send({ type: 'syncDecline', course: o.course, folder: o.folder }); box.hidden = true; };
+  box.querySelector('[data-later]').onclick = () => { S.offerLater.add(o.folder + '|' + o.course); box.hidden = true; };
+}
+function pickOfferDialog(o) {
+  const ov = h(`<div class="overlay offer-pick"><div class="card pad-lg"><h2>אילו סיכומים להוסיף?</h2><p class="muted"></p><div class="offer-list"></div>
+    <div class="row" style="margin-top:16px"><button class="ghost small" data-all>סמן הכול</button><div class="grow"></div><button class="ghost" data-c>ביטול</button><button class="primary" data-ok>הוסף</button></div></div></div>`);
+  ov.querySelector('p').textContent = 'מ' + (o.publisher ? 'הסיכומים של ' + o.publisher : 'התיקייה של החבר') + ' · ' + o.course;
+  const list = ov.querySelector('.offer-list');
+  (o.lectures || []).forEach(l => {
+    const row = h(`<label class="check-row"><input type="checkbox" checked><span class="num-pill"></span><span class="grow" dir="auto"></span></label>`);
+    row.querySelector('.num-pill').textContent = l.num; row.querySelector('.grow').textContent = l.title || 'הרצאה ' + l.num; row.dataset.num = l.num;
+    list.append(row);
+  });
   const close = () => ov.remove();
   ov.querySelector('[data-c]').onclick = close; ov.onclick = (e) => { if (e.target === ov) close(); };
-  ov.querySelector('[data-zip]').onclick = () => { send({ type: 'exportCourseZip', course: c.name }); close(); };
-  ov.querySelector('[data-folder]').onclick = () => { if (!hasFolder) { close(); show('settings'); toast('בחר או חפש כאן את התיקייה המשותפת'); return; } send({ type: 'syncPublish', course: c.name }); close(); };
+  ov.querySelector('[data-all]').onclick = () => list.querySelectorAll('input').forEach(i => i.checked = true);
+  ov.querySelector('[data-ok]').onclick = () => {
+    const nums = [...list.querySelectorAll('.check-row')].filter(r => r.querySelector('input').checked).map(r => +r.dataset.num);
+    if (!nums.length) return toast('לא סימנת אף סיכום');
+    send({ type: 'syncImport', course: o.course, folder: o.folder, nums }); close(); $('courseOffer').hidden = true;
+  };
   document.body.append(ov);
 }
+// "Share" on a course: share its summaries through my OneDrive folder, or one ZIP file to send.
+function shareCourseDialog(c) {
+  const on = isSharedCourse(c.name);
+  const ov = h(`<div class="overlay share-dlg"><div class="card pad-lg"><h2>שיתוף: <span dir="auto"></span></h2>
+    <label class="share-course big"><div class="grow"><b>שתף את הסיכומים של הקורס</b><small class="muted">כל סיכום שתסיים בקורס הזה עולה לתיקייה שלך ב-OneDrive. רק מי שתוסיף לתיקייה יראה אותם.</small></div><span class="toggle"><input type="checkbox" ${on ? 'checked' : ''}><span class="switch"></span></span></label>
+    <button class="soft" style="width:100%;margin-top:10px" data-open><span data-ic="folder"></span>פתח את התיקייה ובחר עם מי לשתף</button>
+    <div class="or"><span>או</span></div>
+    <button class="ghost" style="width:100%" data-zip><span data-ic="download"></span>שמור את כל הקורס כקובץ ZIP לשליחה</button>
+    <div class="row" style="margin-top:16px;justify-content:flex-end"><button class="primary" data-c>סגור</button></div></div></div>`);
+  ov.querySelector('h2 span').textContent = c.name;
+  icons(ov);
+  const close = () => ov.remove();
+  ov.querySelector('[data-c]').onclick = close; ov.onclick = (e) => { if (e.target === ov) close(); };
+  ov.querySelector('input').onchange = (e) => setCourseShare(c.name, e.target.checked);
+  ov.querySelector('[data-open]').onclick = () => { if (!isSharedCourse(c.name)) setCourseShare(c.name, true); send({ type: 'openShareFolder' }); };
+  ov.querySelector('[data-zip]').onclick = () => { send({ type: 'exportCourseZip', course: c.name }); close(); };
+  document.body.append(ov);
+}
+(function settingsNav() {
+  const nav = $('setNav'); if (!nav) return;
+  const links = [...nav.querySelectorAll('a')];
+  links.forEach(a => a.onclick = (e) => { e.preventDefault(); const t = document.querySelector(a.getAttribute('href')); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+  const mark = () => {
+    let cur = links[0];
+    for (const a of links) { const t = document.querySelector(a.getAttribute('href')); if (t && t.getBoundingClientRect().top < 160) cur = a; }
+    links.forEach(a => a.classList.toggle('active', a === cur));
+  };
+  $('main').addEventListener('scroll', () => { if (S.view === 'settings') mark(); }, { passive: true });
+})();
 function instTechnion() { return !!(S.settings && S.settings.institute === 'technion'); }
 function instName() { return instTechnion() ? 'הטכניון' : 'HIT'; }
 // HIT or the Technion: the Technion has CheeseFork instead of the personal portal, and no CS24.
@@ -388,7 +469,7 @@ function renderBanners() {
     const later = h('<button class="small ghost">לא עכשיו</button>'); later.onclick = () => { S.dismissedUpdate = S.update.version; renderBanners(); }; notice.append(later); b.append(notice);
   }
   if (S.ai && !S.ai.ready && !S.ai.setup) b.append(bannerEl('חבר את המנוע החכם כדי לסכם שיעורים ולשאול שאלות', 'חבר עכשיו', () => openWizard(1), 'warn'));
-  if (syncTotal() > 0) b.append(bannerEl(`יש ${syncTotal()} סיכומים חדשים של חברים בתיקייה המשותפת`, 'הורד אותם', () => send({ type: 'syncImport' })));
+  if (syncTotal() > 0) b.append(bannerEl(`חברים שיתפו איתך ${syncTotal()} סיכומים לקורסים שלך`, 'לקורסים', () => show('courses')));
   if (S.moodle === 'login' && !(S.courses && S.courses.length)) b.append(bannerEl('צריך להתחבר ל-Moodle כדי לראות את הקורסים', 'התחבר', connectMoodle, 'warn'));
   else if (S.moodle === 'login') b.append(bannerEl('אין חיבור ל-Moodle כרגע. הקורסים והחומר שכבר הורדת פתוחים כרגיל', 'נסה שוב', () => send({ type: 'loadCourses' })));
 }
@@ -821,19 +902,28 @@ function markCourseCard(name, pct) {
   tag.textContent = pct >= 100 ? 'מכין סיכומים...' : 'מוריד · ' + pct + '%';
 }
 
+const readKey = (course, num) => 'sumit-read|' + course + '|' + num;
+function isRead(course, num) { try { return localStorage.getItem(readKey(course, num)) === '1'; } catch (e) { return false; } }
+function readCount(course) {
+  let n = 0;
+  try { const p = 'sumit-read|' + course + '|'; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith(p) && localStorage.getItem(k) === '1') n++; } } catch (e) { }
+  return n;
+}
 function courseCard(c, i) {
   const L = c.local || {};
   const pages = L.lecturePdfs || L.studyPages || 0;
-  const pct = Math.min(100, Math.round(pages * 100 / 13));
+  // The ring counts the lectures the student ticked as finished (out of a semester of about 13).
+  const done = readCount(c.name);
+  const pct = Math.min(100, Math.round(done * 100 / 13));
   const el = h(`<button class="course-card" style="--i:${i}" data-name="${esc(c.name)}">
-    <div class="band">${ART.band(c.id)}<span class="letter">${esc((c.name || '?').trim().charAt(0))}</span>${pages ? `<div class="ring" style="--p:${pct}" data-label="${pages}"></div>` : ''}</div>
+    <div class="band">${ART.band(c.id)}<span class="letter">${esc((c.name || '?').trim().charAt(0))}</span>${done || pages ? `<div class="ring" style="--p:${pct}" data-label="${done}" title="${done === 1 ? 'הרצאה אחת סומנה כסיימתי' : done + ' הרצאות סומנו כסיימתי'}"></div>` : ''}</div>
     <div class="body"><div class="name" dir="auto">${esc(c.name)}</div><div class="muted" style="font-size:12px" dir="auto">${esc(c.category || '')}</div>
-    <div class="meta">${syncOfferFor(c.name) ? `<span class="chip accent" data-sync>${syncOfferFor(c.name).count} סיכומים חדשים של חברים</span>` : ''}${L.exists ? '<span class="chip ok">במחשב</span>' : '<span class="chip">עוד לא הורד</span>'}${pages ? `<span class="chip accent">${pages} ${L.lecturePdfs ? 'סיכומים' : 'דפי לימוד'}</span>` : ''}${L.exams ? `<span class="chip warn">${L.exams} מבחנים</span>` : ''}</div></div></button>`);
+    <div class="meta">${syncOfferFor(c.name) ? `<span class="chip accent" data-sync>${syncOfferFor(c.name).count} סיכומים של חברים</span>` : ''}${L.exists ? '<span class="chip ok">במחשב</span>' : '<span class="chip">עוד לא הורד</span>'}${pages ? `<span class="chip accent">${pages} ${L.lecturePdfs ? 'סיכומים' : 'דפי לימוד'}</span>` : ''}${L.exams ? `<span class="chip warn">${L.exams} מבחנים</span>` : ''}</div></div></button>`);
   applyBg(el.querySelector('.band'), L.background);
   const shareBtn = h('<span class="card-share" role="button" tabindex="0" title="שיתוף הקורס עם חבר"></span>'); shareBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>';
   shareBtn.onclick = (e) => { e.stopPropagation(); shareCourseDialog(c); };
   el.append(shareBtn);
-  const syncChip = el.querySelector('[data-sync]'); if (syncChip) syncChip.onclick = (e) => { e.stopPropagation(); send({ type: 'syncImport', course: c.name }); };
+  const syncChip = el.querySelector('[data-sync]'); if (syncChip) syncChip.onclick = (e) => { e.stopPropagation(); openCourse(c); };
   el.onclick = () => openCourse(c);
   return el;
 }
@@ -844,6 +934,7 @@ function loadCourses() {
   send({ type: 'loadCourses' });
 }
 function renderCourses() {
+  renderShareSettings();
   const g = $('courses'); g.innerHTML = '';
   const list = (S.courses || []).filter(c => $('showAll').checked || c.current);
   if (!list.length) {
@@ -888,7 +979,7 @@ function openCourse(c) {
   $('courseBand').innerHTML = ART.band(c.id);
   $('lecturer').value = ''; $('lecturer').placeholder = 'מי המרצה?'; $('lecturer').hidden = false; $('lecturerPick').hidden = true;
   $('courseCount').textContent = 'טוען...'; $('courseGrad').textContent = ''; $('courseMeter').hidden = true; $('courseNow').hidden = true; $('courseBadge').hidden = true;
-  $('courseStatus').hidden = true;
+  $('courseStatus').hidden = true; renderCourseOffer();
   $('lectures').innerHTML = '';
   for (let i = 0; i < 6; i++) $('lectures').append(h('<div class="skeleton" style="height:70px;border-radius:16px;margin-bottom:10px"></div>'));
   S.chatScope = saved.chatScope || 'course'; S.chatLogs = saved.chatLogs || {}; S.pendingChat = saved.pendingChat || null; S.chatHidden = true;
@@ -1333,11 +1424,12 @@ function fillLecture(el, s) {
   // "Finished reading" tick, kept per course and lecture in this browser profile.
   el.querySelector('.read-mark')?.remove();
   if (s.num > 0) {
-    const rkey = 'sumit-read|' + course.name + '|' + s.num;
-    const getRead = () => { try { return localStorage.getItem(rkey) === '1'; } catch (e) { return false; } };
+    const rkey = readKey(course.name, s.num);
+    const getRead = () => isRead(course.name, s.num);
     const mark = h('<button class="read-mark" title="סימנתי שסיימתי לקרוא את ההרצאה"></button>');
     const paintRead = () => { const on = getRead(); mark.classList.toggle('on', on); mark.textContent = on ? '✓' : ''; el.classList.toggle('read-done', on); };
-    mark.onclick = e => { e.stopPropagation(); try { if (getRead()) localStorage.removeItem(rkey); else localStorage.setItem(rkey, '1'); } catch (er) {} paintRead(); };
+    // The card turns green only once the lecture is ticked as finished.
+    mark.onclick = e => { e.stopPropagation(); try { if (getRead()) localStorage.removeItem(rkey); else localStorage.setItem(rkey, '1'); } catch (er) {} paintRead(); paintCard(el, s); };
     paintRead();
     el.querySelector('.lecture-head').insertBefore(mark, el.querySelector('.chevron'));
   }
@@ -1425,7 +1517,8 @@ function paintStatus(el, s) {
 function paintCard(el, s) {
   const L = s.local || {};
   const working = s.busy || s.aiBusy;
-  const st = working ? ['run', s.pct != null ? 'נכתב סיכום · ' + s.pct + '%' : 'עובד על זה…'] : (L.lecturePdf || L.studyPage) ? ['ok', 'סיכום מוכן']
+  const done = s.num > 0 && S.course && isRead(S.course.name, s.num);
+  const st = working ? ['run', s.pct != null ? 'נכתב סיכום · ' + s.pct + '%' : 'עובד על זה…'] : done ? ['ok', 'סיימתי'] : (L.lecturePdf || L.studyPage) ? ['ready', 'סיכום מוכן']
     : s.num === 0 ? ['', ''] : (L.files || L.transcripts) ? ['todo', 'חסר סיכום'] : ['wait', 'בקרוב'];
   el.dataset.state = st[0];
   const chip = el.querySelector('.lec-st'); if (chip) { chip.className = 'lec-st ' + st[0]; chip.textContent = st[1]; chip.hidden = !st[1]; }
@@ -1916,7 +2009,7 @@ function renderSettings() {
   }
   $('wizNot').textContent = st.notabilityDir || 'אם Notability מגבה את המחברות לתיקייה במחשב, בחר אותה כאן';
   $('wizNotRow').classList.toggle('ok', !!st.notabilityDir);
-  $('syncFolderPath').textContent = st.syncFolder || 'לא נבחרה'; $('optAutoPublish').checked = !!st.autoPublishSync;
+  renderShareSettings();
   $('optFallback').checked = st.autoFallback !== false; $('optPdfDark').checked = !!st.pdfDark;
   $('refreshSummariesRow').hidden = !st.outdatedSummaries;
   $('refreshSummariesText').textContent = st.outdatedSummaries ? (st.outdatedSummaries === 1 ? 'סיכום אחד נבנה בפורמט הקודם.' : st.outdatedSummaries + ' סיכומים נבנו בפורמט הקודם.') + ' בפורמט החדש ההסבר מתחיל מאפס: הקשר לפני נוסחה, כל דוגמה מוסברת עד הסוף, וכל שאלה בשיעורי הבית כוללת את מה שצריך כדי לפתור אותה. הבנייה מחדש משתמשת ב-AI (אחד אחרי השני) והסיכום הישן נשמר אם היא נכשלת.' : '';
@@ -1933,7 +2026,7 @@ $('themeToggle').onclick = () => {
   const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
   applyTheme(next); send({ type: 'setOption', name: 'theme', value: next });
 };
-[['optAutoPublish', 'autoPublishSync'], ['optSync', 'autoSync'], ['optRec', 'autoRecordings'], ['optUpdate', 'autoUpdate'], ['optFallback', 'autoFallback'], ['optPdfDark', 'pdfDark']].forEach(([id, name]) =>
+[['optSync', 'autoSync'], ['optRec', 'autoRecordings'], ['optUpdate', 'autoUpdate'], ['optFallback', 'autoFallback'], ['optPdfDark', 'pdfDark']].forEach(([id, name]) =>
   $(id).onchange = () => send({ type: 'setOption', name, value: $(id).checked }));
 
 // ---------- First-run setup ----------
@@ -2024,7 +2117,7 @@ function onMessage(m) {
       if (m.state === 'login' && S.view === 'courses' && !S.courses) { $('courses').innerHTML = ''; $('coursesState').innerHTML = ''; $('coursesState').append(h(`<div class="empty">${ART.campus().replace('<svg', '<svg class="art" style="width:220px;height:130px"')}<b>צריך להתחבר ל-Moodle</b>מתחברים פעם אחת עם המשתמש של המוסד.<div class="row"><button class="primary" id="cm">התחבר</button></div></div>`)); $('cm').onclick = connectMoodle; }
       if (S.view === 'home') renderHome();
       break;
-    case 'syncState': S.sync = { offers: m.offers || [], ok: m.ok, folder: m.folder, publisher: m.publisher }; renderBanners(); if (S.courses) renderCourses(); break;
+    case 'syncState': S.sync = { offers: m.offers || [], ok: m.ok, friends: m.friends || [], shareFolder: m.shareFolder || '', shareCourses: m.shareCourses || [] }; renderBanners(); if (S.courses) renderCourses(); renderShareSettings(); renderCourseOffer(); break;
     case 'home': S.events = m.events || []; if (m.name) S.userName = m.name; renderHome(); renderWizardMoodle(); renderProfile(S.settings); break;
     case 'courses':
       S.courses = (m.data || []).filter(c => !/^ספרי[יה]ה?\s*$/.test((c.name || '').trim())); renderCourses(); fillDownloadCourses();
