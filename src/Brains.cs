@@ -57,7 +57,7 @@ partial class HitStudent
     }
 
     // Runs a tool with the prompt on its standard input (so a long text is no problem) and returns exit code, output, errors.
-    async Task<Tuple<int, string, string>> RunCli(string exe, string args, string stdin, string cwd, int timeoutMs, bool loginVerification = false)
+    async Task<Tuple<int, string, string>> RunCli(string exe, string args, string stdin, string cwd, int timeoutMs, bool loginVerification = false, string aiKey = null)
     {
         var psi = new ProcessStartInfo(exe, args)
         {
@@ -67,7 +67,7 @@ partial class HitStudent
         foreach (var kv in CliEnv()) psi.EnvironmentVariables[kv.Key] = kv.Value;
         using (var p = Process.Start(psi))
         {
-            helperRuns.Add(p);
+            if (aiKey != null) aiRuns[aiKey] = p; else helperRuns.Add(p);
             try {
             if (loginVerification) agyLoginProcess = p;
             var outTask = p.StandardOutput.ReadToEndAsync();
@@ -88,7 +88,7 @@ partial class HitStudent
             // The tool's own child processes may keep the pipes open for a moment.
             await Task.WhenAny(Task.WhenAll(outTask, errTask), Task.Delay(4000));
             return Tuple.Create(p.ExitCode, outTask.IsCompleted ? outTask.Result : "", errTask.IsCompleted ? errTask.Result : "");
-            } finally { helperRuns.Remove(p); }
+            } finally { if (aiKey != null) { Process removed; aiRuns.TryRemove(aiKey, out removed); } else helperRuns.Remove(p); }
         }
     }
 

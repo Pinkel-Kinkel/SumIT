@@ -16,6 +16,18 @@ partial class HitStudent
     static string SkillsDir { get { return Path.Combine(Home, @".claude\skills"); } }
 
     readonly System.Collections.Concurrent.ConcurrentDictionary<string, Process> aiRuns = new System.Collections.Concurrent.ConcurrentDictionary<string, Process>();
+    // Keys of work the student stopped. Every later step of that work (review, repair, PDF) checks it and stops too.
+    readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> aiStopped = new System.Collections.Concurrent.ConcurrentDictionary<string, bool>();
+    static string StopKey(string key) { return Regex.Replace(key ?? "", "^review\\|", "sum|"); }
+    bool Stopped(string key) { return aiStopped.ContainsKey(StopKey(key)); }
+    void StopAi(string key)
+    {
+        aiStopped[StopKey(key)] = true;
+        Toast("עוצר...", false);
+        foreach (var kv in aiRuns.ToList()) if (StopKey(kv.Key) == StopKey(key)) KillTree(kv.Value);
+        // The review by a second AI runs as a helper; it belongs to the stopped summary.
+        if (key.StartsWith("sum|")) foreach (var p in helperRuns.ToList()) KillTree(p);
+    }
     string setupState = "";   // what the background installer is doing right now
 
     // ---------- Finding the tools ----------
@@ -492,16 +504,18 @@ partial class HitStudent
             AiResult result = null;
             foreach (string provider in order)
             {
+                if (Stopped(key)) return new AiResult { Error = true, Text = "נעצר לבקשתך" };
                 if (provider == "claude" && (FindClaude() == null || !claudeLoggedIn)) continue;
                 if (provider == "openai" && !ChatGptAccountReady()) continue;
                 if (provider == "gemini" && !GeminiAccountReady()) continue;
                 if (result != null) Toast("המכסה נגמרה — ממשיך עם " + BrainName(provider), false);
                 string continuation = result == null ? prompt : prompt + "\nעבודה קודמת נעצרה בגלל מכסה. בדוק קודם את הקבצים שכבר נוצרו והשלם רק את החסר; אל תחזור על קריאת מקורות שכבר סוכמו.";
                 result = aiWorkOverride != null ? await aiWorkOverride(provider) : provider == "claude" ? await RunClaude(key, cwd, continuation, session, system, onEvent)
-                    : provider == "openai" ? await RunChatGptTask(cwd, continuation, system)
+                    : provider == "openai" ? await RunChatGptTask(key, cwd, continuation, system)
                     : await RunGemini(key, cwd, continuation, system, onEvent);
                 result.Provider = provider;
                 Diagnostic("generate",provider,result.Error?FailureKind(result.Text):"success");
+                if (Stopped(key)) return new AiResult { Error = true, Provider = provider, Text = "נעצר לבקשתך" };
                 if (shuttingDown || !result.Error || !(result.Limit || IsUsageLimit(result.Text))) return result;
                 result.Limit = true;
             }
@@ -510,20 +524,23 @@ partial class HitStudent
         finally { aiGate.Release(); }
     }
 
-    async Task<AiResult> RunChatGptTask(string cwd, string prompt, string system)
+    async Task<AiResult> RunChatGptTask(string key, string cwd, string prompt, string system)
     {
         string output = Path.Combine(cwd, SumitDir, "chatgpt-result-" + Guid.NewGuid().ToString("N") + ".txt");
         Directory.CreateDirectory(Path.GetDirectoryName(output));
         try
         {
             var r = await RunCli(FindCodex(), "exec --ignore-user-config --skip-git-repo-check -s workspace-write -c windows.sandbox=unelevated --ephemeral -o " + Q(output) + " -",
-                (system ?? "") + "\n" + prompt, cwd, 1800000);
+                (system ?? "") + "\n" + prompt + NoBrowser, cwd, 1800000, false, key);
             string answer = File.Exists(output) ? File.ReadAllText(output, Encoding.UTF8) : "";
             return new AiResult { Provider = "openai", Error = r.Item1 != 0 || answer.Length == 0,
                 Limit = IsUsageLimit(r.Item2 + r.Item3), Text = answer.Length > 0 ? answer : Trunc(r.Item3 + r.Item2, 800) };
         }
         finally { if (File.Exists(output)) File.Delete(output); }
     }
+
+    // ChatGPT sometimes opens the page in Edge (to look at it or print it); in its sandbox Edge crashes with an error window.
+    const string NoBrowser = "\n\nהערה טכנית: אל תפתח דפדפן (Edge, Chrome או אחר), אל תפתח קבצים בתוכנות אחרות ואל תדפיס ל-PDF בעצמך. האפליקציה מדפיסה את הדף ל-PDF אחרי שתסיים. רק כתוב את הקבצים.";
 
     static bool IsUsageLimit(string text)
     {

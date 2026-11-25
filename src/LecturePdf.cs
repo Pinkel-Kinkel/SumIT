@@ -135,8 +135,10 @@ partial class HitStudent
         if (CountFiles(dir) == 0 && !hasTranscript) { SectionStatus(course, num, "אין עדיין חומר להרצאה הזו - הוסף קבצים קודם", false, true); return null; }
 
         string folder = LectureFolderName(num);
-        bool homework = CountFiles(Path.Combine(dir, Exercises)) > 0;
+        var strayHomework = StrayHomework(dir);
+        bool homework = CountFiles(Path.Combine(dir, Exercises)) > 0 || strayHomework.Count > 0;
         bool hasSolutions = Directory.Exists(Path.Combine(dir, Exercises)) && Directory.GetFiles(Path.Combine(dir, Exercises), "*", SearchOption.AllDirectories)
+            .Concat(strayHomework.Select(r => Path.Combine(dir, r)))
             .Any(f => !f.Contains("\\" + PointersFolder + "\\") && Regex.IsMatch(Path.GetFileName(f), "(פתרון|solution|solut|(^|[\\s_.-])sol([\\s_.\\d-]|$))", RegexOptions.IgnoreCase));
         var earlier = Enumerable.Range(1, num - 1).Where(k => File.Exists(Path.Combine(CourseDir(course), DigestRel(k).Replace('/', '\\')))).ToList();
         var noDigest = Enumerable.Range(1, num - 1).Where(k => !earlier.Contains(k) && CountFiles(LectureDir(course, k)) > 0).ToList();
@@ -158,6 +160,8 @@ partial class HitStudent
                   + (hasSolutions
                       ? "בתיקיית שיעורי הבית יש גם פתרונות רשמיים של המרצה או המתרגל (קבצים עם \"פתרון\" או Sol בשם): הם מקור האמת. התאם אליהם כל פתרון שאתה כותב, ואם מצאת טעות בפתרון הרשמי - ציין זאת במפורש. "
                       : "לא זוהו קבצי פתרונות לפי השם. אם בתיקיית שיעורי הבית יש בכל זאת קבצים שהם פתרונות של המרצה או המתרגל (גם בלי המילה פתרון בשם), הם מקור האמת והתאם אליהם. אחרת פתור בזהירות, בדוק כל שלב פעמיים, וסמן ליד כל פתרון שהוא לא אומת מול פתרון רשמי. ")
+                  + (strayHomework.Count > 0 ? "שים לב: חלק משיעורי הבית לא נמצאים בתיקייה \"" + Exercises + "\" אלא במקום אחר בתיקיית ההרצאה: " + string.Join(", ", strayHomework.Select(r => "\"" + folder + "/" + r.Replace('\\', '/') + "\"")) + ". לפי השם הם נראים כמו שיעורי בית. בדוק אותם: אם הם דפי שיעורי בית או פתרונות, הם חלק משיעורי הבית לכל דבר - כלול את כל השאלות מהם וגם מהתיקייה, ואל תדלג על אף קובץ. " : "")
+                  + "לפני הכתיבה עבור על כל קבצי ההרצאה ובדוק אם יש דף שיעורי בית נוסף (גם בשם אחר או בתיקייה אחרת), וכלול את כל השאלות מכל הדפים. "
                   + "צור גם את קבצי ה-PDF עם המפנים ב-\"" + folder + "/" + Exercises + "/" + PointersFolder + "\".\n"
                 : "ג. אין עדיין שיעורי בית להרצאה הזו - במקום החלק \"שימוש בתרגילים\" תן 2-3 שאלות תרגול בסגנון של המרצה (מהמבחנים הקודמים, אם יש).\n")
             + "בלי אימוג'ים ובלי סמלים דקורטיביים בכל הדף (לא בכותרות, לא בתיבות ולא בטקסט): רק טקסט, כותרות ונוסחאות. השתמש בעיצוב ובצבע כדי להבליט, לא בציורים.\n"
@@ -178,20 +182,20 @@ partial class HitStudent
         try
         {
             result = await CourseTask(key, course, s => { phaseText = s; SectionStatus(course, num, s, true, false); }, prompt);
-            if (!result.Error && File.Exists(StudyPagePath(course, num)))
+            if (!result.Error && !Stopped(key) && File.Exists(StudyPagePath(course, num)))
             {
                 var authorMeta = LoadMeta(course);
                 var writers = Dict(authorMeta, "summaryWriters") ?? new Dictionary<string, object>();
                 writers[num.ToString()] = result.Provider ?? Provider; authorMeta["summaryWriters"] = writers; SaveMeta(course, authorMeta);
                 // A second AI (Gemini / ChatGPT) reads the homework solutions like a strict reviewer, if one is connected.
-                if (HelperOrder().Count > 0)
+                if (HelperOrder().Count > 0 && !Stopped(key))
                 {
                     phaseText = "AI נוסף בודק את הפתרונות...";
                     SectionStatus(course, num, phaseText, true, false);
                     try { string note = await SecondOpinion(course, num, result.Provider); if (note != null) SectionStatus(course, num, note, true, false); } catch (Exception ex) { SectionStatus(course, num, "הביקורת לא הושלמה: " + Trunc(ex.Message, 100), true, false); }
                 }
-                result = await EnsureCompleteQuestions(key, course, num, result, s => { phaseText = s; SectionStatus(course, num, s, true, false); });
-                if (!result.Error) {
+                if (!Stopped(key)) result = await EnsureCompleteQuestions(key, course, num, result, s => { phaseText = s; SectionStatus(course, num, s, true, false); });
+                if (!result.Error && !Stopped(key)) {
                     printing = true; phaseText = "מכין את קובץ ה-PDF...";
                     SectionStatus(course, num, phaseText, true, false);
                     pdf = await BuildLecturePdf(course, num); warning = pdfFailure;
@@ -199,6 +203,8 @@ partial class HitStudent
             }
         }
         finally { finished = true; summaryRunning.Remove(course + "|" + num); }
+        bool stopped = Stopped(key);
+        if (stopped) result = new AiResult { Error = true, Provider = result == null ? null : result.Provider, Text = "נעצר לבקשתך" };
         await ticker;
         summaryProgress.Remove(course + "|" + num);
         HideSumit(course);
@@ -206,13 +212,14 @@ partial class HitStudent
         Send(new { type = "sectionProgress", course = course, num = num, pct = 100, eta = 0, text = "" });
 
         bool pageReady = File.Exists(StudyPagePath(course, num));
-        string status = result.Error ? "נכשל: " + Trunc(result.Text, 160)
+        string status = stopped ? "הסיכום נעצר. אפשר להתחיל שוב מתי שתרצה"
+            : result.Error ? "נכשל: " + Trunc(result.Text, 160)
             : pdf != null && warning.Length == 0 ? "הסיכום של ההרצאה מוכן"
             : pdf != null ? "הסיכום מוכן (" + warning + ")"
             : pageReady ? "הסיכום מוכן, אבל קובץ ה-PDF לא נוצר (" + warning + "). אפשר לפתוח את הסיכום, ולנסות שוב אחר כך."
             : "הסתיים בלי שנוצר קובץ סיכום" + (!string.IsNullOrWhiteSpace(result.Text) ? ". ההודעה האחרונה של ה-AI: " + Trunc(result.Text.Replace("\n", " "), 200) : "") + ". נסה שוב";
-        Diagnostic("summaryFinish", result.Provider ?? "", result.Error ? FailureKind(result.Text) : !pageReady ? "no-page" : pdf == null ? "no-pdf" : "ok");
-        SectionStatus(course, num, status, false, result.Error || !pageReady);
+        Diagnostic("summaryFinish", result.Provider ?? "", stopped ? "stopped" : result.Error ? FailureKind(result.Text) : !pageReady ? "no-page" : pdf == null ? "no-pdf" : "ok");
+        SectionStatus(course, num, status, false, !stopped && (result.Error || !pageReady));
         SendSectionLocal(course, num);
         if (pageReady && !result.Error)
         {
@@ -221,6 +228,25 @@ partial class HitStudent
             if (open) Send(new { type = "summaryReady", course = course, num = num, page = StudyPagePath(course, num), pdf = pdf });   // not opened in a browser: the student opens the interactive version inside the app
         }
         return result;
+    }
+
+    // Homework sheets a student dropped next to the slides (or straight in the lecture folder) instead of in the homework folder.
+    // Relative paths inside the lecture folder.
+    List<string> StrayHomework(string dir)
+    {
+        var found = new List<string>();
+        if (!Directory.Exists(dir)) return found;
+        foreach (string file in Directory.GetFiles(dir, "*", SearchOption.AllDirectories))
+        {
+            string rel = file.Substring(dir.Length).TrimStart('\\');
+            string top = rel.Contains("\\") ? rel.Substring(0, rel.IndexOf('\\')) : "";
+            if (top == Exercises || top == SummaryName || top == RecordingFolder || top == Notebook || top.StartsWith(".")) continue;
+            string name = Path.GetFileNameWithoutExtension(file);
+            if (!Regex.IsMatch(Path.GetExtension(file), @"^\.(pdf|docx?|png|jpe?g)$", RegexOptions.IgnoreCase)) continue;
+            if (Regex.IsMatch(name, "(שיעורי[\\s_-]*בית|ש[\"״]?ב\\b|תרגיל|מטלה|גיליון|homework|\\bhw\\s*\\d|\\bhw\\b|assignment|exercise|problem[\\s_-]*set|targil|tirgul)", RegexOptions.IgnoreCase))
+                found.Add(rel);
+        }
+        return found;
     }
 
     // Study page (+ the homework sheets) -> one PDF. Returns its path, or null (and says why in pdfFailure).

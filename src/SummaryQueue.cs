@@ -24,6 +24,7 @@ partial class HitStudent
     {
         string key = course + "|" + num;
         if (shuttingDown || num < 1 || num > 200 || !summaryQueued.Add(key)) return null;
+        bool ignored; aiStopped.TryRemove("sum|" + key, out ignored);
         try { SavePendingSummary(course, num, title, force); }
         catch (Exception ex) { summaryQueued.Remove(key); SectionStatus(course, num, ex.Message, false, true); return new AiResult { Error = true, Text = ex.Message }; }
         SectionStatus(course, num, "בתור להכנת סיכום — העבודה נשמרה", true, false);
@@ -35,6 +36,14 @@ partial class HitStudent
         try
         {
             if (shuttingDown) return null;
+            if (Stopped("sum|" + key))
+            {
+                if (File.Exists(PendingSummary(course, num))) File.Delete(PendingSummary(course, num));
+                success = true;
+                SectionStatus(course, num, "הסיכום נעצר. אפשר להתחיל שוב מתי שתרצה", false, false);
+                SendSectionLocal(course, num);
+                return null;
+            }
             if (hadPage) File.Copy(page, backup, true);
             if (hadDigest) File.Copy(digest, digest + ".previous", true);
             SavePendingSummary(course, num, title, force, true);
@@ -63,6 +72,7 @@ partial class HitStudent
             }
             if (success && File.Exists(backup)) File.Delete(backup);
             summaryQueued.Remove(key); summaryRunning.Remove(key); summaryProgress.Remove(key);
+            bool wasStopped; aiStopped.TryRemove("sum|" + key, out wasStopped);
             summaryGate.Release();
         }
     }

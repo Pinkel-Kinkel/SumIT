@@ -15,7 +15,7 @@ using Microsoft.Web.WebView2.WinForms;
 
 partial class HitStudent : Form
 {
-    public const string Version = "1.0.72";
+    public const string Version = "1.0.73";
     const string Repo = "Pinkel-Kinkel/SumIT";
     // Updates are only accepted from these repositories (the project was renamed from hit-recordings).
     static readonly string[] RepoNames = { "Pinkel-Kinkel/SumIT" };
@@ -60,10 +60,14 @@ partial class HitStudent : Form
     string siteDownloadCourse, siteDownloadFolder;
     readonly Timer statusTimer = new Timer { Interval = 45000 };
 
+    [System.Runtime.InteropServices.DllImport("kernel32.dll")] static extern uint SetErrorMode(uint mode);
+
     [STAThread]
     static void Main(string[] args)
     {
         ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
+        // Programs the AI starts inherit this: a crashing helper closes quietly instead of showing an error window.
+        try { SetErrorMode(0x0001 | 0x0002); } catch { }
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
         Application.Run(new HitStudent(args));
@@ -553,10 +557,7 @@ partial class HitStudent : Form
                 meta2["lectureChatHistories"] = histories;
                 SaveMeta(course, meta2);
                 break;
-            case "cancelAi":
-                System.Diagnostics.Process run;
-                if (aiRuns.TryGetValue(Str(m, "key"), out run)) KillTree(run);
-                break;
+            case "cancelAi": StopAi(Str(m, "key")); break;
 
             // Recordings
             case "paste": CheckClipboard(true); break;
