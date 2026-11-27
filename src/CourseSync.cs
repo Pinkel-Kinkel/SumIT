@@ -235,8 +235,85 @@ partial class HitStudent
     {
         if (DateTime.Now - lastSyncCheck < TimeSpan.FromMinutes(3)) return;
         lastSyncCheck = DateTime.Now;
+        if (SettingList("friendLinks").Count > 0) LookForFriendFolders(false);
         SendSyncState();
     }
+
+    const string ShareFolderPrefix = "SumIT - ";
+
+    // Adds every friend's folder that OneDrive brought to this computer. Once one is found, the pasted links are done.
+    int LookForFriendFolders(bool say)
+    {
+        int added = FindSharedFolders().Count(AddFriendFolder);
+        if (added > 0)
+        {
+            SetSettingList("friendLinks", new List<string>());
+            Toast(added == 1 ? "התיקייה של החבר נוספה. בקורסים שיש לשניכם תשאל אם להשתמש בסיכומים." : "נוספו " + added + " תיקיות של חברים", false);
+        }
+        else if (say) Toast("לא מצאתי עדיין תיקייה חדשה ב-OneDrive. אם לחצת 'הוסף קיצור דרך', חכה דקה שהיא תסתנכרן - האפליקציה תמשיך לחפש לבד.", true);
+        return added;
+    }
+
+    // The friend's link opens inside the app (already signed in to the college account), the app presses
+    // "Add shortcut to My files" by itself, and watches OneDrive until the folder arrives.
+    Form friendLinkWindow;
+    void OpenFriendLink(string url)
+    {
+        var links = SettingList("friendLinks");
+        if (!links.Contains(url)) { links.Add(url); SetSettingList("friendLinks", links); }
+        if (env == null) { OpenExternal(url); Toast("הקישור נפתח בדפדפן. לחץ שם 'הוסף קיצור דרך אל הקבצים שלי' - האפליקציה תמצא את התיקייה לבד.", false); return; }
+        if (friendLinkWindow != null && !friendLinkWindow.IsDisposed) friendLinkWindow.Close();
+        var win = new Form { Text = "התיקייה של החבר - לחץ 'הוסף קיצור דרך אל הקבצים שלי' (האפליקציה מנסה ללחוץ לבד)", Width = 1100, Height = 760,
+            StartPosition = FormStartPosition.CenterParent, RightToLeft = RightToLeft.Yes, RightToLeftLayout = true, Icon = Icon, ShowInTaskbar = false };
+        var bar = new Label { Dock = DockStyle.Top, Height = 44, Padding = new Padding(12, 0, 12, 0), TextAlign = System.Drawing.ContentAlignment.MiddleRight,
+            Font = new System.Drawing.Font("Segoe UI", 10.5f), BackColor = System.Drawing.Color.FromArgb(37, 99, 235), ForeColor = System.Drawing.Color.White,
+            Text = "פותח את התיקייה של החבר... אם צריך, התחבר עם חשבון המכללה." };
+        var view = new Microsoft.Web.WebView2.WinForms.WebView2 { Dock = DockStyle.Fill };
+        win.Controls.Add(view); win.Controls.Add(bar);
+        friendLinkWindow = win;
+        var timer = new Timer { Interval = 4000 };
+        int ticks = 0; bool clicked = false;
+        timer.Tick += async delegate
+        {
+            ticks++;
+            if (LookForFriendFolders(false) > 0) { timer.Stop(); SendSyncState(); try { win.Close(); } catch { } return; }
+            if (view.CoreWebView2 == null) return;
+            if (!clicked)
+            {
+                try
+                {
+                    string r = await view.CoreWebView2.ExecuteScriptAsync(ShortcutScript);
+                    if (r.Contains("clicked")) { clicked = true; bar.Text = "לחצתי 'הוסף קיצור דרך'. מחכה ש-OneDrive יביא את התיקייה למחשב (בדרך כלל פחות מדקה)..."; }
+                    else if (r.Contains("added")) { clicked = true; bar.Text = "התיקייה כבר נוספה ל-OneDrive שלך. מחכה שהיא תגיע למחשב..."; }
+                    else if (ticks > 3) bar.Text = "לחץ בדף על 'הוסף קיצור דרך אל הקבצים שלי' (Add shortcut to My files). אחר כך אפשר לסגור את החלון - האפליקציה תמצא את התיקייה לבד.";
+                }
+                catch { }
+            }
+        };
+        win.FormClosed += delegate { timer.Stop(); timer.Dispose(); if (friendLinkWindow == win) friendLinkWindow = null; SendSyncState(); };
+        win.Shown += async delegate
+        {
+            try
+            {
+                await view.EnsureCoreWebView2Async(env);
+                view.CoreWebView2.NewWindowRequested += (s, e) => { e.Handled = true; view.CoreWebView2.Navigate(e.Uri); };
+                view.CoreWebView2.Navigate(url);
+                timer.Start();
+            }
+            catch (Exception ex) { win.Close(); OpenExternal(url); Toast("לא הצלחתי לפתוח את הקישור באפליקציה, הוא נפתח בדפדפן: " + ex.Message, true); }
+        };
+        win.Show(this);
+    }
+
+    // Finds the "Add shortcut to My files" button of OneDrive / SharePoint (English or Hebrew) and presses it once.
+    const string ShortcutScript = @"(function(){
+  var want=/add shortcut|הוסף קיצור|הוספת קיצור|קיצור דרך אל/i, done=/shortcut added|added to my files|קיצור הדרך נוסף|נוסף אל/i;
+  var els=[].slice.call(document.querySelectorAll('button,[role=button],[role=menuitem],a'));
+  for(var i=0;i<els.length;i++){var e=els[i],t=(e.innerText||'')+' '+(e.getAttribute('aria-label')||'')+' '+(e.title||'');
+    if(done.test(t))return 'added';
+    if(want.test(t)&&!e.disabled&&e.getAttribute('aria-disabled')!=='true'&&e.offsetParent!==null){e.click();return 'clicked';}}
+  return 'none';})()";
+
 
     // Downloads (unpacks) the new summaries of one course, or of every course, into the course folders.
     async Task ImportFromFolder(string folder, string onlyCourse, bool createMissing, HashSet<int> onlyNums = null)
@@ -396,7 +473,7 @@ partial class HitStudent
     {
         try
         {
-            if (File.Exists(Path.Combine(dir, SyncIndexName))) { found.Add(dir); return; }
+            if (File.Exists(Path.Combine(dir, SyncIndexName)) || (depth > 0 && Path.GetFileName(dir).StartsWith(ShareFolderPrefix, StringComparison.OrdinalIgnoreCase))) { found.Add(dir); return; }
             if (depth >= 3) return;
             foreach (string d in Directory.GetDirectories(dir))
             {
@@ -435,10 +512,8 @@ partial class HitStudent
                 break;
             case "findSyncFolder":
                 {
-                    int added = FindSharedFolders().Count(AddFriendFolder);
+                    LookForFriendFolders(true);
                     lastSyncCheck = DateTime.MinValue; SendSyncState();
-                    if (added > 0) Toast(added == 1 ? "מצאתי תיקייה של חבר. בקורסים שיש לשניכם תשאל אם להשתמש בסיכומים." : "מצאתי " + added + " תיקיות של חברים", false);
-                    else Toast("לא מצאתי תיקייה חדשה ב-OneDrive. ודא שלחצת בקישור 'הוסף קיצור דרך אל הקבצים שלי', חכה שהיא תסתנכרן למחשב, ונסה שוב.", true);
                 }
                 break;
             case "removeFriendFolder":
@@ -493,8 +568,7 @@ partial class HitStudent
                 {
                     string url = Str(m, "url").Trim();
                     if (!IsOneDrivePage(url)) { Toast("זה לא נראה כמו קישור משותף של OneDrive", true); break; }
-                    OpenExternal(url);
-                    Toast("הקישור נפתח בדפדפן. לחץ שם 'הוסף קיצור דרך אל הקבצים שלי', חכה שהתיקייה תופיע ב-OneDrive במחשב, ואז לחץ כאן 'חפש'.", false);
+                    OpenFriendLink(url);
                 }
                 break;
             case "syncPublish": var p1 = PublishToFolder(Str(m, "course").Length > 0 ? Str(m, "course") : null, false); break;

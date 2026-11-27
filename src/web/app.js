@@ -341,6 +341,7 @@ const isSharedCourse = (name) => (S.sync.shareCourses || []).some(n => n.trim() 
 $('syncFind').onclick = () => send({ type: 'findSyncFolder' });
 $('syncPick').onclick = () => send({ type: 'pickSyncFolder' });
 $('syncLinkGo').onclick = () => { const v = $('syncLink').value.trim(); if (v) send({ type: 'openSyncLink', url: v }); };
+$('syncLink').onkeydown = e => { if (e.key === 'Enter') $('syncLinkGo').click(); };
 $('shareOpen').onclick = () => send({ type: 'openShareFolder' });
 $('sharePick').onclick = () => send({ type: 'pickShareFolder' });
 function setCourseShare(name, on) { S.sync.shareCourses = (S.sync.shareCourses || []).filter(n => n.trim() !== name.trim()).concat(on ? [name] : []); send({ type: 'setCourseShare', course: name, on }); renderShareSettings(); }
