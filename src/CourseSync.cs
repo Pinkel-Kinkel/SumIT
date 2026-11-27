@@ -36,7 +36,10 @@ partial class HitStudent
         var list = SettingList("friendFolders");
         string old = SyncFolder;
         if (old.Length > 0 && Directory.Exists(old) && !PublishedByMe(ReadSyncIndex(old)) && !list.Contains(old, StringComparer.OrdinalIgnoreCase)) list.Add(old);
-        return list;
+        // An old copy of a friend's folder (copied by hand, not linked) stops updating. When the same friend has two folders, the newer one wins.
+        return list.Select(f => new { f = f, index = Directory.Exists(f) ? ReadSyncIndex(f) : null })
+            .GroupBy(x => x.index != null && Str(x.index, "publisherId").Length > 0 ? Str(x.index, "publisherId") : x.f, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.OrderByDescending(x => x.index == null ? "" : Str(x.index, "updated")).First().f).ToList();
     }
 
     // The student's own folder, made in his OneDrive the first time a course is shared.
