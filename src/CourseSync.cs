@@ -58,7 +58,7 @@ partial class HitStudent
         return f;
     }
     DateTime lastSyncCheck = DateTime.MinValue;
-    bool syncBusy;
+    bool syncBusy, publishAgain;   // a publish asked for while one runs is done right after it, not dropped
 
     Dictionary<string, object> ReadSyncIndex(string folder)
     {
@@ -175,7 +175,7 @@ partial class HitStudent
     {
         string folder = EnsureShareFolder();
         if (folder == null) { if (!quiet) Toast("לא מצאתי OneDrive במחשב. בחר תיקייה בהגדרות › שיתוף עם חברים", true); return; }
-        if (syncBusy) return;
+        if (syncBusy) { publishAgain = true; return; }
         syncBusy = true;
         try
         {
@@ -184,13 +184,26 @@ partial class HitStudent
                 var index = ReadSyncIndex(folder);
                 int total = 0;
                 foreach (string name in course != null ? new[] { course } : SharedCourses().Where(n => Directory.Exists(CourseDir(n))).ToArray()) total += PublishCourseTo(folder, name, index);
+                // Courses that are no longer shared (or came from older versions) leave the folder.
+                var listed = Dict(index, "courses");
+                if (course == null && listed != null)
+                    foreach (string k in listed.Keys.Where(k => !IsShared(k)).ToList())
+                    {
+                        listed.Remove(k);
+                        string dir = Path.Combine(folder, SafeName(k));
+                        try { if (IsInside(dir, folder) && Directory.Exists(dir)) Directory.Delete(dir, true); } catch { }
+                    }
                 WriteSyncIndex(folder, index);
                 return total;
             });
             if (!quiet) Toast(written > 0 ? "שותפו " + written + " סיכומים. OneDrive מעלה אותם, ומי שיש לו גישה לתיקייה יראה אותם בקורס." : "הכל כבר מעודכן בתיקייה המשותפת", false);
         }
         catch (Exception ex) { Toast("הפרסום נכשל: " + ex.Message, true); }
-        finally { syncBusy = false; SendSyncState(); }
+        finally
+        {
+            syncBusy = false; SendSyncState();
+            if (publishAgain) { publishAgain = false; var again = PublishToFolder(null, true); }
+        }
     }
 
     // Summaries in a friend's folder for courses this student has, that he has neither taken nor turned down.
@@ -236,6 +249,8 @@ partial class HitStudent
         if (DateTime.Now - lastSyncCheck < TimeSpan.FromMinutes(3)) return;
         lastSyncCheck = DateTime.Now;
         if (SettingList("friendLinks").Count > 0) LookForFriendFolders(false);
+        // Catches up summaries that were made before the course was shared, or while a publish was running.
+        if (SharedCourses().Count > 0) { var p = PublishToFolder(null, true); }
         SendSyncState();
     }
 
