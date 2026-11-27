@@ -303,6 +303,7 @@ partial class HitStudent
                     string r = await view.CoreWebView2.ExecuteScriptAsync(ShortcutScript);
                     if (r.Contains("clicked")) { clicked = true; bar.Text = "לחצתי 'הוסף קיצור דרך'. מחכה ש-OneDrive יביא את התיקייה למחשב (בדרך כלל פחות מדקה)..."; }
                     else if (r.Contains("added")) { clicked = true; bar.Text = "התיקייה כבר נוספה ל-OneDrive שלך. מחכה שהיא תגיע למחשב..."; }
+                    else if (r.Contains("downloadonly") && ticks > 3) bar.Text = "אל תלחץ Download (זה עותק שלא מתעדכן). הקישור הזה פתוח לכולם ולכן אין בו 'הוסף קיצור דרך'. בקש מהחבר לשתף את התיקייה עם המייל שלך במכללה (שיתוף › אנשים ספציפיים), ואז פתח שוב את הקישור מהמייל שקיבלת.";
                     else if (ticks > 3) bar.Text = "לחץ בדף על 'הוסף קיצור דרך אל הקבצים שלי' (Add shortcut to My files). אחר כך אפשר לסגור את החלון - האפליקציה תמצא את התיקייה לבד.";
                 }
                 catch { }
@@ -330,6 +331,7 @@ partial class HitStudent
   for(var i=0;i<els.length;i++){var e=els[i],t=(e.innerText||'')+' '+(e.getAttribute('aria-label')||'')+' '+(e.title||'');
     if(done.test(t))return 'added';
     if(want.test(t)&&!e.disabled&&e.getAttribute('aria-disabled')!=='true'&&e.offsetParent!==null){e.click();return 'clicked';}}
+  for(var j=0;j<els.length;j++){var d=els[j],u=/^\s*(download|הורד|הורדה)\s*$/i;if((u.test(d.innerText||'')||u.test(d.getAttribute('aria-label')||''))&&d.offsetParent!==null)return 'downloadonly';}
   return 'none';})()";
 
 
